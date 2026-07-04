@@ -1,0 +1,21 @@
+grpc:
+  port: 50051
+  timeout: 30s
+
+temporal:
+  host: "localhost:7233"
+  namespace: "default"
+  task_queue: "caritas-tasks"
+  workflow_execution_timeout: 24h
+  activity_timeout: 5m
+
+database:
+  max_open_conns: 25
+  max_idle_conns: 5
+  conn_max_lifetime: 5m
+  conn_max_idle_time: 1m
+
+log:
+  level: "info"
+  format: "json"
+  add_source: true
