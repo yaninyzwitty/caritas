@@ -39,6 +39,13 @@ func main() {
 		log.Fatalf("Failed to parse database URL: %v", err)
 	}
 
+	if cfg.Database.MaxOpenConns > 2147483647 {
+		log.Fatalf("Database.MaxOpenConns exceeds int32 max: %d", cfg.Database.MaxOpenConns)
+	}
+	if cfg.Database.MaxIdleConns > 2147483647 {
+		log.Fatalf("Database.MaxIdleConns exceeds int32 max: %d", cfg.Database.MaxIdleConns)
+	}
+
 	poolConfig.MaxConns = int32(cfg.Database.MaxOpenConns)
 	poolConfig.MinConns = int32(cfg.Database.MaxIdleConns)
 	poolConfig.MaxConnLifetime = cfg.Database.ConnMaxLifetime

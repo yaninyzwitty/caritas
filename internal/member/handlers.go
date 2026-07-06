@@ -21,16 +21,25 @@ func NewHandlers(memberService *Service, store *Store) *Handlers {
 	return &Handlers{memberService: memberService, store: store}
 }
 
-func (h *Handlers) RegisterMember(ctx context.Context, req *memberv1.RegisterMemberRequest) (*memberv1.RegisterMemberResponse, error) {
-	branchID := req.BranchId
+func resolveBranchID(branchID int64) int64 {
 	if branchID == 0 {
-		branchID = DefaultBranchID
+		return DefaultBranchID
 	}
+	return branchID
+}
+
+func (h *Handlers) RegisterMember(ctx context.Context, req *memberv1.RegisterMemberRequest) (*memberv1.RegisterMemberResponse, error) {
+	branchID := resolveBranchID(req.BranchId)
 
 	var dateOfBirth pgtype.Date
 	if req.GetProfile().GetPersonal().GetDateOfBirth() != nil {
 		dateOfBirth = pgtype.Date{Time: req.GetProfile().GetPersonal().GetDateOfBirth().AsTime(), Valid: true}
 	}
+
+	units := req.GetProfile().GetEmployment().GetMonthlyIncome().GetUnits()
+	nanos := req.GetProfile().GetEmployment().GetMonthlyIncome().GetNanos()
+	total := new(big.Int).Mul(big.NewInt(units), big.NewInt(1_000_000_000))
+	total.Add(total, big.NewInt(int64(nanos)))
 
 	profile := sqlc.CreateMemberProfileParams{
 		FullName:              req.GetProfile().GetPersonal().GetFullName(),
@@ -40,12 +49,12 @@ func (h *Handlers) RegisterMember(ctx context.Context, req *memberv1.RegisterMem
 		DateOfBirth:           dateOfBirth,
 		Occupation:            pgtype.Text{String: req.GetProfile().GetEmployment().GetOccupation(), Valid: req.GetProfile().GetEmployment().GetOccupation() != ""},
 		Employer:              pgtype.Text{String: req.GetProfile().GetEmployment().GetEmployer(), Valid: req.GetProfile().GetEmployment().GetEmployer() != ""},
-		MonthlyIncome:         pgtype.Numeric{Int: big.NewInt(req.GetProfile().GetEmployment().GetMonthlyIncome().GetUnits()), Exp: -9, Valid: true},
+		MonthlyIncome:         pgtype.Numeric{Int: total, Exp: -9, Valid: true},
 		IDDocumentType:        pgtype.Text{String: req.GetProfile().GetIdDocument().GetType(), Valid: req.GetProfile().GetIdDocument().GetType() != ""},
 		IDDocumentNumber:      pgtype.Text{String: req.GetProfile().GetIdDocument().GetNumber(), Valid: req.GetProfile().GetIdDocument().GetNumber() != ""},
 		NextOfKinName:         pgtype.Text{String: req.GetProfile().GetNextOfKin().GetName(), Valid: req.GetProfile().GetNextOfKin().GetName() != ""},
 		NextOfKinPhone:        pgtype.Text{String: req.GetProfile().GetNextOfKin().GetPhone(), Valid: req.GetProfile().GetNextOfKin().GetPhone() != ""},
-		NextOfKinRelationship: pgtype.Text{String: req.GetProfile().GetNextOfKin().GetRelationship().String(), Valid: true},
+		NextOfKinRelationship: pgtype.Text{String: req.GetProfile().GetNextOfKin().GetRelationship().String(), Valid: req.GetProfile().GetNextOfKin().GetRelationship() != memberv1.RelationshipType_RELATIONSHIP_TYPE_UNSPECIFIED},
 	}
 
 	member, err := h.memberService.RegisterMember(ctx, branchID, req.NationalId, profile)
@@ -54,11 +63,7 @@ func (h *Handlers) RegisterMember(ctx context.Context, req *memberv1.RegisterMem
 	}
 
 	return &memberv1.RegisterMemberResponse{
-		Member: convertMember(member.ID, member.BranchID, member.MemberNumber, member.NationalID, member.Status, member.CreatedAt, member.UpdatedAt,
-			member.FullName.String, member.Phone.String, member.Email.String, member.Address.String, member.DateOfBirth,
-			member.Occupation.String, member.Employer.String, member.MonthlyIncome.Int,
-			member.IDDocumentType.String, member.IDDocumentNumber.String,
-			member.NextOfKinName.String, member.NextOfKinPhone.String, member.NextOfKinRelationship.String),
+		Member: convertMemberFromRow(member),
 	}, nil
 }
 
@@ -70,11 +75,7 @@ func (h *Handlers) GetMember(ctx context.Context, req *memberv1.GetMemberRequest
 	case *memberv1.GetMemberRequest_MemberId:
 		member, err = h.memberService.GetMember(ctx, identifier.MemberId)
 	case *memberv1.GetMemberRequest_NationalId:
-		branchID := req.BranchId
-		if branchID == 0 {
-			branchID = DefaultBranchID
-		}
-		member, err = h.memberService.GetMemberByNationalID(ctx, branchID, identifier.NationalId)
+		member, err = h.memberService.GetMemberByNationalID(ctx, resolveBranchID(req.BranchId), identifier.NationalId)
 	default:
 		return nil, fmt.Errorf("%w: must provide member_id or national_id", ErrInvalidIdentifier)
 	}
@@ -84,24 +85,22 @@ func (h *Handlers) GetMember(ctx context.Context, req *memberv1.GetMemberRequest
 	}
 
 	return &memberv1.GetMemberResponse{
-		Member: convertMember(member.ID, member.BranchID, member.MemberNumber, member.NationalID, member.Status, member.CreatedAt, member.UpdatedAt,
-			member.FullName.String, member.Phone.String, member.Email.String, member.Address.String, member.DateOfBirth,
-			member.Occupation.String, member.Employer.String, member.MonthlyIncome.Int,
-			member.IDDocumentType.String, member.IDDocumentNumber.String,
-			member.NextOfKinName.String, member.NextOfKinPhone.String, member.NextOfKinRelationship.String),
+		Member: convertMemberFromRow(member),
 	}, nil
 }
 
 func (h *Handlers) ListMembers(ctx context.Context, req *memberv1.ListMembersRequest) (*memberv1.ListMembersResponse, error) {
+	const maxPageSize = 1000
+
 	limit := req.PageSize
 	if limit <= 0 {
 		limit = 50
 	}
-
-	branchID := req.BranchId
-	if branchID == 0 {
-		branchID = DefaultBranchID
+	if limit > maxPageSize {
+		limit = maxPageSize
 	}
+
+	branchID := resolveBranchID(req.BranchId)
 
 	var pageToken *string
 	if req.PageToken != "" {
@@ -119,14 +118,10 @@ func (h *Handlers) ListMembers(ctx context.Context, req *memberv1.ListMembersReq
 	if len(members) > 0 {
 		protoMembers = make([]*memberv1.Member, len(members))
 		for i, m := range members {
-			protoMembers[i] = convertMember(m.ID, m.BranchID, m.MemberNumber, m.NationalID, m.Status, m.CreatedAt, m.UpdatedAt,
-				m.FullName.String, m.Phone.String, m.Email.String, m.Address.String, m.DateOfBirth,
-				m.Occupation.String, m.Employer.String, m.MonthlyIncome.Int,
-				m.IDDocumentType.String, m.IDDocumentNumber.String,
-				m.NextOfKinName.String, m.NextOfKinPhone.String, m.NextOfKinRelationship.String)
+			protoMembers[i] = convertListMemberFromRow(m)
 		}
 		lastMember := members[len(members)-1]
-		nextToken = fmt.Sprintf("%d", lastMember.CreatedAt.Time.Unix())
+		nextToken = fmt.Sprintf("%d,%d", lastMember.CreatedAt.Time.Unix(), lastMember.ID)
 	}
 
 	return &memberv1.ListMembersResponse{
@@ -141,6 +136,11 @@ func (h *Handlers) UpdateMemberProfile(ctx context.Context, req *memberv1.Update
 		dateOfBirth = pgtype.Date{Time: req.GetProfile().GetPersonal().GetDateOfBirth().AsTime(), Valid: true}
 	}
 
+	units := req.GetProfile().GetEmployment().GetMonthlyIncome().GetUnits()
+	nanos := req.GetProfile().GetEmployment().GetMonthlyIncome().GetNanos()
+	total := new(big.Int).Mul(big.NewInt(units), big.NewInt(1_000_000_000))
+	total.Add(total, big.NewInt(int64(nanos)))
+
 	profile := sqlc.UpdateMemberProfileParams{
 		FullName:              req.GetProfile().GetPersonal().GetFullName(),
 		Phone:                 req.GetProfile().GetPersonal().GetPhone(),
@@ -149,12 +149,12 @@ func (h *Handlers) UpdateMemberProfile(ctx context.Context, req *memberv1.Update
 		DateOfBirth:           dateOfBirth,
 		Occupation:            pgtype.Text{String: req.GetProfile().GetEmployment().GetOccupation(), Valid: req.GetProfile().GetEmployment().GetOccupation() != ""},
 		Employer:              pgtype.Text{String: req.GetProfile().GetEmployment().GetEmployer(), Valid: req.GetProfile().GetEmployment().GetEmployer() != ""},
-		MonthlyIncome:         pgtype.Numeric{Int: big.NewInt(req.GetProfile().GetEmployment().GetMonthlyIncome().GetUnits()), Exp: -9, Valid: true},
+		MonthlyIncome:         pgtype.Numeric{Int: total, Exp: -9, Valid: true},
 		IDDocumentType:        pgtype.Text{String: req.GetProfile().GetIdDocument().GetType(), Valid: req.GetProfile().GetIdDocument().GetType() != ""},
 		IDDocumentNumber:      pgtype.Text{String: req.GetProfile().GetIdDocument().GetNumber(), Valid: req.GetProfile().GetIdDocument().GetNumber() != ""},
 		NextOfKinName:         pgtype.Text{String: req.GetProfile().GetNextOfKin().GetName(), Valid: req.GetProfile().GetNextOfKin().GetName() != ""},
 		NextOfKinPhone:        pgtype.Text{String: req.GetProfile().GetNextOfKin().GetPhone(), Valid: req.GetProfile().GetNextOfKin().GetPhone() != ""},
-		NextOfKinRelationship: pgtype.Text{String: req.GetProfile().GetNextOfKin().GetRelationship().String(), Valid: true},
+		NextOfKinRelationship: pgtype.Text{String: req.GetProfile().GetNextOfKin().GetRelationship().String(), Valid: req.GetProfile().GetNextOfKin().GetRelationship() != memberv1.RelationshipType_RELATIONSHIP_TYPE_UNSPECIFIED},
 	}
 
 	if err := h.memberService.UpdateMemberProfile(ctx, req.MemberId, profile); err != nil {
@@ -167,11 +167,7 @@ func (h *Handlers) UpdateMemberProfile(ctx context.Context, req *memberv1.Update
 	}
 
 	return &memberv1.UpdateMemberProfileResponse{
-		Member: convertMember(member.ID, member.BranchID, member.MemberNumber, member.NationalID, member.Status, member.CreatedAt, member.UpdatedAt,
-			member.FullName.String, member.Phone.String, member.Email.String, member.Address.String, member.DateOfBirth,
-			member.Occupation.String, member.Employer.String, member.MonthlyIncome.Int,
-			member.IDDocumentType.String, member.IDDocumentNumber.String,
-			member.NextOfKinName.String, member.NextOfKinPhone.String, member.NextOfKinRelationship.String),
+		Member: convertMemberFromRow(member),
 	}, nil
 }
 
@@ -183,11 +179,7 @@ func (h *Handlers) UpdateMemberStatus(ctx context.Context, req *memberv1.UpdateM
 	}
 
 	return &memberv1.UpdateMemberStatusResponse{
-		Member: convertMember(member.ID, member.BranchID, member.MemberNumber, member.NationalID, member.Status, member.CreatedAt, member.UpdatedAt,
-			member.FullName.String, member.Phone.String, member.Email.String, member.Address.String, member.DateOfBirth,
-			member.Occupation.String, member.Employer.String, member.MonthlyIncome.Int,
-			member.IDDocumentType.String, member.IDDocumentNumber.String,
-			member.NextOfKinName.String, member.NextOfKinPhone.String, member.NextOfKinRelationship.String),
+		Member: convertMemberFromRow(member),
 	}, nil
 }
 
@@ -209,16 +201,16 @@ func (h *Handlers) GetMemberStatusHistory(ctx context.Context, req *memberv1.Get
 	}
 
 	var transitions []*memberv1.StatusTransition
-	for _, h := range history {
+	for _, transition := range history {
 		var occurredAt *timestamppb.Timestamp
-		if h.CreatedAt.Valid {
-			occurredAt = timestamppb.New(h.CreatedAt.Time)
+		if transition.CreatedAt.Valid {
+			occurredAt = timestamppb.New(transition.CreatedAt.Time)
 		}
 
 		transitions = append(transitions, &memberv1.StatusTransition{
-			FromStatus: h.FromStatus.String,
-			ToStatus:   h.ToStatus,
-			Reason:     h.Reason.String,
+			FromStatus: transition.FromStatus.String,
+			ToStatus:   transition.ToStatus,
+			Reason:     transition.Reason.String,
 			OccurredAt: occurredAt,
 		})
 	}

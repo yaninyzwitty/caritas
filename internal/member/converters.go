@@ -5,69 +5,122 @@ import (
 
 	"github.com/jackc/pgx/v5/pgtype"
 	memberv1 "github.com/yaninyzwitty/caritas-backend/gen/caritas/member/v1"
+	"github.com/yaninyzwitty/caritas-backend/internal/repository/sqlc"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 )
 
-func convertMember(id, branchID, memberNumber int64, nationalID, status string, createdAt, updatedAt pgtype.Timestamptz,
-	fullName, phone, email, address string, dateOfBirth pgtype.Date,
-	occupation, employer string, monthlyIncome *big.Int,
-	idDocumentType, idDocumentNumber string,
-	nextOfKinName, nextOfKinPhone, nextOfKinRelationship string) *memberv1.Member {
-
+func convertMemberFromRow(row sqlc.GetMemberByIDRow) *memberv1.Member {
 	var units int64
-	if monthlyIncome != nil {
-		units = monthlyIncome.Int64()
-	}
+	var nanos int32
 
-	var dob *timestamppb.Timestamp
-	if dateOfBirth.Valid {
-		dob = timestamppb.New(dateOfBirth.Time)
-	}
-
-	var registeredAt, lastUpdated *timestamppb.Timestamp
-	if createdAt.Valid {
-		registeredAt = timestamppb.New(createdAt.Time)
-	}
-	if updatedAt.Valid {
-		lastUpdated = timestamppb.New(updatedAt.Time)
+	if row.MonthlyIncome.Int != nil && row.MonthlyIncome.Int.Sign() != 0 {
+		total := new(big.Int).Set(row.MonthlyIncome.Int)
+		unitsBig := new(big.Int).Div(total, big.NewInt(1_000_000_000))
+		nanosBig := new(big.Int).Mod(total, big.NewInt(1_000_000_000))
+		units = unitsBig.Int64()
+		nanos = int32(nanosBig.Int64())
 	}
 
 	return &memberv1.Member{
-		Id:           id,
-		BranchId:     branchID,
-		MemberNumber: memberNumber,
-		NationalId:   nationalID,
-		Status:       statusStringToProto(status),
+		Id:           row.ID,
+		BranchId:     row.BranchID,
+		MemberNumber: row.MemberNumber,
+		NationalId:   row.NationalID,
+		Status:       statusStringToProto(row.Status),
 		Profile: &memberv1.MemberProfile{
 			Personal: &memberv1.PersonalInfo{
-				FullName:    fullName,
-				Phone:       phone,
-				Email:       email,
-				DateOfBirth: dob,
-				Address:     address,
+				FullName:    row.FullName.String,
+				Phone:       row.Phone.String,
+				Email:       row.Email.String,
+				DateOfBirth: dateToProto(row.DateOfBirth),
+				Address:     row.Address.String,
 			},
 			Employment: &memberv1.Employment{
-				Occupation: occupation,
-				Employer:   employer,
+				Occupation: row.Occupation.String,
+				Employer:   row.Employer.String,
 				MonthlyIncome: &memberv1.Money{
 					CurrencyCode: "KES",
 					Units:        units,
-					Nanos:        0,
+					Nanos:        nanos,
 				},
 			},
 			IdDocument: &memberv1.Identification{
-				Type:   idDocumentType,
-				Number: idDocumentNumber,
+				Type:   row.IDDocumentType.String,
+				Number: row.IDDocumentNumber.String,
 			},
 			NextOfKin: &memberv1.NextOfKin{
-				Name:         nextOfKinName,
-				Phone:        nextOfKinPhone,
-				Relationship: relationshipStringToProto(nextOfKinRelationship),
+				Name:         row.NextOfKinName.String,
+				Phone:        row.NextOfKinPhone.String,
+				Relationship: relationshipStringToProto(row.NextOfKinRelationship.String),
 			},
 		},
-		RegisteredAt: registeredAt,
-		LastUpdated:  lastUpdated,
+		RegisteredAt: timestampToProto(row.CreatedAt),
+		LastUpdated:  timestampToProto(row.UpdatedAt),
 	}
+}
+
+func convertListMemberFromRow(row sqlc.ListMembersByBranchCursorRow) *memberv1.Member {
+	var units int64
+	var nanos int32
+
+	if row.MonthlyIncome.Int != nil && row.MonthlyIncome.Int.Sign() != 0 {
+		total := new(big.Int).Set(row.MonthlyIncome.Int)
+		unitsBig := new(big.Int).Div(total, big.NewInt(1_000_000_000))
+		nanosBig := new(big.Int).Mod(total, big.NewInt(1_000_000_000))
+		units = unitsBig.Int64()
+		nanos = int32(nanosBig.Int64())
+	}
+
+	return &memberv1.Member{
+		Id:           row.ID,
+		BranchId:     row.BranchID,
+		MemberNumber: row.MemberNumber,
+		NationalId:   row.NationalID,
+		Status:       statusStringToProto(row.Status),
+		Profile: &memberv1.MemberProfile{
+			Personal: &memberv1.PersonalInfo{
+				FullName:    row.FullName.String,
+				Phone:       row.Phone.String,
+				Email:       row.Email.String,
+				DateOfBirth: dateToProto(row.DateOfBirth),
+				Address:     row.Address.String,
+			},
+			Employment: &memberv1.Employment{
+				Occupation: row.Occupation.String,
+				Employer:   row.Employer.String,
+				MonthlyIncome: &memberv1.Money{
+					CurrencyCode: "KES",
+					Units:        units,
+					Nanos:        nanos,
+				},
+			},
+			IdDocument: &memberv1.Identification{
+				Type:   row.IDDocumentType.String,
+				Number: row.IDDocumentNumber.String,
+			},
+			NextOfKin: &memberv1.NextOfKin{
+				Name:         row.NextOfKinName.String,
+				Phone:        row.NextOfKinPhone.String,
+				Relationship: relationshipStringToProto(row.NextOfKinRelationship.String),
+			},
+		},
+		RegisteredAt: timestampToProto(row.CreatedAt),
+		LastUpdated:  timestampToProto(row.UpdatedAt),
+	}
+}
+
+func dateToProto(d pgtype.Date) *timestamppb.Timestamp {
+	if !d.Valid {
+		return nil
+	}
+	return timestamppb.New(d.Time)
+}
+
+func timestampToProto(t pgtype.Timestamptz) *timestamppb.Timestamp {
+	if !t.Valid {
+		return nil
+	}
+	return timestamppb.New(t.Time)
 }
 
 func statusStringToProto(status string) memberv1.MemberStatus {

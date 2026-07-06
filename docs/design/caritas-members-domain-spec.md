@@ -1,7 +1,7 @@
 This domain spec only considers members, not shares / savings, not loans.
 
 **Who is a member**
-Change to "A member belongs to a branch. In single-branch mode, all members are assigned to a default branch (ID=1)
+A member belongs to a branch. In single-branch mode, all members are assigned to a default branch (ID=1)
 
 **Natural key**
 National ID is the dedup key for a member, per branch. Phone and email are mutable contact info only — never used for uniqueness or dedup logic, since both can be reassigned or changed.
