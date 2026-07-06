@@ -34,9 +34,9 @@ SELECT m.id, m.branch_id, m.member_number, m.national_id, m.status, m.is_deleted
 FROM members m
 LEFT JOIN member_profiles p ON p.member_id = m.id
 WHERE m.branch_id = $1 AND m.is_deleted = FALSE
-  AND ($2::TIMESTAMP IS NULL OR (m.created_at, m.id) < ($2, $3))
-ORDER BY m.created_at DESC, m.id DESC
-LIMIT $4;
+  AND ($2::BIGINT IS NULL OR m.id < $2)
+ORDER BY m.id DESC
+LIMIT $3;
 
 -- name: GetNextMemberNumber :one
 SELECT next_member_number

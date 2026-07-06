@@ -1,15 +1,17 @@
 This domain spec only considers members, not shares / savings, not loans.
 
 **Who is a member**
-A member in this context, is someone who belongs to a branch (even though we are working with a single branch here)
+A member belongs to a branch. In single-branch mode, all members are assigned to a default branch (ID=1)
 
 **Natural key**
 National ID is the dedup key for a member, per branch. Phone and email are mutable contact info only — never used for uniqueness or dedup logic, since both can be reassigned or changed.
 
 **Invariants (must always be true)**
 
+- Default branch ID (1) is constant and must exist for system to operate
 - Every member belongs to exactly one branch, permanently. Branch transfer is not supported — if a member needs to move branches, this is out of scope for now and must be handled manually outside the system, not as a domain operation.
 - Member number is unique within a branch, sequential, never reused. Counter recovery is monotonic: GREATEST(current_counter, MAX(member_number) + 1), never a blind reset.
+- Branch creation/management endpoints are deferred until multi-branch is needed
 - Member cannot be hard-deleted, only deactivated via `is_deleted`. A member with an active loan or nonzero share balance cannot be closed — this is enforced at the service layer, not assumed.
 - member_profiles is never queried independently — always joined through members, so is_deleted only needs to live on one table.
 - No other domain writes to `members` or `member_profiles` directly — must call `member_service`. This is a code convention, not yet an infrastructure-enforced guarantee (single-developer project, enforced via discipline and review for now).
