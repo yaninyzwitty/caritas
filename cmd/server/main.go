@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"log"
 	"net"
@@ -10,34 +11,54 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/yaninyzwitty/caritas-backend/config"
-	"github.com/yaninyzwitty/caritas-backend/database"
-	"github.com/yaninyzwitty/caritas-backend/internal/db"
-	grpcServer "github.com/yaninyzwitty/caritas-backend/internal/grpc"
+	memberv1 "github.com/yaninyzwitty/caritas-backend/gen/caritas/member/v1"
 	"github.com/yaninyzwitty/caritas-backend/internal/member"
-	"github.com/yaninyzwitty/caritas-backend/gen/caritas/member/v1"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/reflection"
 )
 
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+	configPath := flag.String("config", "config.yaml", "the path to your config file")
+	flag.Parse()
 
-	cfg, err := config.Load("config.yaml")
+	cfg, err := config.Load(*configPath)
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
-	pool, err := database.New(ctx, *cfg)
+	dbURL, err := config.GetDatabaseURL()
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		log.Fatalf("Failed to get database URL: %v", err)
+	}
+
+	poolConfig, err := pgxpool.ParseConfig(dbURL)
+	if err != nil {
+		log.Fatalf("Failed to parse database URL: %v", err)
+	}
+
+	poolConfig.MaxConns = int32(cfg.Database.MaxOpenConns)
+	poolConfig.MinConns = int32(cfg.Database.MaxIdleConns)
+	poolConfig.MaxConnLifetime = cfg.Database.ConnMaxLifetime
+	poolConfig.MaxConnIdleTime = cfg.Database.ConnMaxIdleTime
+
+	pool, err := pgxpool.NewWithConfig(ctx, poolConfig)
+	if err != nil {
+		log.Fatalf("Failed to create database pool: %v", err)
 	}
 	defer pool.Close()
 
-	store := db.NewStore(pool)
+	pingCtx, pingCancel := context.WithTimeout(ctx, 5*time.Second)
+	defer pingCancel()
+	if err := pool.Ping(pingCtx); err != nil {
+		log.Fatalf("Failed to ping database: %v", err)
+	}
+
+	store := member.NewStore(pool)
 	memberService := member.NewService(store)
-	server := grpcServer.NewServer(memberService)
+	server := member.NewHandlers(memberService, store)
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.GRPC.Port))
 	if err != nil {
@@ -46,7 +67,6 @@ func main() {
 
 	s := grpc.NewServer()
 	memberv1.RegisterMemberServiceServer(s, server)
-	reflection.Register(s)
 
 	go func() {
 		log.Printf("Starting gRPC server on port %d", cfg.GRPC.Port)

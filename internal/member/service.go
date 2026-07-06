@@ -2,36 +2,21 @@ package member
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/yaninyzwitty/caritas-backend/internal/db"
 	"github.com/yaninyzwitty/caritas-backend/internal/repository/sqlc"
 )
 
+const DefaultBranchID = 1
+
 type Service struct {
-	store *db.Store
+	store *Store
 }
 
-func NewService(store *db.Store) *Service {
+func NewService(store *Store) *Service {
 	return &Service{store: store}
-}
-
-var (
-	ErrInvalidStatusTransition = errors.New("invalid status transition")
-	ErrMemberHasActiveLoans    = errors.New("member has active loans")
-	ErrMemberHasShareBalance   = errors.New("member has nonzero share balance")
-)
-
-func allowedStatusTransition(from, to string) bool {
-	transitions := map[string]map[string]bool{
-		"pending":   {"active": true, "rejected": true},
-		"active":    {"suspended": true, "closed": true},
-		"suspended": {"active": true},
-	}
-	return transitions[from][to]
 }
 
 func (s *Service) RegisterMember(ctx context.Context, branchID int64, nationalID string, profile sqlc.CreateMemberProfileParams) (sqlc.GetMemberByIDRow, error) {
@@ -108,13 +93,12 @@ func (s *Service) GetMemberByNationalID(ctx context.Context, branchID int64, nat
 	return s.store.GetMemberByID(ctx, existing.ID)
 }
 
-func (s *Service) ListMembers(ctx context.Context, branchID int64, cursor *string, limit int32, statusFilter *string) ([]sqlc.ListMembersByBranchCursorRow, error) {
+func (s *Service) ListMembers(ctx context.Context, branchID int64, cursor *string, limit int32) ([]sqlc.ListMembersByBranchCursorRow, error) {
 	var cursorTime pgtype.Timestamptz
-	var cursorID int64
 
 	if cursor != nil {
 		var unixTime int64
-		_, err := fmt.Sscanf(*cursor, "%d,%d", &unixTime, &cursorID)
+		_, err := fmt.Sscanf(*cursor, "%d", &unixTime)
 		if err != nil {
 			return nil, fmt.Errorf("parse cursor: %w", err)
 		}
@@ -122,35 +106,17 @@ func (s *Service) ListMembers(ctx context.Context, branchID int64, cursor *strin
 		cursorTime.Valid = true
 	}
 
-	members, err := s.store.ListMembersByBranchCursor(ctx, sqlc.ListMembersByBranchCursorParams{
+	return s.store.ListMembersByBranchCursor(ctx, sqlc.ListMembersByBranchCursorParams{
 		BranchID:  branchID,
 		Column2:   pgtype.Timestamp{Time: cursorTime.Time, Valid: cursorTime.Valid},
 		CreatedAt: cursorTime,
 		Limit:     limit,
 	})
-	if err != nil {
-		return nil, err
-	}
-
-	if statusFilter == nil || *statusFilter == "" {
-		return members, nil
-	}
-
-	var filtered []sqlc.ListMembersByBranchCursorRow
-	for _, m := range members {
-		if m.Status == *statusFilter {
-			filtered = append(filtered, m)
-		}
-	}
-
-	return filtered, nil
 }
 
 func (s *Service) UpdateMemberProfile(ctx context.Context, memberID int64, profile sqlc.UpdateMemberProfileParams) error {
-	return s.store.ExecTx(ctx, func(q sqlc.Querier) error {
-		profile.MemberID = memberID
-		return q.UpdateMemberProfile(ctx, profile)
-	})
+	profile.MemberID = memberID
+	return s.store.UpdateMemberProfile(ctx, profile)
 }
 
 func (s *Service) UpdateMemberStatus(ctx context.Context, memberID int64, newStatus string, reason string) (sqlc.GetMemberByIDRow, error) {
@@ -162,7 +128,12 @@ func (s *Service) UpdateMemberStatus(ctx context.Context, memberID int64, newSta
 			return fmt.Errorf("get current member: %w", err)
 		}
 
-		if !allowedStatusTransition(current.Status, newStatus) {
+		transitions := map[string]map[string]bool{
+			"pending":   {"active": true, "rejected": true},
+			"active":    {"suspended": true, "closed": true},
+			"suspended": {"active": true},
+		}
+		if !transitions[current.Status][newStatus] {
 			return fmt.Errorf("%w: cannot transition from %s to %s", ErrInvalidStatusTransition, current.Status, newStatus)
 		}
 
@@ -208,13 +179,12 @@ func (s *Service) CloseMember(ctx context.Context, memberID int64, reason string
 		return sqlc.DeactivateMemberRow{}, fmt.Errorf("member already closed")
 	}
 
-	if !allowedStatusTransition(member.Status, "closed") {
+	transitions := map[string]map[string]bool{
+		"active": {"closed": true},
+	}
+	if !transitions[member.Status]["closed"] {
 		return sqlc.DeactivateMemberRow{}, fmt.Errorf("%w: cannot close member with status %s", ErrInvalidStatusTransition, member.Status)
 	}
-
-	// TODO: Check for active loans and nonzero share balance
-	// This requires shares and loans domains to be implemented
-	// For now, we allow closure but this validation is required per domain spec
 
 	var deactivated sqlc.DeactivateMemberRow
 
@@ -241,15 +211,4 @@ func (s *Service) CloseMember(ctx context.Context, memberID int64, reason string
 	}
 
 	return deactivated, nil
-}
-
-func (s *Service) GetMemberStatusHistory(ctx context.Context, memberID int64) ([]sqlc.MemberStatusHistory, error) {
-	return s.store.GetMemberStatusHistory(ctx, memberID)
-}
-
-func (s *Service) ValidateMemberActiveInBranch(ctx context.Context, memberID int64, branchID int64) (sqlc.ValidateMemberActiveInBranchRow, error) {
-	return s.store.ValidateMemberActiveInBranch(ctx, sqlc.ValidateMemberActiveInBranchParams{
-		ID:       memberID,
-		BranchID: branchID,
-	})
 }

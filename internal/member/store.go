@@ -1,4 +1,4 @@
-package db
+package member
 
 import (
 	"context"
@@ -28,7 +28,7 @@ func NewStore(pool *pgxpool.Pool) *Store {
 func (s *Store) ExecTx(ctx context.Context, fn func(q sqlc.Querier) error) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return fmt.Errorf("begin ctx: %w", err)
+		return fmt.Errorf("begin tx: %w", err)
 	}
 
 	defer tx.Rollback(ctx)
