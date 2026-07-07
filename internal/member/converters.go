@@ -10,6 +10,8 @@ import (
 )
 
 func convertMemberFromRow(row sqlc.GetMemberByIDRow) *memberv1.Member {
+	id, _ := uuidToString(row.ID)
+
 	var units int64
 	var nanos int32
 
@@ -22,7 +24,7 @@ func convertMemberFromRow(row sqlc.GetMemberByIDRow) *memberv1.Member {
 	}
 
 	return &memberv1.Member{
-		Id:           row.ID,
+		Id:           id,
 		BranchId:     row.BranchID,
 		MemberNumber: row.MemberNumber,
 		NationalId:   row.NationalID,
@@ -60,6 +62,8 @@ func convertMemberFromRow(row sqlc.GetMemberByIDRow) *memberv1.Member {
 }
 
 func convertListMemberFromRow(row sqlc.ListMembersByBranchCursorRow) *memberv1.Member {
+	id, _ := uuidToString(row.ID)
+
 	var units int64
 	var nanos int32
 
@@ -72,7 +76,7 @@ func convertListMemberFromRow(row sqlc.ListMembersByBranchCursorRow) *memberv1.M
 	}
 
 	return &memberv1.Member{
-		Id:           row.ID,
+		Id:           id,
 		BranchId:     row.BranchID,
 		MemberNumber: row.MemberNumber,
 		NationalId:   row.NationalID,

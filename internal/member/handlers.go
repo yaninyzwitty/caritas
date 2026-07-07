@@ -59,11 +59,18 @@ func (h *Handlers) RegisterMember(ctx context.Context, req *memberv1.RegisterMem
 
 	member, err := h.memberService.RegisterMember(ctx, branchID, req.NationalId, profile)
 	if err != nil {
-		return nil, fmt.Errorf("register member: %w", err)
+		return nil, err
+	}
+
+	memberIDStr, err := uuidToString(member.ID)
+	if err != nil {
+		return nil, err
 	}
 
 	return &memberv1.RegisterMemberResponse{
-		Member: convertMemberFromRow(member),
+		MemberId:     memberIDStr,
+		MemberNumber: member.MemberNumber,
+		Status:       statusStringToProto(member.Status),
 	}, nil
 }
 
@@ -73,7 +80,11 @@ func (h *Handlers) GetMember(ctx context.Context, req *memberv1.GetMemberRequest
 
 	switch identifier := req.Identifier.(type) {
 	case *memberv1.GetMemberRequest_MemberId:
-		member, err = h.memberService.GetMember(ctx, identifier.MemberId)
+		memberID, err := stringToUUID(identifier.MemberId)
+		if err != nil {
+			return nil, err
+		}
+		member, err = h.memberService.GetMember(ctx, memberID)
 	case *memberv1.GetMemberRequest_NationalId:
 		member, err = h.memberService.GetMemberByNationalID(ctx, resolveBranchID(req.BranchId), identifier.NationalId)
 	default:
@@ -81,7 +92,7 @@ func (h *Handlers) GetMember(ctx context.Context, req *memberv1.GetMemberRequest
 	}
 
 	if err != nil {
-		return nil, fmt.Errorf("get member: %w", err)
+		return nil, err
 	}
 
 	return &memberv1.GetMemberResponse{
@@ -89,48 +100,65 @@ func (h *Handlers) GetMember(ctx context.Context, req *memberv1.GetMemberRequest
 	}, nil
 }
 
-func (h *Handlers) ListMembers(ctx context.Context, req *memberv1.ListMembersRequest) (*memberv1.ListMembersResponse, error) {
-	const maxPageSize = 1000
+func (h *Handlers) ListMembers(
+	ctx context.Context,
+	req *memberv1.ListMembersRequest,
+) (*memberv1.ListMembersResponse, error) {
+	const (
+		defaultPageSize = 50
+		maxPageSize     = 1000
+	)
 
 	limit := req.PageSize
-	if limit <= 0 {
-		limit = 50
-	}
-	if limit > maxPageSize {
+	switch {
+	case limit <= 0:
+		limit = defaultPageSize
+	case limit > maxPageSize:
 		limit = maxPageSize
 	}
 
 	branchID := resolveBranchID(req.BranchId)
 
-	var pageToken *string
+	var cursor *pgtype.UUID
 	if req.PageToken != "" {
-		pageToken = &req.PageToken
-	}
-
-	members, err := h.memberService.ListMembers(ctx, branchID, pageToken, limit)
-	if err != nil {
-		return nil, fmt.Errorf("list members: %w", err)
-	}
-
-	var protoMembers []*memberv1.Member
-	var nextToken string
-
-	if len(members) > 0 {
-		protoMembers = make([]*memberv1.Member, len(members))
-		for i, m := range members {
-			protoMembers[i] = convertListMemberFromRow(m)
+		cursorUUID, err := stringToUUID(req.PageToken)
+		if err != nil {
+			return nil, err
 		}
-		lastMember := members[len(members)-1]
-		nextToken = fmt.Sprintf("%d,%d", lastMember.CreatedAt.Time.Unix(), lastMember.ID)
+		cursor = &cursorUUID
 	}
 
-	return &memberv1.ListMembersResponse{
-		Members:       protoMembers,
-		NextPageToken: nextToken,
-	}, nil
+	members, err := h.memberService.ListMembers(ctx, branchID, cursor, limit)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := &memberv1.ListMembersResponse{
+		Members: make([]*memberv1.Member, 0, len(members)),
+	}
+
+	for _, m := range members {
+		resp.Members = append(resp.Members, convertListMemberFromRow(m))
+	}
+
+	if len(members) == int(limit) {
+		last := members[len(members)-1]
+		lastIDStr, err := uuidToString(last.ID)
+		if err != nil {
+			return nil, err
+		}
+		resp.NextPageToken = lastIDStr
+	}
+
+	return resp, nil
 }
 
 func (h *Handlers) UpdateMemberProfile(ctx context.Context, req *memberv1.UpdateMemberProfileRequest) (*memberv1.UpdateMemberProfileResponse, error) {
+	memberID, err := stringToUUID(req.MemberId)
+	if err != nil {
+		return nil, err
+	}
+
 	var dateOfBirth pgtype.Date
 	if req.GetProfile().GetPersonal().GetDateOfBirth() != nil {
 		dateOfBirth = pgtype.Date{Time: req.GetProfile().GetPersonal().GetDateOfBirth().AsTime(), Valid: true}
@@ -142,6 +170,7 @@ func (h *Handlers) UpdateMemberProfile(ctx context.Context, req *memberv1.Update
 	total.Add(total, big.NewInt(int64(nanos)))
 
 	profile := sqlc.UpdateMemberProfileParams{
+		MemberID:              memberID,
 		FullName:              req.GetProfile().GetPersonal().GetFullName(),
 		Phone:                 req.GetProfile().GetPersonal().GetPhone(),
 		Email:                 req.GetProfile().GetPersonal().GetEmail(),
@@ -157,36 +186,47 @@ func (h *Handlers) UpdateMemberProfile(ctx context.Context, req *memberv1.Update
 		NextOfKinRelationship: pgtype.Text{String: req.GetProfile().GetNextOfKin().GetRelationship().String(), Valid: req.GetProfile().GetNextOfKin().GetRelationship() != memberv1.RelationshipType_RELATIONSHIP_TYPE_UNSPECIFIED},
 	}
 
-	if err := h.memberService.UpdateMemberProfile(ctx, req.MemberId, profile); err != nil {
-		return nil, fmt.Errorf("update member profile: %w", err)
-	}
-
-	member, err := h.memberService.GetMember(ctx, req.MemberId)
-	if err != nil {
-		return nil, fmt.Errorf("get updated member: %w", err)
+	if err := h.memberService.UpdateMemberProfile(ctx, memberID, profile); err != nil {
+		return nil, err
 	}
 
 	return &memberv1.UpdateMemberProfileResponse{
-		Member: convertMemberFromRow(member),
+		LastUpdated: timestamppb.Now(),
 	}, nil
 }
 
 func (h *Handlers) UpdateMemberStatus(ctx context.Context, req *memberv1.UpdateMemberStatusRequest) (*memberv1.UpdateMemberStatusResponse, error) {
-	status := statusProtoToString(req.NewStatus)
-	member, err := h.memberService.UpdateMemberStatus(ctx, req.MemberId, status, req.Reason)
+	memberID, err := stringToUUID(req.MemberId)
 	if err != nil {
-		return nil, fmt.Errorf("update member status: %w", err)
+		return nil, err
+	}
+
+	status := statusProtoToString(req.NewStatus)
+	member, err := h.memberService.UpdateMemberStatus(ctx, memberID, status, req.Reason)
+	if err != nil {
+		return nil, err
 	}
 
 	return &memberv1.UpdateMemberStatusResponse{
-		Member: convertMemberFromRow(member),
+		NewStatus: statusStringToProto(member.Status),
+		UpdatedAt: func() *timestamppb.Timestamp {
+			if member.UpdatedAt.Valid {
+				return timestamppb.New(member.UpdatedAt.Time)
+			}
+			return nil
+		}(),
 	}, nil
 }
 
 func (h *Handlers) CloseMember(ctx context.Context, req *memberv1.CloseMemberRequest) (*memberv1.CloseMemberResponse, error) {
-	_, err := h.memberService.CloseMember(ctx, req.MemberId, req.Reason)
+	memberID, err := stringToUUID(req.MemberId)
 	if err != nil {
-		return nil, fmt.Errorf("close member: %w", err)
+		return nil, err
+	}
+
+	_, err = h.memberService.CloseMember(ctx, memberID, req.Reason)
+	if err != nil {
+		return nil, err
 	}
 
 	return &memberv1.CloseMemberResponse{
@@ -195,9 +235,14 @@ func (h *Handlers) CloseMember(ctx context.Context, req *memberv1.CloseMemberReq
 }
 
 func (h *Handlers) GetMemberStatusHistory(ctx context.Context, req *memberv1.GetMemberStatusHistoryRequest) (*memberv1.GetMemberStatusHistoryResponse, error) {
-	history, err := h.store.GetMemberStatusHistory(ctx, req.MemberId)
+	memberID, err := stringToUUID(req.MemberId)
 	if err != nil {
-		return nil, fmt.Errorf("get member status history: %w", err)
+		return nil, err
+	}
+
+	history, err := h.store.GetMemberStatusHistory(ctx, memberID)
+	if err != nil {
+		return nil, err
 	}
 
 	var transitions []*memberv1.StatusTransition

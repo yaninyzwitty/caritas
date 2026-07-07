@@ -528,7 +528,7 @@ func (x *MemberProfile) GetNextOfKin() *NextOfKin {
 // Member represents a SACCO member with their complete information.
 type Member struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	BranchId      int64                  `protobuf:"varint,2,opt,name=branch_id,json=branchId,proto3" json:"branch_id,omitempty"`
 	MemberNumber  int64                  `protobuf:"varint,3,opt,name=member_number,json=memberNumber,proto3" json:"member_number,omitempty"`
 	NationalId    string                 `protobuf:"bytes,4,opt,name=national_id,json=nationalId,proto3" json:"national_id,omitempty"`
@@ -570,11 +570,11 @@ func (*Member) Descriptor() ([]byte, []int) {
 	return file_caritas_member_v1_member_proto_rawDescGZIP(), []int{6}
 }
 
-func (x *Member) GetId() int64 {
+func (x *Member) GetId() string {
 	if x != nil {
 		return x.Id
 	}
-	return 0
+	return ""
 }
 
 func (x *Member) GetBranchId() int64 {
@@ -687,10 +687,12 @@ func (x *RegisterMemberRequest) GetProfile() *MemberProfile {
 	return nil
 }
 
-// RegisterMemberResponse returns the newly registered member.
+// RegisterMemberResponse returns the newly registered member's identifiers and status.
 type RegisterMemberResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Member        *Member                `protobuf:"bytes,1,opt,name=member,proto3" json:"member,omitempty"`
+	MemberId      string                 `protobuf:"bytes,1,opt,name=member_id,json=memberId,proto3" json:"member_id,omitempty"`
+	MemberNumber  int64                  `protobuf:"varint,2,opt,name=member_number,json=memberNumber,proto3" json:"member_number,omitempty"`
+	Status        MemberStatus           `protobuf:"varint,3,opt,name=status,proto3,enum=caritas.member.v1.MemberStatus" json:"status,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -725,11 +727,25 @@ func (*RegisterMemberResponse) Descriptor() ([]byte, []int) {
 	return file_caritas_member_v1_member_proto_rawDescGZIP(), []int{8}
 }
 
-func (x *RegisterMemberResponse) GetMember() *Member {
+func (x *RegisterMemberResponse) GetMemberId() string {
 	if x != nil {
-		return x.Member
+		return x.MemberId
 	}
-	return nil
+	return ""
+}
+
+func (x *RegisterMemberResponse) GetMemberNumber() int64 {
+	if x != nil {
+		return x.MemberNumber
+	}
+	return 0
+}
+
+func (x *RegisterMemberResponse) GetStatus() MemberStatus {
+	if x != nil {
+		return x.Status
+	}
+	return MemberStatus_MEMBER_STATUS_UNSPECIFIED
 }
 
 // GetMemberRequest specifies which member to retrieve.
@@ -782,13 +798,13 @@ func (x *GetMemberRequest) GetIdentifier() isGetMemberRequest_Identifier {
 	return nil
 }
 
-func (x *GetMemberRequest) GetMemberId() int64 {
+func (x *GetMemberRequest) GetMemberId() string {
 	if x != nil {
 		if x, ok := x.Identifier.(*GetMemberRequest_MemberId); ok {
 			return x.MemberId
 		}
 	}
-	return 0
+	return ""
 }
 
 func (x *GetMemberRequest) GetNationalId() string {
@@ -812,7 +828,7 @@ type isGetMemberRequest_Identifier interface {
 }
 
 type GetMemberRequest_MemberId struct {
-	MemberId int64 `protobuf:"varint,1,opt,name=member_id,json=memberId,proto3,oneof"`
+	MemberId string `protobuf:"bytes,1,opt,name=member_id,json=memberId,proto3,oneof"`
 }
 
 type GetMemberRequest_NationalId struct {
@@ -993,7 +1009,7 @@ func (x *ListMembersResponse) GetNextPageToken() string {
 // UpdateMemberProfileRequest specifies the member and profile updates.
 type UpdateMemberProfileRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	MemberId      int64                  `protobuf:"varint,1,opt,name=member_id,json=memberId,proto3" json:"member_id,omitempty"`
+	MemberId      string                 `protobuf:"bytes,1,opt,name=member_id,json=memberId,proto3" json:"member_id,omitempty"`
 	Profile       *MemberProfile         `protobuf:"bytes,2,opt,name=profile,proto3" json:"profile,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1029,11 +1045,11 @@ func (*UpdateMemberProfileRequest) Descriptor() ([]byte, []int) {
 	return file_caritas_member_v1_member_proto_rawDescGZIP(), []int{13}
 }
 
-func (x *UpdateMemberProfileRequest) GetMemberId() int64 {
+func (x *UpdateMemberProfileRequest) GetMemberId() string {
 	if x != nil {
 		return x.MemberId
 	}
-	return 0
+	return ""
 }
 
 func (x *UpdateMemberProfileRequest) GetProfile() *MemberProfile {
@@ -1043,10 +1059,10 @@ func (x *UpdateMemberProfileRequest) GetProfile() *MemberProfile {
 	return nil
 }
 
-// UpdateMemberProfileResponse returns the updated member.
+// UpdateMemberProfileResponse confirms the profile update.
 type UpdateMemberProfileResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Member        *Member                `protobuf:"bytes,1,opt,name=member,proto3" json:"member,omitempty"`
+	LastUpdated   *timestamppb.Timestamp `protobuf:"bytes,1,opt,name=last_updated,json=lastUpdated,proto3" json:"last_updated,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1081,9 +1097,9 @@ func (*UpdateMemberProfileResponse) Descriptor() ([]byte, []int) {
 	return file_caritas_member_v1_member_proto_rawDescGZIP(), []int{14}
 }
 
-func (x *UpdateMemberProfileResponse) GetMember() *Member {
+func (x *UpdateMemberProfileResponse) GetLastUpdated() *timestamppb.Timestamp {
 	if x != nil {
-		return x.Member
+		return x.LastUpdated
 	}
 	return nil
 }
@@ -1091,7 +1107,7 @@ func (x *UpdateMemberProfileResponse) GetMember() *Member {
 // UpdateMemberStatusRequest specifies the status change and reason.
 type UpdateMemberStatusRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	MemberId      int64                  `protobuf:"varint,1,opt,name=member_id,json=memberId,proto3" json:"member_id,omitempty"`
+	MemberId      string                 `protobuf:"bytes,1,opt,name=member_id,json=memberId,proto3" json:"member_id,omitempty"`
 	NewStatus     MemberStatus           `protobuf:"varint,2,opt,name=new_status,json=newStatus,proto3,enum=caritas.member.v1.MemberStatus" json:"new_status,omitempty"`
 	Reason        string                 `protobuf:"bytes,3,opt,name=reason,proto3" json:"reason,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -1128,11 +1144,11 @@ func (*UpdateMemberStatusRequest) Descriptor() ([]byte, []int) {
 	return file_caritas_member_v1_member_proto_rawDescGZIP(), []int{15}
 }
 
-func (x *UpdateMemberStatusRequest) GetMemberId() int64 {
+func (x *UpdateMemberStatusRequest) GetMemberId() string {
 	if x != nil {
 		return x.MemberId
 	}
-	return 0
+	return ""
 }
 
 func (x *UpdateMemberStatusRequest) GetNewStatus() MemberStatus {
@@ -1149,10 +1165,11 @@ func (x *UpdateMemberStatusRequest) GetReason() string {
 	return ""
 }
 
-// UpdateMemberStatusResponse returns the updated member.
+// UpdateMemberStatusResponse confirms the status change.
 type UpdateMemberStatusResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Member        *Member                `protobuf:"bytes,1,opt,name=member,proto3" json:"member,omitempty"`
+	NewStatus     MemberStatus           `protobuf:"varint,1,opt,name=new_status,json=newStatus,proto3,enum=caritas.member.v1.MemberStatus" json:"new_status,omitempty"`
+	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1187,9 +1204,16 @@ func (*UpdateMemberStatusResponse) Descriptor() ([]byte, []int) {
 	return file_caritas_member_v1_member_proto_rawDescGZIP(), []int{16}
 }
 
-func (x *UpdateMemberStatusResponse) GetMember() *Member {
+func (x *UpdateMemberStatusResponse) GetNewStatus() MemberStatus {
 	if x != nil {
-		return x.Member
+		return x.NewStatus
+	}
+	return MemberStatus_MEMBER_STATUS_UNSPECIFIED
+}
+
+func (x *UpdateMemberStatusResponse) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
 	}
 	return nil
 }
@@ -1197,7 +1221,7 @@ func (x *UpdateMemberStatusResponse) GetMember() *Member {
 // CloseMemberRequest specifies the member to close with a reason.
 type CloseMemberRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	MemberId      int64                  `protobuf:"varint,1,opt,name=member_id,json=memberId,proto3" json:"member_id,omitempty"`
+	MemberId      string                 `protobuf:"bytes,1,opt,name=member_id,json=memberId,proto3" json:"member_id,omitempty"`
 	Reason        string                 `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1233,11 +1257,11 @@ func (*CloseMemberRequest) Descriptor() ([]byte, []int) {
 	return file_caritas_member_v1_member_proto_rawDescGZIP(), []int{17}
 }
 
-func (x *CloseMemberRequest) GetMemberId() int64 {
+func (x *CloseMemberRequest) GetMemberId() string {
 	if x != nil {
 		return x.MemberId
 	}
-	return 0
+	return ""
 }
 
 func (x *CloseMemberRequest) GetReason() string {
@@ -1295,7 +1319,7 @@ func (x *CloseMemberResponse) GetSuccess() bool {
 // GetMemberStatusHistoryRequest requests status history for a member.
 type GetMemberStatusHistoryRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	MemberId      int64                  `protobuf:"varint,1,opt,name=member_id,json=memberId,proto3" json:"member_id,omitempty"`
+	MemberId      string                 `protobuf:"bytes,1,opt,name=member_id,json=memberId,proto3" json:"member_id,omitempty"`
 	PageSize      int32                  `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
 	PageToken     string                 `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -1332,11 +1356,11 @@ func (*GetMemberStatusHistoryRequest) Descriptor() ([]byte, []int) {
 	return file_caritas_member_v1_member_proto_rawDescGZIP(), []int{19}
 }
 
-func (x *GetMemberStatusHistoryRequest) GetMemberId() int64 {
+func (x *GetMemberStatusHistoryRequest) GetMemberId() string {
 	if x != nil {
 		return x.MemberId
 	}
-	return 0
+	return ""
 }
 
 func (x *GetMemberStatusHistoryRequest) GetPageSize() int32 {
@@ -1513,7 +1537,7 @@ const file_caritas_member_v1_member_proto_rawDesc = "" +
 	"idDocument\x12<\n" +
 	"\vnext_of_kin\x18\x04 \x01(\v2\x1c.caritas.member.v1.NextOfKinR\tnextOfKin\"\xf0\x02\n" +
 	"\x06Member\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x1b\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tbranch_id\x18\x02 \x01(\x03R\bbranchId\x12#\n" +
 	"\rmember_number\x18\x03 \x01(\x03R\fmemberNumber\x12\x1f\n" +
 	"\vnational_id\x18\x04 \x01(\tR\n" +
@@ -1526,11 +1550,13 @@ const file_caritas_member_v1_member_proto_rawDesc = "" +
 	"\tbranch_id\x18\x01 \x01(\x03R\bbranchId\x12\x1f\n" +
 	"\vnational_id\x18\x02 \x01(\tR\n" +
 	"nationalId\x12:\n" +
-	"\aprofile\x18\x03 \x01(\v2 .caritas.member.v1.MemberProfileR\aprofile\"K\n" +
-	"\x16RegisterMemberResponse\x121\n" +
-	"\x06member\x18\x01 \x01(\v2\x19.caritas.member.v1.MemberR\x06member\"\x7f\n" +
+	"\aprofile\x18\x03 \x01(\v2 .caritas.member.v1.MemberProfileR\aprofile\"\x93\x01\n" +
+	"\x16RegisterMemberResponse\x12\x1b\n" +
+	"\tmember_id\x18\x01 \x01(\tR\bmemberId\x12#\n" +
+	"\rmember_number\x18\x02 \x01(\x03R\fmemberNumber\x127\n" +
+	"\x06status\x18\x03 \x01(\x0e2\x1f.caritas.member.v1.MemberStatusR\x06status\"\x7f\n" +
 	"\x10GetMemberRequest\x12\x1d\n" +
-	"\tmember_id\x18\x01 \x01(\x03H\x00R\bmemberId\x12!\n" +
+	"\tmember_id\x18\x01 \x01(\tH\x00R\bmemberId\x12!\n" +
 	"\vnational_id\x18\x02 \x01(\tH\x00R\n" +
 	"nationalId\x12\x1b\n" +
 	"\tbranch_id\x18\x03 \x01(\x03R\bbranchIdB\f\n" +
@@ -1548,24 +1574,27 @@ const file_caritas_member_v1_member_proto_rawDesc = "" +
 	"\amembers\x18\x01 \x03(\v2\x19.caritas.member.v1.MemberR\amembers\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"u\n" +
 	"\x1aUpdateMemberProfileRequest\x12\x1b\n" +
-	"\tmember_id\x18\x01 \x01(\x03R\bmemberId\x12:\n" +
-	"\aprofile\x18\x02 \x01(\v2 .caritas.member.v1.MemberProfileR\aprofile\"P\n" +
-	"\x1bUpdateMemberProfileResponse\x121\n" +
-	"\x06member\x18\x01 \x01(\v2\x19.caritas.member.v1.MemberR\x06member\"\x90\x01\n" +
+	"\tmember_id\x18\x01 \x01(\tR\bmemberId\x12:\n" +
+	"\aprofile\x18\x02 \x01(\v2 .caritas.member.v1.MemberProfileR\aprofile\"\\\n" +
+	"\x1bUpdateMemberProfileResponse\x12=\n" +
+	"\flast_updated\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampR\vlastUpdated\"\x90\x01\n" +
 	"\x19UpdateMemberStatusRequest\x12\x1b\n" +
-	"\tmember_id\x18\x01 \x01(\x03R\bmemberId\x12>\n" +
+	"\tmember_id\x18\x01 \x01(\tR\bmemberId\x12>\n" +
 	"\n" +
 	"new_status\x18\x02 \x01(\x0e2\x1f.caritas.member.v1.MemberStatusR\tnewStatus\x12\x16\n" +
-	"\x06reason\x18\x03 \x01(\tR\x06reason\"O\n" +
-	"\x1aUpdateMemberStatusResponse\x121\n" +
-	"\x06member\x18\x01 \x01(\v2\x19.caritas.member.v1.MemberR\x06member\"I\n" +
+	"\x06reason\x18\x03 \x01(\tR\x06reason\"\x97\x01\n" +
+	"\x1aUpdateMemberStatusResponse\x12>\n" +
+	"\n" +
+	"new_status\x18\x01 \x01(\x0e2\x1f.caritas.member.v1.MemberStatusR\tnewStatus\x129\n" +
+	"\n" +
+	"updated_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"I\n" +
 	"\x12CloseMemberRequest\x12\x1b\n" +
-	"\tmember_id\x18\x01 \x01(\x03R\bmemberId\x12\x16\n" +
+	"\tmember_id\x18\x01 \x01(\tR\bmemberId\x12\x16\n" +
 	"\x06reason\x18\x02 \x01(\tR\x06reason\"/\n" +
 	"\x13CloseMemberResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\"x\n" +
 	"\x1dGetMemberStatusHistoryRequest\x12\x1b\n" +
-	"\tmember_id\x18\x01 \x01(\x03R\bmemberId\x12\x1b\n" +
+	"\tmember_id\x18\x01 \x01(\tR\bmemberId\x12\x1b\n" +
 	"\tpage_size\x18\x02 \x01(\x05R\bpageSize\x12\x1d\n" +
 	"\n" +
 	"page_token\x18\x03 \x01(\tR\tpageToken\"\xa5\x01\n" +
@@ -1658,35 +1687,36 @@ var file_caritas_member_v1_member_proto_depIdxs = []int32{
 	24, // 9: caritas.member.v1.Member.registered_at:type_name -> google.protobuf.Timestamp
 	24, // 10: caritas.member.v1.Member.last_updated:type_name -> google.protobuf.Timestamp
 	7,  // 11: caritas.member.v1.RegisterMemberRequest.profile:type_name -> caritas.member.v1.MemberProfile
-	8,  // 12: caritas.member.v1.RegisterMemberResponse.member:type_name -> caritas.member.v1.Member
+	0,  // 12: caritas.member.v1.RegisterMemberResponse.status:type_name -> caritas.member.v1.MemberStatus
 	8,  // 13: caritas.member.v1.GetMemberResponse.member:type_name -> caritas.member.v1.Member
 	0,  // 14: caritas.member.v1.ListMembersRequest.status_filter:type_name -> caritas.member.v1.MemberStatus
 	8,  // 15: caritas.member.v1.ListMembersResponse.members:type_name -> caritas.member.v1.Member
 	7,  // 16: caritas.member.v1.UpdateMemberProfileRequest.profile:type_name -> caritas.member.v1.MemberProfile
-	8,  // 17: caritas.member.v1.UpdateMemberProfileResponse.member:type_name -> caritas.member.v1.Member
+	24, // 17: caritas.member.v1.UpdateMemberProfileResponse.last_updated:type_name -> google.protobuf.Timestamp
 	0,  // 18: caritas.member.v1.UpdateMemberStatusRequest.new_status:type_name -> caritas.member.v1.MemberStatus
-	8,  // 19: caritas.member.v1.UpdateMemberStatusResponse.member:type_name -> caritas.member.v1.Member
-	24, // 20: caritas.member.v1.StatusTransition.occurred_at:type_name -> google.protobuf.Timestamp
-	22, // 21: caritas.member.v1.GetMemberStatusHistoryResponse.transitions:type_name -> caritas.member.v1.StatusTransition
-	9,  // 22: caritas.member.v1.MemberService.RegisterMember:input_type -> caritas.member.v1.RegisterMemberRequest
-	11, // 23: caritas.member.v1.MemberService.GetMember:input_type -> caritas.member.v1.GetMemberRequest
-	13, // 24: caritas.member.v1.MemberService.ListMembers:input_type -> caritas.member.v1.ListMembersRequest
-	15, // 25: caritas.member.v1.MemberService.UpdateMemberProfile:input_type -> caritas.member.v1.UpdateMemberProfileRequest
-	17, // 26: caritas.member.v1.MemberService.UpdateMemberStatus:input_type -> caritas.member.v1.UpdateMemberStatusRequest
-	19, // 27: caritas.member.v1.MemberService.CloseMember:input_type -> caritas.member.v1.CloseMemberRequest
-	21, // 28: caritas.member.v1.MemberService.GetMemberStatusHistory:input_type -> caritas.member.v1.GetMemberStatusHistoryRequest
-	10, // 29: caritas.member.v1.MemberService.RegisterMember:output_type -> caritas.member.v1.RegisterMemberResponse
-	12, // 30: caritas.member.v1.MemberService.GetMember:output_type -> caritas.member.v1.GetMemberResponse
-	14, // 31: caritas.member.v1.MemberService.ListMembers:output_type -> caritas.member.v1.ListMembersResponse
-	16, // 32: caritas.member.v1.MemberService.UpdateMemberProfile:output_type -> caritas.member.v1.UpdateMemberProfileResponse
-	18, // 33: caritas.member.v1.MemberService.UpdateMemberStatus:output_type -> caritas.member.v1.UpdateMemberStatusResponse
-	20, // 34: caritas.member.v1.MemberService.CloseMember:output_type -> caritas.member.v1.CloseMemberResponse
-	23, // 35: caritas.member.v1.MemberService.GetMemberStatusHistory:output_type -> caritas.member.v1.GetMemberStatusHistoryResponse
-	29, // [29:36] is the sub-list for method output_type
-	22, // [22:29] is the sub-list for method input_type
-	22, // [22:22] is the sub-list for extension type_name
-	22, // [22:22] is the sub-list for extension extendee
-	0,  // [0:22] is the sub-list for field type_name
+	0,  // 19: caritas.member.v1.UpdateMemberStatusResponse.new_status:type_name -> caritas.member.v1.MemberStatus
+	24, // 20: caritas.member.v1.UpdateMemberStatusResponse.updated_at:type_name -> google.protobuf.Timestamp
+	24, // 21: caritas.member.v1.StatusTransition.occurred_at:type_name -> google.protobuf.Timestamp
+	22, // 22: caritas.member.v1.GetMemberStatusHistoryResponse.transitions:type_name -> caritas.member.v1.StatusTransition
+	9,  // 23: caritas.member.v1.MemberService.RegisterMember:input_type -> caritas.member.v1.RegisterMemberRequest
+	11, // 24: caritas.member.v1.MemberService.GetMember:input_type -> caritas.member.v1.GetMemberRequest
+	13, // 25: caritas.member.v1.MemberService.ListMembers:input_type -> caritas.member.v1.ListMembersRequest
+	15, // 26: caritas.member.v1.MemberService.UpdateMemberProfile:input_type -> caritas.member.v1.UpdateMemberProfileRequest
+	17, // 27: caritas.member.v1.MemberService.UpdateMemberStatus:input_type -> caritas.member.v1.UpdateMemberStatusRequest
+	19, // 28: caritas.member.v1.MemberService.CloseMember:input_type -> caritas.member.v1.CloseMemberRequest
+	21, // 29: caritas.member.v1.MemberService.GetMemberStatusHistory:input_type -> caritas.member.v1.GetMemberStatusHistoryRequest
+	10, // 30: caritas.member.v1.MemberService.RegisterMember:output_type -> caritas.member.v1.RegisterMemberResponse
+	12, // 31: caritas.member.v1.MemberService.GetMember:output_type -> caritas.member.v1.GetMemberResponse
+	14, // 32: caritas.member.v1.MemberService.ListMembers:output_type -> caritas.member.v1.ListMembersResponse
+	16, // 33: caritas.member.v1.MemberService.UpdateMemberProfile:output_type -> caritas.member.v1.UpdateMemberProfileResponse
+	18, // 34: caritas.member.v1.MemberService.UpdateMemberStatus:output_type -> caritas.member.v1.UpdateMemberStatusResponse
+	20, // 35: caritas.member.v1.MemberService.CloseMember:output_type -> caritas.member.v1.CloseMemberResponse
+	23, // 36: caritas.member.v1.MemberService.GetMemberStatusHistory:output_type -> caritas.member.v1.GetMemberStatusHistoryResponse
+	30, // [30:37] is the sub-list for method output_type
+	23, // [23:30] is the sub-list for method input_type
+	23, // [23:23] is the sub-list for extension type_name
+	23, // [23:23] is the sub-list for extension extendee
+	0,  // [0:23] is the sub-list for field type_name
 }
 
 func init() { file_caritas_member_v1_member_proto_init() }

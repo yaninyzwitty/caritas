@@ -6,15 +6,17 @@ package sqlc
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Querier interface {
-	CreateMember(ctx context.Context, arg CreateMemberParams) (int64, error)
-	CreateMemberProfile(ctx context.Context, arg CreateMemberProfileParams) (int64, error)
-	DeactivateMember(ctx context.Context, id int64) (DeactivateMemberRow, error)
+	CreateMember(ctx context.Context, arg CreateMemberParams) (pgtype.UUID, error)
+	CreateMemberProfile(ctx context.Context, arg CreateMemberProfileParams) (pgtype.UUID, error)
+	DeactivateMember(ctx context.Context, id pgtype.UUID) (DeactivateMemberRow, error)
 	GetMemberByBranchAndNumber(ctx context.Context, arg GetMemberByBranchAndNumberParams) (GetMemberByBranchAndNumberRow, error)
-	GetMemberByID(ctx context.Context, id int64) (GetMemberByIDRow, error)
-	GetMemberStatusHistory(ctx context.Context, memberID int64) ([]MemberStatusHistory, error)
+	GetMemberByID(ctx context.Context, id pgtype.UUID) (GetMemberByIDRow, error)
+	GetMemberStatusHistory(ctx context.Context, memberID pgtype.UUID) ([]MemberStatusHistory, error)
 	GetNextMemberNumber(ctx context.Context, branchID int64) (int64, error)
 	IncrementMemberNumber(ctx context.Context, branchID int64) (int32, error)
 	ListMembersByBranchCursor(ctx context.Context, arg ListMembersByBranchCursorParams) ([]ListMembersByBranchCursorRow, error)

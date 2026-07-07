@@ -34,8 +34,6 @@ const (
 //
 // MemberService manages SACCO member lifecycle operations within a branch.
 type MemberServiceClient interface {
-	// RegisterMember registers a new SACCO member with their branch and profile details.
-	// Returns the created member with auto-generated member number.
 	RegisterMember(ctx context.Context, in *RegisterMemberRequest, opts ...grpc.CallOption) (*RegisterMemberResponse, error)
 	// GetMember retrieves member details by ID or national ID within a branch.
 	GetMember(ctx context.Context, in *GetMemberRequest, opts ...grpc.CallOption) (*GetMemberResponse, error)
@@ -136,8 +134,6 @@ func (c *memberServiceClient) GetMemberStatusHistory(ctx context.Context, in *Ge
 //
 // MemberService manages SACCO member lifecycle operations within a branch.
 type MemberServiceServer interface {
-	// RegisterMember registers a new SACCO member with their branch and profile details.
-	// Returns the created member with auto-generated member number.
 	RegisterMember(context.Context, *RegisterMemberRequest) (*RegisterMemberResponse, error)
 	// GetMember retrieves member details by ID or national ID within a branch.
 	GetMember(context.Context, *GetMemberRequest) (*GetMemberResponse, error)
