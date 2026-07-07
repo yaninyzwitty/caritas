@@ -9,8 +9,8 @@ import (
 )
 
 type MemberStatusHistory struct {
-	ID         int64              `json:"id"`
-	MemberID   int64              `json:"memberId"`
+	ID         pgtype.UUID        `json:"id"`
+	MemberID   pgtype.UUID        `json:"memberId"`
 	FromStatus pgtype.Text        `json:"fromStatus"`
 	ToStatus   string             `json:"toStatus"`
 	Reason     pgtype.Text        `json:"reason"`

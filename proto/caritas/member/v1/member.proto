@@ -8,8 +8,6 @@ import "google/protobuf/timestamp.proto";
 
 // MemberService manages SACCO member lifecycle operations within a branch.
 service MemberService {
-  // RegisterMember registers a new SACCO member with their branch and profile details.
-  // Returns the created member with auto-generated member number.
   rpc RegisterMember(RegisterMemberRequest) returns (RegisterMemberResponse);
 
   // GetMember retrieves member details by ID or national ID within a branch.
@@ -99,7 +97,7 @@ message MemberProfile {
 
 // Member represents a SACCO member with their complete information.
 message Member {
-  int64 id = 1;
+  string id = 1;
   int64 branch_id = 2;
   int64 member_number = 3;
   string national_id = 4;
@@ -116,15 +114,17 @@ message RegisterMemberRequest {
   MemberProfile profile = 3;
 }
 
-// RegisterMemberResponse returns the newly registered member.
+// RegisterMemberResponse returns the newly registered member's identifiers and status.
 message RegisterMemberResponse {
-  Member member = 1;
+  string member_id = 1;
+  int64 member_number = 2;
+  MemberStatus status = 3;
 }
 
 // GetMemberRequest specifies which member to retrieve.
 message GetMemberRequest {
   oneof identifier {
-    int64 member_id = 1;
+    string member_id = 1;
     string national_id = 2;
   }
   int64 branch_id = 3;
@@ -151,30 +151,31 @@ message ListMembersResponse {
 
 // UpdateMemberProfileRequest specifies the member and profile updates.
 message UpdateMemberProfileRequest {
-  int64 member_id = 1;
+  string member_id = 1;
   MemberProfile profile = 2;
 }
 
-// UpdateMemberProfileResponse returns the updated member.
+// UpdateMemberProfileResponse confirms the profile update.
 message UpdateMemberProfileResponse {
-  Member member = 1;
+  google.protobuf.Timestamp last_updated = 1;
 }
 
 // UpdateMemberStatusRequest specifies the status change and reason.
 message UpdateMemberStatusRequest {
-  int64 member_id = 1;
+  string member_id = 1;
   MemberStatus new_status = 2;
   string reason = 3;
 }
 
-// UpdateMemberStatusResponse returns the updated member.
+// UpdateMemberStatusResponse confirms the status change.
 message UpdateMemberStatusResponse {
-  Member member = 1;
+  MemberStatus new_status = 1;
+  google.protobuf.Timestamp updated_at = 2;
 }
 
 // CloseMemberRequest specifies the member to close with a reason.
 message CloseMemberRequest {
-  int64 member_id = 1;
+  string member_id = 1;
   string reason = 2;
 }
 
@@ -185,7 +186,7 @@ message CloseMemberResponse {
 
 // GetMemberStatusHistoryRequest requests status history for a member.
 message GetMemberStatusHistoryRequest {
-  int64 member_id = 1;
+  string member_id = 1;
   int32 page_size = 2;
   string page_token = 3;
 }

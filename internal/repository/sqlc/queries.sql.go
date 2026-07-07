@@ -25,14 +25,14 @@ type CreateMemberParams struct {
 	Status       string `json:"status"`
 }
 
-func (q *Queries) CreateMember(ctx context.Context, arg CreateMemberParams) (int64, error) {
+func (q *Queries) CreateMember(ctx context.Context, arg CreateMemberParams) (pgtype.UUID, error) {
 	row := q.db.QueryRow(ctx, createMember,
 		arg.BranchID,
 		arg.MemberNumber,
 		arg.NationalID,
 		arg.Status,
 	)
-	var id int64
+	var id pgtype.UUID
 	err := row.Scan(&id)
 	return id, err
 }
@@ -46,7 +46,7 @@ RETURNING member_id
 `
 
 type CreateMemberProfileParams struct {
-	MemberID              int64          `json:"memberId"`
+	MemberID              pgtype.UUID    `json:"memberId"`
 	FullName              string         `json:"fullName"`
 	Phone                 string         `json:"phone"`
 	Email                 string         `json:"email"`
@@ -62,7 +62,7 @@ type CreateMemberProfileParams struct {
 	NextOfKinRelationship pgtype.Text    `json:"nextOfKinRelationship"`
 }
 
-func (q *Queries) CreateMemberProfile(ctx context.Context, arg CreateMemberProfileParams) (int64, error) {
+func (q *Queries) CreateMemberProfile(ctx context.Context, arg CreateMemberProfileParams) (pgtype.UUID, error) {
 	row := q.db.QueryRow(ctx, createMemberProfile,
 		arg.MemberID,
 		arg.FullName,
@@ -79,7 +79,7 @@ func (q *Queries) CreateMemberProfile(ctx context.Context, arg CreateMemberProfi
 		arg.NextOfKinPhone,
 		arg.NextOfKinRelationship,
 	)
-	var member_id int64
+	var member_id pgtype.UUID
 	err := row.Scan(&member_id)
 	return member_id, err
 }
@@ -92,12 +92,12 @@ RETURNING id, branch_id, status
 `
 
 type DeactivateMemberRow struct {
-	ID       int64  `json:"id"`
-	BranchID int64  `json:"branchId"`
-	Status   string `json:"status"`
+	ID       pgtype.UUID `json:"id"`
+	BranchID int64       `json:"branchId"`
+	Status   string      `json:"status"`
 }
 
-func (q *Queries) DeactivateMember(ctx context.Context, id int64) (DeactivateMemberRow, error) {
+func (q *Queries) DeactivateMember(ctx context.Context, id pgtype.UUID) (DeactivateMemberRow, error) {
 	row := q.db.QueryRow(ctx, deactivateMember, id)
 	var i DeactivateMemberRow
 	err := row.Scan(&i.ID, &i.BranchID, &i.Status)
@@ -120,7 +120,7 @@ type GetMemberByBranchAndNumberParams struct {
 }
 
 type GetMemberByBranchAndNumberRow struct {
-	ID                    int64              `json:"id"`
+	ID                    pgtype.UUID        `json:"id"`
 	BranchID              int64              `json:"branchId"`
 	MemberNumber          int64              `json:"memberNumber"`
 	NationalID            string             `json:"nationalId"`
@@ -183,7 +183,7 @@ WHERE m.id = $1 AND m.is_deleted = FALSE
 `
 
 type GetMemberByIDRow struct {
-	ID                    int64              `json:"id"`
+	ID                    pgtype.UUID        `json:"id"`
 	BranchID              int64              `json:"branchId"`
 	MemberNumber          int64              `json:"memberNumber"`
 	NationalID            string             `json:"nationalId"`
@@ -206,7 +206,7 @@ type GetMemberByIDRow struct {
 	NextOfKinRelationship pgtype.Text        `json:"nextOfKinRelationship"`
 }
 
-func (q *Queries) GetMemberByID(ctx context.Context, id int64) (GetMemberByIDRow, error) {
+func (q *Queries) GetMemberByID(ctx context.Context, id pgtype.UUID) (GetMemberByIDRow, error) {
 	row := q.db.QueryRow(ctx, getMemberByID, id)
 	var i GetMemberByIDRow
 	err := row.Scan(
@@ -242,7 +242,7 @@ WHERE member_id = $1
 ORDER BY created_at DESC
 `
 
-func (q *Queries) GetMemberStatusHistory(ctx context.Context, memberID int64) ([]MemberStatusHistory, error) {
+func (q *Queries) GetMemberStatusHistory(ctx context.Context, memberID pgtype.UUID) ([]MemberStatusHistory, error) {
 	rows, err := q.db.Query(ctx, getMemberStatusHistory, memberID)
 	if err != nil {
 		return nil, err
@@ -304,20 +304,21 @@ SELECT m.id, m.branch_id, m.member_number, m.national_id, m.status, m.is_deleted
        p.next_of_kin_name, p.next_of_kin_phone, p.next_of_kin_relationship
 FROM members m
 LEFT JOIN member_profiles p ON p.member_id = m.id
-WHERE m.branch_id = $1 AND m.is_deleted = FALSE
-  AND ($2::BIGINT IS NULL OR m.id < $2)
+WHERE m.branch_id = $1
+  AND NOT m.is_deleted
+  AND ($2::uuid IS NULL OR m.id < COALESCE($2::uuid, 'FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF'::uuid))
 ORDER BY m.id DESC
 LIMIT $3
 `
 
 type ListMembersByBranchCursorParams struct {
-	BranchID int64 `json:"branchId"`
-	Column2  int64 `json:"column2"`
-	Limit    int32 `json:"limit"`
+	BranchID int64       `json:"branchId"`
+	Column2  pgtype.UUID `json:"column2"`
+	Limit    int32       `json:"limit"`
 }
 
 type ListMembersByBranchCursorRow struct {
-	ID                    int64              `json:"id"`
+	ID                    pgtype.UUID        `json:"id"`
 	BranchID              int64              `json:"branchId"`
 	MemberNumber          int64              `json:"memberNumber"`
 	NationalID            string             `json:"nationalId"`
@@ -394,8 +395,8 @@ type MemberExistsByBranchAndNationalIDParams struct {
 }
 
 type MemberExistsByBranchAndNationalIDRow struct {
-	ID     int64  `json:"id"`
-	Status string `json:"status"`
+	ID     pgtype.UUID `json:"id"`
+	Status string      `json:"status"`
 }
 
 func (q *Queries) MemberExistsByBranchAndNationalID(ctx context.Context, arg MemberExistsByBranchAndNationalIDParams) (MemberExistsByBranchAndNationalIDRow, error) {
@@ -411,7 +412,7 @@ VALUES ($1, $2, $3, $4)
 `
 
 type RecordMemberStatusTransitionParams struct {
-	MemberID   int64       `json:"memberId"`
+	MemberID   pgtype.UUID `json:"memberId"`
 	FromStatus pgtype.Text `json:"fromStatus"`
 	ToStatus   string      `json:"toStatus"`
 	Reason     pgtype.Text `json:"reason"`
@@ -459,7 +460,7 @@ WHERE member_id = $1
 `
 
 type UpdateMemberProfileParams struct {
-	MemberID              int64          `json:"memberId"`
+	MemberID              pgtype.UUID    `json:"memberId"`
 	FullName              string         `json:"fullName"`
 	Phone                 string         `json:"phone"`
 	Email                 string         `json:"email"`
@@ -503,12 +504,12 @@ RETURNING id, branch_id, status, updated_at
 `
 
 type UpdateMemberStatusParams struct {
-	ID     int64  `json:"id"`
-	Status string `json:"status"`
+	ID     pgtype.UUID `json:"id"`
+	Status string      `json:"status"`
 }
 
 type UpdateMemberStatusRow struct {
-	ID        int64              `json:"id"`
+	ID        pgtype.UUID        `json:"id"`
 	BranchID  int64              `json:"branchId"`
 	Status    string             `json:"status"`
 	UpdatedAt pgtype.Timestamptz `json:"updatedAt"`
@@ -533,14 +534,14 @@ WHERE id = $1 AND branch_id = $2 AND status = 'active' AND is_deleted = FALSE
 `
 
 type ValidateMemberActiveInBranchParams struct {
-	ID       int64 `json:"id"`
-	BranchID int64 `json:"branchId"`
+	ID       pgtype.UUID `json:"id"`
+	BranchID int64       `json:"branchId"`
 }
 
 type ValidateMemberActiveInBranchRow struct {
-	ID       int64  `json:"id"`
-	BranchID int64  `json:"branchId"`
-	Status   string `json:"status"`
+	ID       pgtype.UUID `json:"id"`
+	BranchID int64       `json:"branchId"`
+	Status   string      `json:"status"`
 }
 
 func (q *Queries) ValidateMemberActiveInBranch(ctx context.Context, arg ValidateMemberActiveInBranchParams) (ValidateMemberActiveInBranchRow, error) {

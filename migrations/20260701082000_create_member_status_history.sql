@@ -1,7 +1,7 @@
 -- +goose Up
 CREATE TABLE member_status_history (
-    id BIGSERIAL PRIMARY KEY,
-    member_id BIGINT NOT NULL,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    member_id UUID NOT NULL,
     from_status TEXT,
     to_status TEXT NOT NULL,
     reason TEXT,

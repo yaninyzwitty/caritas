@@ -33,8 +33,9 @@ SELECT m.id, m.branch_id, m.member_number, m.national_id, m.status, m.is_deleted
        p.next_of_kin_name, p.next_of_kin_phone, p.next_of_kin_relationship
 FROM members m
 LEFT JOIN member_profiles p ON p.member_id = m.id
-WHERE m.branch_id = $1 AND m.is_deleted = FALSE
-  AND ($2::BIGINT IS NULL OR m.id < $2)
+WHERE m.branch_id = $1
+  AND NOT m.is_deleted
+  AND ($2::uuid IS NULL OR m.id < COALESCE($2::uuid, 'FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF'::uuid))
 ORDER BY m.id DESC
 LIMIT $3;
 

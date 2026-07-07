@@ -1,6 +1,6 @@
 -- +goose Up
 CREATE TABLE member_profiles (
-    member_id BIGINT PRIMARY KEY,
+    member_id UUID PRIMARY KEY,
     full_name TEXT NOT NULL,
     phone TEXT NOT NULL,
     email TEXT NOT NULL,

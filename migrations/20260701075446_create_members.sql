@@ -1,6 +1,6 @@
 -- +goose Up
 CREATE TABLE members (
-    id BIGSERIAL PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     branch_id BIGINT NOT NULL,
     member_number BIGINT NOT NULL,
     national_id TEXT NOT NULL,

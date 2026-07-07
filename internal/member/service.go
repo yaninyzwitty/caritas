@@ -3,6 +3,7 @@ package member
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/yaninyzwitty/caritas-backend/internal/repository/sqlc"
@@ -28,14 +29,11 @@ func (s *Service) RegisterMember(ctx context.Context, branchID int64, nationalID
 	var member sqlc.GetMemberByIDRow
 
 	err := s.store.ExecTx(ctx, func(q sqlc.Querier) error {
-		if err := q.RecoverMemberNumberCounter(ctx, branchID); err != nil {
-			return fmt.Errorf("recover member number counter: %w", err)
-		}
-
 		memberNumber, err := q.IncrementMemberNumber(ctx, branchID)
 		if err != nil {
 			return fmt.Errorf("increment member number: %w", err)
 		}
+		slog.Info("member number", "val", memberNumber)
 
 		memberID, err := q.CreateMember(ctx, sqlc.CreateMemberParams{
 			BranchID:     branchID,
@@ -47,32 +45,13 @@ func (s *Service) RegisterMember(ctx context.Context, branchID int64, nationalID
 			return fmt.Errorf("create member: %w", err)
 		}
 
-		if memberID == 0 {
-			existing, err := q.MemberExistsByBranchAndNationalID(ctx, sqlc.MemberExistsByBranchAndNationalIDParams{
-				BranchID:   branchID,
-				NationalID: nationalID,
-			})
-			if err != nil {
-				return fmt.Errorf("check existing member: %w", err)
-			}
-			member, err = q.GetMemberByID(ctx, existing.ID)
-			if err != nil {
-				return fmt.Errorf("get existing member: %w", err)
-			}
-			return nil
-		}
-
 		profile.MemberID = memberID
 		if _, err := q.CreateMemberProfile(ctx, profile); err != nil {
 			return fmt.Errorf("create member profile: %w", err)
 		}
 
 		member, err = q.GetMemberByID(ctx, memberID)
-		if err != nil {
-			return fmt.Errorf("get created member: %w", err)
-		}
-
-		return nil
+		return err
 	})
 
 	if err != nil {
@@ -82,7 +61,7 @@ func (s *Service) RegisterMember(ctx context.Context, branchID int64, nationalID
 	return member, nil
 }
 
-func (s *Service) GetMember(ctx context.Context, memberID int64) (sqlc.GetMemberByIDRow, error) {
+func (s *Service) GetMember(ctx context.Context, memberID pgtype.UUID) (sqlc.GetMemberByIDRow, error) {
 	return s.store.GetMemberByID(ctx, memberID)
 }
 
@@ -98,30 +77,30 @@ func (s *Service) GetMemberByNationalID(ctx context.Context, branchID int64, nat
 	return s.store.GetMemberByID(ctx, existing.ID)
 }
 
-func (s *Service) ListMembers(ctx context.Context, branchID int64, cursor *string, limit int32) ([]sqlc.ListMembersByBranchCursorRow, error) {
-	var cursorID int64
-
+func (s *Service) ListMembers(ctx context.Context, branchID int64, cursor *pgtype.UUID, limit int32) ([]sqlc.ListMembersByBranchCursorRow, error) {
+	var cursorUUID pgtype.UUID
 	if cursor != nil {
-		var timestamp int64
-		n, err := fmt.Sscanf(*cursor, "%d,%d", &timestamp, &cursorID)
-		if err != nil || n != 2 {
-			return nil, fmt.Errorf("parse cursor: invalid format")
-		}
+		cursorUUID = *cursor
 	}
-
+	
 	return s.store.ListMembersByBranchCursor(ctx, sqlc.ListMembersByBranchCursorParams{
 		BranchID: branchID,
-		Column2:  cursorID,
+		Column2:  cursorUUID,
 		Limit:    limit,
 	})
 }
 
-func (s *Service) UpdateMemberProfile(ctx context.Context, memberID int64, profile sqlc.UpdateMemberProfileParams) error {
+func (s *Service) UpdateMemberProfile(ctx context.Context, memberID pgtype.UUID, profile sqlc.UpdateMemberProfileParams) error {
 	profile.MemberID = memberID
-	return s.store.UpdateMemberProfile(ctx, profile)
+	return s.store.ExecTx(ctx, func(q sqlc.Querier) error {
+		if err := q.UpdateMemberProfile(ctx, profile); err != nil {
+			return fmt.Errorf("update member profile: %w", err)
+		}
+		return nil
+	})
 }
 
-func (s *Service) UpdateMemberStatus(ctx context.Context, memberID int64, newStatus string, reason string) (sqlc.GetMemberByIDRow, error) {
+func (s *Service) UpdateMemberStatus(ctx context.Context, memberID pgtype.UUID, newStatus string, reason string) (sqlc.GetMemberByIDRow, error) {
 	var member sqlc.GetMemberByIDRow
 
 	err := s.store.ExecTx(ctx, func(q sqlc.Querier) error {
@@ -166,7 +145,7 @@ func (s *Service) UpdateMemberStatus(ctx context.Context, memberID int64, newSta
 	return member, nil
 }
 
-func (s *Service) CloseMember(ctx context.Context, memberID int64, reason string) (sqlc.DeactivateMemberRow, error) {
+func (s *Service) CloseMember(ctx context.Context, memberID pgtype.UUID, reason string) (sqlc.DeactivateMemberRow, error) {
 	var deactivated sqlc.DeactivateMemberRow
 
 	err := s.store.ExecTx(ctx, func(q sqlc.Querier) error {
