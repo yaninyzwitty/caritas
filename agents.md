@@ -21,5 +21,5 @@ Stack: Go, Postgres (pgx/v5, sqlc, goose), Temporal, gRPC, Github Actions.
 
 ## Domain specs
 
-See docs/design/ — caritas-members-domain-spec.md
+See docs/design/ — caritas-members-domain-spec.md - caritas-shares-domain-spec.md - caritas-loans-domain-spec.md
 Read the relevant one before touching that domain.
