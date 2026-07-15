@@ -11,6 +11,7 @@ import (
 )
 
 type Querier interface {
+	CreateShareAccount(ctx context.Context, arg CreateShareAccountParams) (ShareAccount, error)
 	GetAccountByID(ctx context.Context, id pgtype.UUID) (ShareAccount, error)
 	GetAccountByMemberID(ctx context.Context, memberID pgtype.UUID) (ShareAccount, error)
 	GetAdjustmentByTransactionID(ctx context.Context, shareTransactionID pgtype.UUID) (ShareAdjustment, error)

@@ -1,0 +1,168 @@
+syntax = "proto3";
+
+package caritas.share.v1;
+
+option go_package = "github.com/yaninyzwitty/caritas-backend/gen/caritas/share/v1";
+
+import "google/protobuf/timestamp.proto";
+import "caritas/member/v1/member.proto";
+
+service ShareService {
+  rpc OpenShareAccount(OpenShareAccountRequest) returns (OpenShareAccountResponse);
+  rpc GetShareAccount(GetShareAccountRequest) returns (GetShareAccountResponse);
+  rpc ListShareAccounts(ListShareAccountsRequest) returns (ListShareAccountsResponse);
+  rpc PurchaseShares(PurchaseSharesRequest) returns (PurchaseSharesResponse);
+  rpc WithdrawShares(WithdrawSharesRequest) returns (WithdrawSharesResponse);
+  rpc GetShareBalance(GetShareBalanceRequest) returns (GetShareBalanceResponse);
+  rpc ListShareTransactions(ListShareTransactionsRequest) returns (ListShareTransactionsResponse);
+  rpc GetShareTransaction(GetShareTransactionRequest) returns (GetShareTransactionResponse);
+  rpc ApproveShareAdjustment(ApproveShareAdjustmentRequest) returns (ApproveShareAdjustmentResponse);
+}
+
+enum ShareAccountStatus {
+  SHARE_ACCOUNT_STATUS_UNSPECIFIED = 0;
+  SHARE_ACCOUNT_STATUS_ACTIVE      = 1;
+  SHARE_ACCOUNT_STATUS_DORMANT     = 2;
+  SHARE_ACCOUNT_STATUS_CLOSED      = 3;
+}
+
+enum ShareTransactionType {
+  SHARE_TRANSACTION_TYPE_UNSPECIFIED = 0;
+  SHARE_TRANSACTION_TYPE_PURCHASE    = 1;
+  SHARE_TRANSACTION_TYPE_WITHDRAWAL  = 2;
+  SHARE_TRANSACTION_TYPE_DIVIDEND    = 3;
+  SHARE_TRANSACTION_TYPE_REVERSAL    = 4;
+  SHARE_TRANSACTION_TYPE_ADJUSTMENT  = 5;
+}
+
+message ShareAccount {
+  string                    id         = 1;
+  string                    member_id  = 2;
+  int64                     branch_id  = 3;
+  ShareAccountStatus        status     = 4;
+  google.protobuf.Timestamp opened_at  = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}
+
+message ShareTransaction {
+  string                    id               = 1;
+  string                    share_account_id = 2;
+  ShareTransactionType      type             = 3;
+  caritas.member.v1.Money   amount           = 4;
+  caritas.member.v1.Money   balance_after    = 5;
+  string                    reference_id     = 6;
+  string                    reversal_of      = 7;
+  string                    reason           = 8;
+  string                    originator_id    = 9;
+  google.protobuf.Timestamp created_at       = 10;
+}
+
+message ShareAdjustment {
+  string                    id                   = 1;
+  string                    share_transaction_id = 2;
+  string                    approver_id          = 3;
+  string                    reason               = 4;
+  string                    audit_report_id      = 5;
+  google.protobuf.Timestamp created_at           = 6;
+}
+
+message OpenShareAccountRequest {
+  string member_id = 1;
+  int64  branch_id = 2;
+}
+
+message OpenShareAccountResponse {
+  string             account_id = 1;
+  ShareAccountStatus status     = 2;
+}
+
+message GetShareAccountRequest {
+  oneof identifier {
+    string account_id = 1;
+    string member_id  = 2;
+  }
+  int64 branch_id = 3;
+}
+
+message GetShareAccountResponse {
+  ShareAccount account = 1;
+}
+
+message ListShareAccountsRequest {
+  int64              branch_id     = 1;
+  int32              page_size     = 2;
+  string             page_token    = 3;
+  ShareAccountStatus status_filter = 4;
+}
+
+message ListShareAccountsResponse {
+  repeated ShareAccount accounts        = 1;
+  string                next_page_token = 2;
+}
+
+message PurchaseSharesRequest {
+  string                  account_id    = 1;
+  caritas.member.v1.Money amount        = 2;
+  string                  reference_id  = 3;
+  string                  originator_id = 4;
+  string                  reason        = 5;
+}
+
+message PurchaseSharesResponse {
+  string                  transaction_id = 1;
+  caritas.member.v1.Money balance_after  = 2;
+}
+
+message WithdrawSharesRequest {
+  string                  account_id    = 1;
+  caritas.member.v1.Money amount        = 2;
+  string                  reference_id  = 3;
+  string                  originator_id = 4;
+  string                  reason        = 5;
+}
+
+message WithdrawSharesResponse {
+  string                  transaction_id = 1;
+  caritas.member.v1.Money balance_after  = 2;
+}
+
+message GetShareBalanceRequest {
+  string account_id         = 1;
+  bool   consistency_strong = 2;
+}
+
+message GetShareBalanceResponse {
+  caritas.member.v1.Money balance    = 1;
+  string                  account_id = 2;
+}
+
+message ListShareTransactionsRequest {
+  string account_id = 1;
+  int32  page_size  = 2;
+  string page_token = 3;
+}
+
+message ListShareTransactionsResponse {
+  repeated ShareTransaction transactions    = 1;
+  string                    next_page_token = 2;
+}
+
+message GetShareTransactionRequest {
+  string transaction_id = 1;
+}
+
+message GetShareTransactionResponse {
+  ShareTransaction transaction = 1;
+}
+
+message ApproveShareAdjustmentRequest {
+  string transaction_id  = 1;
+  string approver_id     = 2;
+  string reason          = 3;
+  string audit_report_id = 4;
+}
+
+message ApproveShareAdjustmentResponse {
+  string adjustment_id = 1;
+}

@@ -14,7 +14,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/yaninyzwitty/caritas-backend/config"
 	memberv1 "github.com/yaninyzwitty/caritas-backend/gen/caritas/member/v1"
+	sharev1 "github.com/yaninyzwitty/caritas-backend/gen/caritas/share/v1"
 	"github.com/yaninyzwitty/caritas-backend/internal/member"
+	"github.com/yaninyzwitty/caritas-backend/internal/share"
 	"google.golang.org/grpc"
 )
 
@@ -67,6 +69,10 @@ func main() {
 	memberService := member.NewService(store)
 	server := member.NewHandlers(memberService, store)
 
+	shareStore := share.NewStore(pool)
+	shareService := share.NewService(shareStore)
+	shareServer := share.NewHandlers(shareService, shareStore)
+
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.GRPC.Port))
 	if err != nil {
 		log.Fatalf("Failed to listen: %v", err)
@@ -74,6 +80,7 @@ func main() {
 
 	s := grpc.NewServer()
 	memberv1.RegisterMemberServiceServer(s, server)
+	sharev1.RegisterShareServiceServer(s, shareServer)
 
 	go func() {
 		log.Printf("Starting gRPC server on port %d", cfg.GRPC.Port)

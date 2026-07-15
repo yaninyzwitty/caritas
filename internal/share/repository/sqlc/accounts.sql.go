@@ -11,6 +11,33 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const createShareAccount = `-- name: CreateShareAccount :one
+INSERT INTO share_accounts (member_id, branch_id, status, opened_at)
+VALUES ($1, $2, 'active', NOW())
+RETURNING id, member_id, branch_id, status, opened_at, is_deleted, created_at, updated_at
+`
+
+type CreateShareAccountParams struct {
+	MemberID pgtype.UUID `json:"memberId"`
+	BranchID int64       `json:"branchId"`
+}
+
+func (q *Queries) CreateShareAccount(ctx context.Context, arg CreateShareAccountParams) (ShareAccount, error) {
+	row := q.db.QueryRow(ctx, createShareAccount, arg.MemberID, arg.BranchID)
+	var i ShareAccount
+	err := row.Scan(
+		&i.ID,
+		&i.MemberID,
+		&i.BranchID,
+		&i.Status,
+		&i.OpenedAt,
+		&i.IsDeleted,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getAccountByID = `-- name: GetAccountByID :one
 SELECT id, member_id, branch_id, status, opened_at, is_deleted, created_at, updated_at FROM share_accounts
 WHERE id = $1 AND is_deleted = FALSE
@@ -56,19 +83,26 @@ func (q *Queries) GetAccountByMemberID(ctx context.Context, memberID pgtype.UUID
 const listAccounts = `-- name: ListAccounts :many
 SELECT id, member_id, branch_id, status, opened_at, is_deleted, created_at, updated_at FROM share_accounts
 WHERE is_deleted = FALSE
-  AND (created_at < $1 OR (created_at = $1 AND id < $2))
+  AND branch_id = $1
+  AND ($2::timestamptz IS NULL OR created_at < $2 OR (created_at = $2 AND id < $3))
 ORDER BY created_at DESC, id DESC
-LIMIT $3
+LIMIT $4
 `
 
 type ListAccountsParams struct {
-	CreatedAt interface{} `json:"createdAt"`
-	ID        pgtype.UUID `json:"id"`
-	Limit     int32       `json:"limit"`
+	BranchID int64              `json:"branchId"`
+	Column2  pgtype.Timestamptz `json:"column2"`
+	ID       pgtype.UUID        `json:"id"`
+	Limit    int32              `json:"limit"`
 }
 
 func (q *Queries) ListAccounts(ctx context.Context, arg ListAccountsParams) ([]ShareAccount, error) {
-	rows, err := q.db.Query(ctx, listAccounts, arg.CreatedAt, arg.ID, arg.Limit)
+	rows, err := q.db.Query(ctx, listAccounts,
+		arg.BranchID,
+		arg.Column2,
+		arg.ID,
+		arg.Limit,
+	)
 	if err != nil {
 		return nil, err
 	}
