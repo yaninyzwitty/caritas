@@ -14,7 +14,7 @@ FOR UPDATE;
 -- name: ListTransactions :many
 SELECT id, share_account_id, type, amount, balance_after, reference_id, reversal_of, reason, originator_id, created_at FROM share_transactions
 WHERE share_account_id = $1
-  AND (created_at < $2 OR (created_at = $2 AND id < $3))
+  AND ($2::timestamptz IS NULL OR created_at < $2 OR (created_at = $2 AND id < $3))
 ORDER BY created_at DESC, id DESC
 LIMIT $4;
 

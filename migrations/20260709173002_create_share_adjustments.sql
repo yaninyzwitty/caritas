@@ -5,7 +5,7 @@ CREATE TABLE share_adjustments (
     approver_id UUID NOT NULL,
     reason TEXT NOT NULL,
     audit_report_id UUID,
-    created_at TIMESTAMPZ NOT NULL DEFAULT NOW(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT fk_share_adjustments_transaction FOREIGN KEY (share_transaction_id) REFERENCES share_transactions(id) ON DELETE RESTRICT
 );
 

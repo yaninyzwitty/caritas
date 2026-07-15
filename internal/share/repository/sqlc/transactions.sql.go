@@ -161,22 +161,22 @@ func (q *Queries) InsertShareTransaction(ctx context.Context, arg InsertShareTra
 const listTransactions = `-- name: ListTransactions :many
 SELECT id, share_account_id, type, amount, balance_after, reference_id, reversal_of, reason, originator_id, created_at FROM share_transactions
 WHERE share_account_id = $1
-  AND (created_at < $2 OR (created_at = $2 AND id < $3))
+  AND ($2::timestamptz IS NULL OR created_at < $2 OR (created_at = $2 AND id < $3))
 ORDER BY created_at DESC, id DESC
 LIMIT $4
 `
 
 type ListTransactionsParams struct {
-	ShareAccountID pgtype.UUID `json:"shareAccountId"`
-	CreatedAt      interface{} `json:"createdAt"`
-	ID             pgtype.UUID `json:"id"`
-	Limit          int32       `json:"limit"`
+	ShareAccountID pgtype.UUID        `json:"shareAccountId"`
+	Column2        pgtype.Timestamptz `json:"column2"`
+	ID             pgtype.UUID        `json:"id"`
+	Limit          int32              `json:"limit"`
 }
 
 func (q *Queries) ListTransactions(ctx context.Context, arg ListTransactionsParams) ([]ShareTransaction, error) {
 	rows, err := q.db.Query(ctx, listTransactions,
 		arg.ShareAccountID,
-		arg.CreatedAt,
+		arg.Column2,
 		arg.ID,
 		arg.Limit,
 	)

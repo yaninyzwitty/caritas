@@ -104,19 +104,19 @@ type ShareAccount struct {
 	MemberID  pgtype.UUID        `json:"memberId"`
 	BranchID  int64              `json:"branchId"`
 	Status    ShareAccountStatus `json:"status"`
-	OpenedAt  interface{}        `json:"openedAt"`
+	OpenedAt  pgtype.Timestamptz `json:"openedAt"`
 	IsDeleted bool               `json:"isDeleted"`
-	CreatedAt interface{}        `json:"createdAt"`
-	UpdatedAt interface{}        `json:"updatedAt"`
+	CreatedAt pgtype.Timestamptz `json:"createdAt"`
+	UpdatedAt pgtype.Timestamptz `json:"updatedAt"`
 }
 
 type ShareAdjustment struct {
-	ID                 pgtype.UUID `json:"id"`
-	ShareTransactionID pgtype.UUID `json:"shareTransactionId"`
-	ApproverID         pgtype.UUID `json:"approverId"`
-	Reason             string      `json:"reason"`
-	AuditReportID      pgtype.UUID `json:"auditReportId"`
-	CreatedAt          interface{} `json:"createdAt"`
+	ID                 pgtype.UUID        `json:"id"`
+	ShareTransactionID pgtype.UUID        `json:"shareTransactionId"`
+	ApproverID         pgtype.UUID        `json:"approverId"`
+	Reason             string             `json:"reason"`
+	AuditReportID      pgtype.UUID        `json:"auditReportId"`
+	CreatedAt          pgtype.Timestamptz `json:"createdAt"`
 }
 
 type ShareTransaction struct {
@@ -129,5 +129,5 @@ type ShareTransaction struct {
 	ReversalOf     pgtype.UUID          `json:"reversalOf"`
 	Reason         pgtype.Text          `json:"reason"`
 	OriginatorID   pgtype.UUID          `json:"originatorId"`
-	CreatedAt      interface{}          `json:"createdAt"`
+	CreatedAt      pgtype.Timestamptz   `json:"createdAt"`
 }

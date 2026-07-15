@@ -33,98 +33,98 @@ service MemberService {
 // MemberStatus represents the lifecycle states of a SACCO member.
 enum MemberStatus {
   MEMBER_STATUS_UNSPECIFIED = 0;
-  MEMBER_STATUS_PENDING = 1;
-  MEMBER_STATUS_ACTIVE = 2;
-  MEMBER_STATUS_SUSPENDED = 3;
-  MEMBER_STATUS_CLOSED = 4;
-  MEMBER_STATUS_REJECTED = 5;
+  MEMBER_STATUS_PENDING     = 1;
+  MEMBER_STATUS_ACTIVE      = 2;
+  MEMBER_STATUS_SUSPENDED   = 3;
+  MEMBER_STATUS_CLOSED      = 4;
+  MEMBER_STATUS_REJECTED    = 5;
 }
 
 // RelationshipType defines the relationship between a member and their next of kin.
 enum RelationshipType {
   RELATIONSHIP_TYPE_UNSPECIFIED = 0;
-  RELATIONSHIP_TYPE_SPOUSE = 1;
-  RELATIONSHIP_TYPE_CHILD = 2;
-  RELATIONSHIP_TYPE_PARENT = 3;
-  RELATIONSHIP_TYPE_SIBLING = 4;
-  RELATIONSHIP_TYPE_FRIEND = 5;
-  RELATIONSHIP_TYPE_OTHER = 6;
+  RELATIONSHIP_TYPE_SPOUSE      = 1;
+  RELATIONSHIP_TYPE_CHILD       = 2;
+  RELATIONSHIP_TYPE_PARENT      = 3;
+  RELATIONSHIP_TYPE_SIBLING     = 4;
+  RELATIONSHIP_TYPE_FRIEND      = 5;
+  RELATIONSHIP_TYPE_OTHER       = 6;
 }
 
 // Identification holds government-issued ID information for a member.
 message Identification {
-  string type = 1;
+  string type   = 1;
   string number = 2;
 }
 
 // PersonalInfo contains a member's basic personal contact information.
 message PersonalInfo {
-  string full_name = 1;
-  string phone = 2;
-  string email = 3;
+  string                    full_name     = 1;
+  string                    phone         = 2;
+  string                    email         = 3;
   google.protobuf.Timestamp date_of_birth = 4;
-  string address = 5;
+  string                    address       = 5;
 }
 
 // Money represents a monetary amount with currency.
 message Money {
   string currency_code = 1;  // ISO 4217 currency code (e.g., "USD", "KES")
-  int64 units = 2;           // Whole units of the amount
-  int32 nanos = 3;           // Nano units of the amount (must be same sign as units)
+  int64  units         = 2;           // Whole units of the amount
+  int32  nanos         = 3;           // Nano units of the amount (must be same sign as units)
 }
 
 // Employment represents a member's employment and income information.
 message Employment {
-  string occupation = 1;
-  string employer = 2;
-  Money monthly_income = 3;
+  string occupation     = 1;
+  string employer       = 2;
+  Money  monthly_income = 3;
 }
 
 // NextOfKin holds emergency contact and relationship information.
 message NextOfKin {
-  string name = 1;
-  string phone = 2;
+  string           name         = 1;
+  string           phone        = 2;
   RelationshipType relationship = 3;
 }
 
 // MemberProfile combines all profile information for a SACCO member.
 message MemberProfile {
-  PersonalInfo personal = 1;
-  Employment employment = 2;
+  PersonalInfo   personal    = 1;
+  Employment     employment  = 2;
   Identification id_document = 3;
-  NextOfKin next_of_kin = 4;
+  NextOfKin      next_of_kin = 4;
 }
 
 // Member represents a SACCO member with their complete information.
 message Member {
-  string id = 1;
-  int64 branch_id = 2;
-  int64 member_number = 3;
-  string national_id = 4;
-  MemberStatus status = 5;
-  MemberProfile profile = 6;
+  string                    id            = 1;
+  int64                     branch_id     = 2;
+  int64                     member_number = 3;
+  string                    national_id   = 4;
+  MemberStatus              status        = 5;
+  MemberProfile             profile       = 6;
   google.protobuf.Timestamp registered_at = 7;
-  google.protobuf.Timestamp last_updated = 8;
+  google.protobuf.Timestamp last_updated  = 8;
 }
 
 // RegisterMemberRequest contains the information needed to register a new member.
 message RegisterMemberRequest {
-  int64 branch_id = 1;
-  string national_id = 2;
-  MemberProfile profile = 3;
+  int64         branch_id   = 1;
+  string        national_id = 2;
+  MemberProfile profile     = 3;
 }
 
 // RegisterMemberResponse returns the newly registered member's identifiers and status.
 message RegisterMemberResponse {
-  string member_id = 1;
-  int64 member_number = 2;
-  MemberStatus status = 3;
+  string       member_id     = 1;
+  int64        member_number = 2;
+  MemberStatus status        = 3;
 }
 
 // GetMemberRequest specifies which member to retrieve.
 message GetMemberRequest {
   oneof identifier {
-    string member_id = 1;
+    string member_id   = 1;
     string national_id = 2;
   }
   int64 branch_id = 3;
@@ -137,22 +137,22 @@ message GetMemberResponse {
 
 // ListMembersRequest specifies filtering and pagination for listing members.
 message ListMembersRequest {
-  int64 branch_id = 1;
-  int32 page_size = 2;
-  string page_token = 3;
+  int64        branch_id     = 1;
+  int32        page_size     = 2;
+  string       page_token    = 3;
   MemberStatus status_filter = 4;
 }
 
 // ListMembersResponse returns a paginated list of members.
 message ListMembersResponse {
-  repeated Member members = 1;
-  string next_page_token = 2;
+  repeated Member members         = 1;
+  string          next_page_token = 2;
 }
 
 // UpdateMemberProfileRequest specifies the member and profile updates.
 message UpdateMemberProfileRequest {
-  string member_id = 1;
-  MemberProfile profile = 2;
+  string        member_id = 1;
+  MemberProfile profile   = 2;
 }
 
 // UpdateMemberProfileResponse confirms the profile update.
@@ -162,21 +162,21 @@ message UpdateMemberProfileResponse {
 
 // UpdateMemberStatusRequest specifies the status change and reason.
 message UpdateMemberStatusRequest {
-  string member_id = 1;
+  string       member_id  = 1;
   MemberStatus new_status = 2;
-  string reason = 3;
+  string       reason     = 3;
 }
 
 // UpdateMemberStatusResponse confirms the status change.
 message UpdateMemberStatusResponse {
-  MemberStatus new_status = 1;
+  MemberStatus              new_status = 1;
   google.protobuf.Timestamp updated_at = 2;
 }
 
 // CloseMemberRequest specifies the member to close with a reason.
 message CloseMemberRequest {
   string member_id = 1;
-  string reason = 2;
+  string reason    = 2;
 }
 
 // CloseMemberResponse confirms the member closure.
@@ -186,21 +186,21 @@ message CloseMemberResponse {
 
 // GetMemberStatusHistoryRequest requests status history for a member.
 message GetMemberStatusHistoryRequest {
-  string member_id = 1;
-  int32 page_size = 2;
+  string member_id  = 1;
+  int32  page_size  = 2;
   string page_token = 3;
 }
 
 // StatusTransition represents a single status change event.
 message StatusTransition {
-  string from_status = 1;
-  string to_status = 2;
-  string reason = 3;
+  string                    from_status = 1;
+  string                    to_status   = 2;
+  string                    reason      = 3;
   google.protobuf.Timestamp occurred_at = 4;
 }
 
 // GetMemberStatusHistoryResponse returns the status history with pagination.
 message GetMemberStatusHistoryResponse {
-  repeated StatusTransition transitions = 1;
-  string next_page_token = 2;
+  repeated StatusTransition transitions     = 1;
+  string                    next_page_token = 2;
 }
