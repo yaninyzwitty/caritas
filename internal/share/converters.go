@@ -30,6 +30,23 @@ func accountStatusToProto(s sharesqlc.ShareAccountStatus) sharev1.ShareAccountSt
 	}
 }
 
+// accountStatusFromProto is the inverse of accountStatusToProto, used to turn a
+// request's status_filter into the nullable DB enum the ListAccounts query
+// expects. UNSPECIFIED maps to an empty string so the caller can build a
+// NullShareAccountStatus with Valid=false and skip the filter.
+func accountStatusFromProto(s sharev1.ShareAccountStatus) sharesqlc.ShareAccountStatus {
+	switch s {
+	case sharev1.ShareAccountStatus_SHARE_ACCOUNT_STATUS_ACTIVE:
+		return sharesqlc.ShareAccountStatusActive
+	case sharev1.ShareAccountStatus_SHARE_ACCOUNT_STATUS_DORMANT:
+		return sharesqlc.ShareAccountStatusDormant
+	case sharev1.ShareAccountStatus_SHARE_ACCOUNT_STATUS_CLOSED:
+		return sharesqlc.ShareAccountStatusClosed
+	default:
+		return ""
+	}
+}
+
 // transactionTypeToProto maps the DB enum string to the proto enum. Without it,
 // transaction types could not be represented in responses.
 func transactionTypeToProto(t sharesqlc.ShareTransactionType) sharev1.ShareTransactionType {

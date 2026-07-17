@@ -1,9 +1,12 @@
 package share
 
+// TODO-APPLY THE GOOSE MIGRATIONS
+
 import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"math/big"
 
 	"github.com/jackc/pgx/v5"
@@ -70,6 +73,8 @@ func (s *Service) postTransaction(
 		if account.Status != sharesqlc.ShareAccountStatusActive {
 			return ErrAccountNotActive
 		}
+
+		slog.Info("account, ", "value", account.ID, "member_id", account.MemberID)
 
 		// Idempotency (spec I4): a retried reference_id returns the original
 		// transaction without re-applying the amount. Without this check a

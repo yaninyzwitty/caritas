@@ -85,15 +85,17 @@ SELECT id, member_id, branch_id, status, opened_at, is_deleted, created_at, upda
 WHERE is_deleted = FALSE
   AND branch_id = $1
   AND ($2::timestamptz IS NULL OR created_at < $2 OR (created_at = $2 AND id < $3))
+  AND ($5::share_account_status IS NULL OR status = $5)
 ORDER BY created_at DESC, id DESC
 LIMIT $4
 `
 
 type ListAccountsParams struct {
-	BranchID int64              `json:"branchId"`
-	Column2  pgtype.Timestamptz `json:"column2"`
-	ID       pgtype.UUID        `json:"id"`
-	Limit    int32              `json:"limit"`
+	BranchID     int64                  `json:"branchId"`
+	Column2      pgtype.Timestamptz     `json:"column2"`
+	ID           pgtype.UUID            `json:"id"`
+	Limit        int32                  `json:"limit"`
+	StatusFilter NullShareAccountStatus `json:"statusFilter"`
 }
 
 func (q *Queries) ListAccounts(ctx context.Context, arg ListAccountsParams) ([]ShareAccount, error) {
@@ -102,6 +104,7 @@ func (q *Queries) ListAccounts(ctx context.Context, arg ListAccountsParams) ([]S
 		arg.Column2,
 		arg.ID,
 		arg.Limit,
+		arg.StatusFilter,
 	)
 	if err != nil {
 		return nil, err
