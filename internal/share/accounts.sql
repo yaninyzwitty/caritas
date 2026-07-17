@@ -11,6 +11,7 @@ SELECT id, member_id, branch_id, status, opened_at, is_deleted, created_at, upda
 WHERE is_deleted = FALSE
   AND branch_id = $1
   AND ($2::timestamptz IS NULL OR created_at < $2 OR (created_at = $2 AND id < $3))
+  AND (sqlc.narg('status_filter')::share_account_status IS NULL OR status = sqlc.narg('status_filter'))
 ORDER BY created_at DESC, id DESC
 LIMIT $4;
 

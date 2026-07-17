@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"log/slog"
 	"net"
 	"os"
 	"os/signal"
@@ -59,16 +60,37 @@ func main() {
 	}
 	defer pool.Close()
 
-	pingCtx, pingCancel := context.WithTimeout(ctx, 5*time.Second)
-	defer pingCancel()
-	if err := pool.Ping(pingCtx); err != nil {
-		log.Fatalf("Failed to ping database: %v", err)
+	// TODO-move the postgres logic into its own separate file
+	// retry on startup to prevent: context timeout deadline or whatever
+	backoff := time.Second
+
+	for attempt := 1; attempt <= 5; attempt++ {
+		pingCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		err := pool.Ping(pingCtx)
+		cancel()
+
+		if err == nil {
+			slog.Info("Connected to database successfully")
+			break
+		}
+
+		if attempt == 5 {
+			log.Fatalf("Failed to connect to PostgreSQL after %d attempts: %v", attempt, err)
+		}
+
+		slog.Warn(
+			"Database not ready, retrying...",
+			slog.Int("attempt", attempt),
+			slog.Any("error", err),
+		)
+
+		time.Sleep(backoff)
+		backoff *= 2
 	}
 
 	store := member.NewStore(pool)
 	memberService := member.NewService(store)
 	server := member.NewHandlers(memberService, store)
-
 	shareStore := share.NewStore(pool)
 	shareService := share.NewService(shareStore)
 	shareServer := share.NewHandlers(shareService, shareStore)

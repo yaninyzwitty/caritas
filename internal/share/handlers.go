@@ -163,11 +163,20 @@ func (h *Handlers) ListShareAccounts(ctx context.Context, req *sharev1.ListShare
 		return nil, err
 	}
 
+	var statusFilter sharesqlc.NullShareAccountStatus
+	if sf := req.GetStatusFilter(); sf != sharev1.ShareAccountStatus_SHARE_ACCOUNT_STATUS_UNSPECIFIED {
+		statusFilter = sharesqlc.NullShareAccountStatus{
+			ShareAccountStatus: accountStatusFromProto(sf),
+			Valid:              true,
+		}
+	}
+
 	accounts, err := h.store.ListAccounts(ctx, sharesqlc.ListAccountsParams{
-		BranchID: resolveBranchID(req.GetBranchId()),
-		Column2:  cursorTS,
-		ID:       cursorID,
-		Limit:    limit + 1, // fetch one extra to determine if there's a next page
+		BranchID:     resolveBranchID(req.GetBranchId()),
+		Column2:      cursorTS,
+		ID:           cursorID,
+		StatusFilter: statusFilter,
+		Limit:        limit + 1, // fetch one extra to determine if there's a next page
 	})
 	if err != nil {
 		return nil, err
@@ -203,23 +212,23 @@ func (h *Handlers) ListShareAccounts(ctx context.Context, req *sharev1.ListShare
 func (h *Handlers) PurchaseShares(ctx context.Context, req *sharev1.PurchaseSharesRequest) (*sharev1.PurchaseSharesResponse, error) {
 	accountID, err := stringToUUID(req.GetAccountId())
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid account_id: %w", err)
+		return nil, status.Errorf(codes.InvalidArgument, "invalid account_id: %v", err)
 	}
 	referenceID, err := stringToUUID(req.GetReferenceId())
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid reference_id: %w", err)
+		return nil, status.Errorf(codes.InvalidArgument, "invalid reference_id: %v", err)
 	}
 	originatorID, err := stringToUUID(req.GetOriginatorId())
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid originator_id: %w", err)
+		return nil, status.Errorf(codes.InvalidArgument, "invalid originator_id: %v", err)
 	}
 	tx, err := h.service.PurchaseShares(ctx, accountID, moneyToNumeric(req.GetAmount()), referenceID, originatorID, req.GetReason())
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to purchase shares: %w", err)
+		return nil, status.Errorf(codes.Internal, "failed to purchase shares: %v", err)
 	}
 	txID, err := uuidToString(tx.ID)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to convert transaction ID: %w", err)
+		return nil, status.Errorf(codes.Internal, "failed to convert transaction ID: %v", err)
 	}
 	return &sharev1.PurchaseSharesResponse{
 		TransactionId: txID,

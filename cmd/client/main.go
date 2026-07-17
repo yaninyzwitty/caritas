@@ -9,8 +9,9 @@ import (
 	"os"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/yaninyzwitty/caritas-backend/config"
-	memberv1 "github.com/yaninyzwitty/caritas-backend/gen/caritas/member/v1"
+	sharev1 "github.com/yaninyzwitty/caritas-backend/gen/caritas/share/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -29,24 +30,27 @@ func main() {
 	conn, err := grpc.NewClient(address, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		slog.Error("grpc newClient", "error", err)
+		os.Exit(1)
 	}
-
 	defer conn.Close()
 
-	memberClient := memberv1.NewMemberServiceClient(conn)
+	shareClient := sharev1.NewShareServiceClient(conn)
 
-	// get members
-	members, err := memberClient.ListMembers(ctx, &memberv1.ListMembersRequest{
-		BranchId:     1,
-		PageSize:     8,
-		PageToken:    "7a888aae-3349-47ac-b8f6-68518ba4443e",
-		StatusFilter: memberv1.MemberStatus_MEMBER_STATUS_PENDING,
+	// reference_id is the idempotency key (NOT NULL, part of the unique
+	// constraint on share_transactions) so the client must supply it; a fresh
+	// UUID per run makes each purchase a distinct, retry-safe operation.
+	shareAdjustmentRes, err := shareClient.ApproveShareAdjustment(ctx, &sharev1.ApproveShareAdjustmentRequest{
+		TransactionId: "370621df-5e8c-4457-bf83-d2f0158f9c37",
+		ApproverId:    "126ec801-fa06-4a2c-9d0b-e3524016d17f",
+		Reason:        "They made a purchase of 1000",
+		AuditReportId: uuid.NewString(),
 	})
+
 	if err != nil {
-		slog.Error("ListMembers", "error", err)
+		slog.Error("approve share adjustment failed", "error", err)
 		os.Exit(1)
 	}
 
-	slog.Info("members", "value", len(members.Members), "nextPageToken", members.NextPageToken)
+	slog.Info("share Adjustment", "adjustment_id", shareAdjustmentRes.AdjustmentId)
 
 }
