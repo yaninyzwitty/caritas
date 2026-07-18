@@ -121,7 +121,7 @@ func (h *Handlers) GetShareAccount(ctx context.Context, req *sharev1.GetShareAcc
 
 		account, err = h.store.GetAccountByID(ctx, accountID)
 		if err != nil {
-			return nil, status.Errorf(codes.NotFound, "failed to get account by id, %w", err)
+			return nil, status.Errorf(codes.NotFound, "failed to get account by id, %v", err)
 		}
 	case *sharev1.GetShareAccountRequest_MemberId:
 		memberID, err := stringToUUID(id.MemberId)
@@ -131,7 +131,7 @@ func (h *Handlers) GetShareAccount(ctx context.Context, req *sharev1.GetShareAcc
 
 		account, err = h.store.GetAccountByMemberID(ctx, memberID)
 		if err != nil {
-			return nil, status.Errorf(codes.NotFound, "failed to get account by member id, %w", err)
+			return nil, status.Errorf(codes.NotFound, "failed to get account by member id, %v", err)
 		}
 	default:
 		return nil, status.Errorf(codes.InvalidArgument, "identifier is required")
