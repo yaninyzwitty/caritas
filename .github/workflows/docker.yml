@@ -23,7 +23,6 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          target: server-runtime
           push: true
           tags: ${{ vars.DOCKER_USERNAME }}/${{ github.event.repository.name }}:latest
           platforms: linux/amd64,linux/arm64
