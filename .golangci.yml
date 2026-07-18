@@ -1,33 +1,38 @@
 linters:
   disable-all: true
   enable:
-    - govet
     - errcheck
-    - gosec
+    - govet
     - staticcheck
     - unused
     - ineffassign
+    - gosimple
+    - bodyclose
+    - noctx
+    - wrapcheck
+    - exhaustive
     - gocyclo
-    - goconst
-    - misspell
-    - prealloc
-    - unconvert
-    - gofumpt
+    - revive
+    - gosec
 
 linters-settings:
+  govet:
+    enable:
+      - shadow
   gocyclo:
     min-complexity: 15
+  wrapcheck:
+    ignorePackageGlobs:
+      - "github.com/yourorg/*"
+  exhaustive:
+    default-signifies-exhaustive: true
 
-  goconst:
-    min-len: 3
-    min-occurrences: 3
-
-  misspell:
-    locale: US
-
-  gofumpt:
-    extra-rules: true
-
-run:
-  timeout: 5m
-  go: '1.26.1'
+issues:
+  exclude-rules:
+    - path: "_test\\.go"
+      linters:
+        - wrapcheck
+        - gosec
+        - errcheck
+  max-issues-per-linter: 0
+  max-same-issues: 0
