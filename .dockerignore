@@ -1,0 +1,62 @@
+# Git
+.git
+.gitignore
+.github
+
+# IDEs
+.vscode
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Documentation
+README.md
+docs/
+
+# Tests
+testdata/
+coverage.out
+coverage/
+*.test
+
+# Logs
+*.log
+
+# Local environment
+.env
+.env.*
+!.env.example
+
+# Build artifacts
+bin/
+dist/
+build/
+tmp/
+out/
+
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+
+# Terraform (if present)
+.terraform/
+*.tfstate*
+terraform.tfvars
+
+# Kubernetes manifests (optional)
+k8s/
+
+# Node (if frontend exists)
+node_modules/
+
+# Editor swap files
+*.swp
+*.swo

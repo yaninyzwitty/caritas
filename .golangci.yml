@@ -1,0 +1,33 @@
+linters:
+  disable-all: true
+  enable:
+    - govet
+    - errcheck
+    - gosec
+    - staticcheck
+    - unused
+    - ineffassign
+    - gocyclo
+    - goconst
+    - misspell
+    - prealloc
+    - unconvert
+    - gofumpt
+
+linters-settings:
+  gocyclo:
+    min-complexity: 15
+
+  goconst:
+    min-len: 3
+    min-occurrences: 3
+
+  misspell:
+    locale: US
+
+  gofumpt:
+    extra-rules: true
+
+run:
+  timeout: 5m
+  go: '1.26.1'
