@@ -3,6 +3,7 @@ package member
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/yaninyzwitty/caritas-backend/internal/repository/sqlc"
@@ -31,8 +32,12 @@ func (s *Store) ExecTx(ctx context.Context, fn func(q sqlc.Querier) error) error
 		return fmt.Errorf("begin tx: %w", err)
 	}
 
-	defer tx.Rollback(ctx)
+	defer func() {
+		if err := tx.Rollback(ctx); err != nil {
+			slog.Error("rollback error", "error", err)
+		}
 
+	}()
 	q := sqlc.New(tx)
 	if err := fn(q); err != nil {
 		return fmt.Errorf("exec tx: %w", err)

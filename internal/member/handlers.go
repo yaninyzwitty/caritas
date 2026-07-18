@@ -74,9 +74,11 @@ func (h *Handlers) RegisterMember(ctx context.Context, req *memberv1.RegisterMem
 	}, nil
 }
 
-func (h *Handlers) GetMember(ctx context.Context, req *memberv1.GetMemberRequest) (*memberv1.GetMemberResponse, error) {
+func (h *Handlers) GetMember(
+	ctx context.Context,
+	req *memberv1.GetMemberRequest,
+) (*memberv1.GetMemberResponse, error) {
 	var member sqlc.GetMemberByIDRow
-	var err error
 
 	switch identifier := req.Identifier.(type) {
 	case *memberv1.GetMemberRequest_MemberId:
@@ -84,15 +86,29 @@ func (h *Handlers) GetMember(ctx context.Context, req *memberv1.GetMemberRequest
 		if err != nil {
 			return nil, err
 		}
-		member, err = h.memberService.GetMember(ctx, memberID)
-	case *memberv1.GetMemberRequest_NationalId:
-		member, err = h.memberService.GetMemberByNationalID(ctx, resolveBranchID(req.BranchId), identifier.NationalId)
-	default:
-		return nil, fmt.Errorf("%w: must provide member_id or national_id", ErrInvalidIdentifier)
-	}
 
-	if err != nil {
-		return nil, err
+		member, err = h.memberService.GetMember(ctx, memberID)
+		if err != nil {
+			return nil, err
+		}
+
+	case *memberv1.GetMemberRequest_NationalId:
+		var err error
+
+		member, err = h.memberService.GetMemberByNationalID(
+			ctx,
+			resolveBranchID(req.BranchId),
+			identifier.NationalId,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+	default:
+		return nil, fmt.Errorf(
+			"%w: must provide member_id or national_id",
+			ErrInvalidIdentifier,
+		)
 	}
 
 	return &memberv1.GetMemberResponse{

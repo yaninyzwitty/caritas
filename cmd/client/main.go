@@ -32,7 +32,11 @@ func main() {
 		slog.Error("grpc newClient", "error", err)
 		os.Exit(1)
 	}
-	defer conn.Close()
+	defer func() {
+		if err := conn.Close(); err != nil {
+			slog.Error("failed to close connection", "error", err)
+		}
+	}()
 
 	shareClient := sharev1.NewShareServiceClient(conn)
 
