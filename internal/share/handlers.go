@@ -369,6 +369,35 @@ func (h *Handlers) GetShareTransaction(ctx context.Context, req *sharev1.GetShar
 	return &sharev1.GetShareTransactionResponse{Transaction: convertTransactionToProto(tx)}, nil
 }
 
+// CreateAdjustment handles creating a manual adjustment transaction. Without it
+// manual corrections for audit failures cannot be initiated.
+func (h *Handlers) CreateAdjustment(ctx context.Context, req *sharev1.CreateAdjustmentRequest) (*sharev1.CreateAdjustmentResponse, error) {
+	accountID, err := stringToUUID(req.GetAccountId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid account_id: %v", err)
+	}
+	referenceID, err := stringToUUID(req.GetReferenceId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid reference_id: %v", err)
+	}
+	originatorID, err := stringToUUID(req.GetOriginatorId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid originator_id: %v", err)
+	}
+	tx, err := h.service.CreateAdjustment(ctx, accountID, moneyToNumeric(req.GetAmount()), referenceID, originatorID, req.GetReason())
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to create adjustment: %v", err)
+	}
+	txID, err := uuidToString(tx.ID)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to convert transaction ID: %v", err)
+	}
+	return &sharev1.CreateAdjustmentResponse{
+		TransactionId: txID,
+		BalanceAfter:  numericToMoney(tx.BalanceAfter),
+	}, nil
+}
+
 // ApproveShareAdjustment handles recording the audit approval for an adjustment
 // transaction. Without it manual corrections cannot be approved or audited.
 func (h *Handlers) ApproveShareAdjustment(ctx context.Context, req *sharev1.ApproveShareAdjustmentRequest) (*sharev1.ApproveShareAdjustmentResponse, error) {

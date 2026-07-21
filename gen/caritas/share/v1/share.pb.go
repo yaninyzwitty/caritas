@@ -1346,7 +1346,7 @@ func (x *GetShareTransactionResponse) GetTransaction() *ShareTransaction {
 type ApproveShareAdjustmentRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	TransactionId string                 `protobuf:"bytes,1,opt,name=transaction_id,json=transactionId,proto3" json:"transaction_id,omitempty"`
-	ApproverId    string                 `protobuf:"bytes,2,opt,name=approver_id,json=approverId,proto3" json:"approver_id,omitempty"`
+	ApproverId    string                 `protobuf:"bytes,2,opt,name=approver_id,json=approverId,proto3" json:"approver_id,omitempty"` // fix this with proper authentication JWT
 	Reason        string                 `protobuf:"bytes,3,opt,name=reason,proto3" json:"reason,omitempty"`
 	AuditReportId string                 `protobuf:"bytes,4,opt,name=audit_report_id,json=auditReportId,proto3" json:"audit_report_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -1453,6 +1453,134 @@ func (x *ApproveShareAdjustmentResponse) GetAdjustmentId() string {
 		return x.AdjustmentId
 	}
 	return ""
+}
+
+type CreateAdjustmentRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	AccountId     string                 `protobuf:"bytes,1,opt,name=account_id,json=accountId,proto3" json:"account_id,omitempty"`
+	Amount        *v1.Money              `protobuf:"bytes,2,opt,name=amount,proto3" json:"amount,omitempty"`
+	ReferenceId   string                 `protobuf:"bytes,3,opt,name=reference_id,json=referenceId,proto3" json:"reference_id,omitempty"`
+	OriginatorId  string                 `protobuf:"bytes,4,opt,name=originator_id,json=originatorId,proto3" json:"originator_id,omitempty"`
+	Reason        string                 `protobuf:"bytes,5,opt,name=reason,proto3" json:"reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateAdjustmentRequest) Reset() {
+	*x = CreateAdjustmentRequest{}
+	mi := &file_caritas_share_v1_share_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateAdjustmentRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateAdjustmentRequest) ProtoMessage() {}
+
+func (x *CreateAdjustmentRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_caritas_share_v1_share_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateAdjustmentRequest.ProtoReflect.Descriptor instead.
+func (*CreateAdjustmentRequest) Descriptor() ([]byte, []int) {
+	return file_caritas_share_v1_share_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *CreateAdjustmentRequest) GetAccountId() string {
+	if x != nil {
+		return x.AccountId
+	}
+	return ""
+}
+
+func (x *CreateAdjustmentRequest) GetAmount() *v1.Money {
+	if x != nil {
+		return x.Amount
+	}
+	return nil
+}
+
+func (x *CreateAdjustmentRequest) GetReferenceId() string {
+	if x != nil {
+		return x.ReferenceId
+	}
+	return ""
+}
+
+func (x *CreateAdjustmentRequest) GetOriginatorId() string {
+	if x != nil {
+		return x.OriginatorId
+	}
+	return ""
+}
+
+func (x *CreateAdjustmentRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+type CreateAdjustmentResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TransactionId string                 `protobuf:"bytes,1,opt,name=transaction_id,json=transactionId,proto3" json:"transaction_id,omitempty"`
+	BalanceAfter  *v1.Money              `protobuf:"bytes,2,opt,name=balance_after,json=balanceAfter,proto3" json:"balance_after,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateAdjustmentResponse) Reset() {
+	*x = CreateAdjustmentResponse{}
+	mi := &file_caritas_share_v1_share_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateAdjustmentResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateAdjustmentResponse) ProtoMessage() {}
+
+func (x *CreateAdjustmentResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_caritas_share_v1_share_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateAdjustmentResponse.ProtoReflect.Descriptor instead.
+func (*CreateAdjustmentResponse) Descriptor() ([]byte, []int) {
+	return file_caritas_share_v1_share_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *CreateAdjustmentResponse) GetTransactionId() string {
+	if x != nil {
+		return x.TransactionId
+	}
+	return ""
+}
+
+func (x *CreateAdjustmentResponse) GetBalanceAfter() *v1.Money {
+	if x != nil {
+		return x.BalanceAfter
+	}
+	return nil
 }
 
 var File_caritas_share_v1_share_proto protoreflect.FileDescriptor
@@ -1566,7 +1694,17 @@ const file_caritas_share_v1_share_proto_rawDesc = "" +
 	"\x06reason\x18\x03 \x01(\tR\x06reason\x12&\n" +
 	"\x0faudit_report_id\x18\x04 \x01(\tR\rauditReportId\"E\n" +
 	"\x1eApproveShareAdjustmentResponse\x12#\n" +
-	"\radjustment_id\x18\x01 \x01(\tR\fadjustmentId*\x9e\x01\n" +
+	"\radjustment_id\x18\x01 \x01(\tR\fadjustmentId\"\xca\x01\n" +
+	"\x17CreateAdjustmentRequest\x12\x1d\n" +
+	"\n" +
+	"account_id\x18\x01 \x01(\tR\taccountId\x120\n" +
+	"\x06amount\x18\x02 \x01(\v2\x18.caritas.member.v1.MoneyR\x06amount\x12!\n" +
+	"\freference_id\x18\x03 \x01(\tR\vreferenceId\x12#\n" +
+	"\roriginator_id\x18\x04 \x01(\tR\foriginatorId\x12\x16\n" +
+	"\x06reason\x18\x05 \x01(\tR\x06reason\"\x80\x01\n" +
+	"\x18CreateAdjustmentResponse\x12%\n" +
+	"\x0etransaction_id\x18\x01 \x01(\tR\rtransactionId\x12=\n" +
+	"\rbalance_after\x18\x02 \x01(\v2\x18.caritas.member.v1.MoneyR\fbalanceAfter*\x9e\x01\n" +
 	"\x12ShareAccountStatus\x12$\n" +
 	" SHARE_ACCOUNT_STATUS_UNSPECIFIED\x10\x00\x12\x1f\n" +
 	"\x1bSHARE_ACCOUNT_STATUS_ACTIVE\x10\x01\x12 \n" +
@@ -1578,7 +1716,7 @@ const file_caritas_share_v1_share_proto_rawDesc = "" +
 	"!SHARE_TRANSACTION_TYPE_WITHDRAWAL\x10\x02\x12#\n" +
 	"\x1fSHARE_TRANSACTION_TYPE_DIVIDEND\x10\x03\x12#\n" +
 	"\x1fSHARE_TRANSACTION_TYPE_REVERSAL\x10\x04\x12%\n" +
-	"!SHARE_TRANSACTION_TYPE_ADJUSTMENT\x10\x052\xec\a\n" +
+	"!SHARE_TRANSACTION_TYPE_ADJUSTMENT\x10\x052\xd7\b\n" +
 	"\fShareService\x12i\n" +
 	"\x10OpenShareAccount\x12).caritas.share.v1.OpenShareAccountRequest\x1a*.caritas.share.v1.OpenShareAccountResponse\x12f\n" +
 	"\x0fGetShareAccount\x12(.caritas.share.v1.GetShareAccountRequest\x1a).caritas.share.v1.GetShareAccountResponse\x12l\n" +
@@ -1587,7 +1725,8 @@ const file_caritas_share_v1_share_proto_rawDesc = "" +
 	"\x0eWithdrawShares\x12'.caritas.share.v1.WithdrawSharesRequest\x1a(.caritas.share.v1.WithdrawSharesResponse\x12f\n" +
 	"\x0fGetShareBalance\x12(.caritas.share.v1.GetShareBalanceRequest\x1a).caritas.share.v1.GetShareBalanceResponse\x12x\n" +
 	"\x15ListShareTransactions\x12..caritas.share.v1.ListShareTransactionsRequest\x1a/.caritas.share.v1.ListShareTransactionsResponse\x12r\n" +
-	"\x13GetShareTransaction\x12,.caritas.share.v1.GetShareTransactionRequest\x1a-.caritas.share.v1.GetShareTransactionResponse\x12{\n" +
+	"\x13GetShareTransaction\x12,.caritas.share.v1.GetShareTransactionRequest\x1a-.caritas.share.v1.GetShareTransactionResponse\x12i\n" +
+	"\x10CreateAdjustment\x12).caritas.share.v1.CreateAdjustmentRequest\x1a*.caritas.share.v1.CreateAdjustmentResponse\x12{\n" +
 	"\x16ApproveShareAdjustment\x12/.caritas.share.v1.ApproveShareAdjustmentRequest\x1a0.caritas.share.v1.ApproveShareAdjustmentResponseB\xca\x01\n" +
 	"\x14com.caritas.share.v1B\n" +
 	"ShareProtoP\x01ZDgithub.com/yaninyzwitty/caritas-backend/gen/caritas/share/v1;sharev1\xa2\x02\x03CSX\xaa\x02\x10Caritas.Share.V1\xca\x02\x10Caritas\\Share\\V1\xe2\x02\x1cCaritas\\Share\\V1\\GPBMetadata\xea\x02\x12Caritas::Share::V1b\x06proto3"
@@ -1605,7 +1744,7 @@ func file_caritas_share_v1_share_proto_rawDescGZIP() []byte {
 }
 
 var file_caritas_share_v1_share_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_caritas_share_v1_share_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
+var file_caritas_share_v1_share_proto_msgTypes = make([]protoimpl.MessageInfo, 23)
 var file_caritas_share_v1_share_proto_goTypes = []any{
 	(ShareAccountStatus)(0),                // 0: caritas.share.v1.ShareAccountStatus
 	(ShareTransactionType)(0),              // 1: caritas.share.v1.ShareTransactionType
@@ -1630,53 +1769,59 @@ var file_caritas_share_v1_share_proto_goTypes = []any{
 	(*GetShareTransactionResponse)(nil),    // 20: caritas.share.v1.GetShareTransactionResponse
 	(*ApproveShareAdjustmentRequest)(nil),  // 21: caritas.share.v1.ApproveShareAdjustmentRequest
 	(*ApproveShareAdjustmentResponse)(nil), // 22: caritas.share.v1.ApproveShareAdjustmentResponse
-	(*timestamppb.Timestamp)(nil),          // 23: google.protobuf.Timestamp
-	(*v1.Money)(nil),                       // 24: caritas.member.v1.Money
+	(*CreateAdjustmentRequest)(nil),        // 23: caritas.share.v1.CreateAdjustmentRequest
+	(*CreateAdjustmentResponse)(nil),       // 24: caritas.share.v1.CreateAdjustmentResponse
+	(*timestamppb.Timestamp)(nil),          // 25: google.protobuf.Timestamp
+	(*v1.Money)(nil),                       // 26: caritas.member.v1.Money
 }
 var file_caritas_share_v1_share_proto_depIdxs = []int32{
 	0,  // 0: caritas.share.v1.ShareAccount.status:type_name -> caritas.share.v1.ShareAccountStatus
-	23, // 1: caritas.share.v1.ShareAccount.opened_at:type_name -> google.protobuf.Timestamp
-	23, // 2: caritas.share.v1.ShareAccount.created_at:type_name -> google.protobuf.Timestamp
-	23, // 3: caritas.share.v1.ShareAccount.updated_at:type_name -> google.protobuf.Timestamp
+	25, // 1: caritas.share.v1.ShareAccount.opened_at:type_name -> google.protobuf.Timestamp
+	25, // 2: caritas.share.v1.ShareAccount.created_at:type_name -> google.protobuf.Timestamp
+	25, // 3: caritas.share.v1.ShareAccount.updated_at:type_name -> google.protobuf.Timestamp
 	1,  // 4: caritas.share.v1.ShareTransaction.type:type_name -> caritas.share.v1.ShareTransactionType
-	24, // 5: caritas.share.v1.ShareTransaction.amount:type_name -> caritas.member.v1.Money
-	24, // 6: caritas.share.v1.ShareTransaction.balance_after:type_name -> caritas.member.v1.Money
-	23, // 7: caritas.share.v1.ShareTransaction.created_at:type_name -> google.protobuf.Timestamp
-	23, // 8: caritas.share.v1.ShareAdjustment.created_at:type_name -> google.protobuf.Timestamp
+	26, // 5: caritas.share.v1.ShareTransaction.amount:type_name -> caritas.member.v1.Money
+	26, // 6: caritas.share.v1.ShareTransaction.balance_after:type_name -> caritas.member.v1.Money
+	25, // 7: caritas.share.v1.ShareTransaction.created_at:type_name -> google.protobuf.Timestamp
+	25, // 8: caritas.share.v1.ShareAdjustment.created_at:type_name -> google.protobuf.Timestamp
 	0,  // 9: caritas.share.v1.OpenShareAccountResponse.status:type_name -> caritas.share.v1.ShareAccountStatus
 	2,  // 10: caritas.share.v1.GetShareAccountResponse.account:type_name -> caritas.share.v1.ShareAccount
 	0,  // 11: caritas.share.v1.ListShareAccountsRequest.status_filter:type_name -> caritas.share.v1.ShareAccountStatus
 	2,  // 12: caritas.share.v1.ListShareAccountsResponse.accounts:type_name -> caritas.share.v1.ShareAccount
-	24, // 13: caritas.share.v1.PurchaseSharesRequest.amount:type_name -> caritas.member.v1.Money
-	24, // 14: caritas.share.v1.PurchaseSharesResponse.balance_after:type_name -> caritas.member.v1.Money
-	24, // 15: caritas.share.v1.WithdrawSharesRequest.amount:type_name -> caritas.member.v1.Money
-	24, // 16: caritas.share.v1.WithdrawSharesResponse.balance_after:type_name -> caritas.member.v1.Money
-	24, // 17: caritas.share.v1.GetShareBalanceResponse.balance:type_name -> caritas.member.v1.Money
+	26, // 13: caritas.share.v1.PurchaseSharesRequest.amount:type_name -> caritas.member.v1.Money
+	26, // 14: caritas.share.v1.PurchaseSharesResponse.balance_after:type_name -> caritas.member.v1.Money
+	26, // 15: caritas.share.v1.WithdrawSharesRequest.amount:type_name -> caritas.member.v1.Money
+	26, // 16: caritas.share.v1.WithdrawSharesResponse.balance_after:type_name -> caritas.member.v1.Money
+	26, // 17: caritas.share.v1.GetShareBalanceResponse.balance:type_name -> caritas.member.v1.Money
 	3,  // 18: caritas.share.v1.ListShareTransactionsResponse.transactions:type_name -> caritas.share.v1.ShareTransaction
 	3,  // 19: caritas.share.v1.GetShareTransactionResponse.transaction:type_name -> caritas.share.v1.ShareTransaction
-	5,  // 20: caritas.share.v1.ShareService.OpenShareAccount:input_type -> caritas.share.v1.OpenShareAccountRequest
-	7,  // 21: caritas.share.v1.ShareService.GetShareAccount:input_type -> caritas.share.v1.GetShareAccountRequest
-	9,  // 22: caritas.share.v1.ShareService.ListShareAccounts:input_type -> caritas.share.v1.ListShareAccountsRequest
-	11, // 23: caritas.share.v1.ShareService.PurchaseShares:input_type -> caritas.share.v1.PurchaseSharesRequest
-	13, // 24: caritas.share.v1.ShareService.WithdrawShares:input_type -> caritas.share.v1.WithdrawSharesRequest
-	15, // 25: caritas.share.v1.ShareService.GetShareBalance:input_type -> caritas.share.v1.GetShareBalanceRequest
-	17, // 26: caritas.share.v1.ShareService.ListShareTransactions:input_type -> caritas.share.v1.ListShareTransactionsRequest
-	19, // 27: caritas.share.v1.ShareService.GetShareTransaction:input_type -> caritas.share.v1.GetShareTransactionRequest
-	21, // 28: caritas.share.v1.ShareService.ApproveShareAdjustment:input_type -> caritas.share.v1.ApproveShareAdjustmentRequest
-	6,  // 29: caritas.share.v1.ShareService.OpenShareAccount:output_type -> caritas.share.v1.OpenShareAccountResponse
-	8,  // 30: caritas.share.v1.ShareService.GetShareAccount:output_type -> caritas.share.v1.GetShareAccountResponse
-	10, // 31: caritas.share.v1.ShareService.ListShareAccounts:output_type -> caritas.share.v1.ListShareAccountsResponse
-	12, // 32: caritas.share.v1.ShareService.PurchaseShares:output_type -> caritas.share.v1.PurchaseSharesResponse
-	14, // 33: caritas.share.v1.ShareService.WithdrawShares:output_type -> caritas.share.v1.WithdrawSharesResponse
-	16, // 34: caritas.share.v1.ShareService.GetShareBalance:output_type -> caritas.share.v1.GetShareBalanceResponse
-	18, // 35: caritas.share.v1.ShareService.ListShareTransactions:output_type -> caritas.share.v1.ListShareTransactionsResponse
-	20, // 36: caritas.share.v1.ShareService.GetShareTransaction:output_type -> caritas.share.v1.GetShareTransactionResponse
-	22, // 37: caritas.share.v1.ShareService.ApproveShareAdjustment:output_type -> caritas.share.v1.ApproveShareAdjustmentResponse
-	29, // [29:38] is the sub-list for method output_type
-	20, // [20:29] is the sub-list for method input_type
-	20, // [20:20] is the sub-list for extension type_name
-	20, // [20:20] is the sub-list for extension extendee
-	0,  // [0:20] is the sub-list for field type_name
+	26, // 20: caritas.share.v1.CreateAdjustmentRequest.amount:type_name -> caritas.member.v1.Money
+	26, // 21: caritas.share.v1.CreateAdjustmentResponse.balance_after:type_name -> caritas.member.v1.Money
+	5,  // 22: caritas.share.v1.ShareService.OpenShareAccount:input_type -> caritas.share.v1.OpenShareAccountRequest
+	7,  // 23: caritas.share.v1.ShareService.GetShareAccount:input_type -> caritas.share.v1.GetShareAccountRequest
+	9,  // 24: caritas.share.v1.ShareService.ListShareAccounts:input_type -> caritas.share.v1.ListShareAccountsRequest
+	11, // 25: caritas.share.v1.ShareService.PurchaseShares:input_type -> caritas.share.v1.PurchaseSharesRequest
+	13, // 26: caritas.share.v1.ShareService.WithdrawShares:input_type -> caritas.share.v1.WithdrawSharesRequest
+	15, // 27: caritas.share.v1.ShareService.GetShareBalance:input_type -> caritas.share.v1.GetShareBalanceRequest
+	17, // 28: caritas.share.v1.ShareService.ListShareTransactions:input_type -> caritas.share.v1.ListShareTransactionsRequest
+	19, // 29: caritas.share.v1.ShareService.GetShareTransaction:input_type -> caritas.share.v1.GetShareTransactionRequest
+	23, // 30: caritas.share.v1.ShareService.CreateAdjustment:input_type -> caritas.share.v1.CreateAdjustmentRequest
+	21, // 31: caritas.share.v1.ShareService.ApproveShareAdjustment:input_type -> caritas.share.v1.ApproveShareAdjustmentRequest
+	6,  // 32: caritas.share.v1.ShareService.OpenShareAccount:output_type -> caritas.share.v1.OpenShareAccountResponse
+	8,  // 33: caritas.share.v1.ShareService.GetShareAccount:output_type -> caritas.share.v1.GetShareAccountResponse
+	10, // 34: caritas.share.v1.ShareService.ListShareAccounts:output_type -> caritas.share.v1.ListShareAccountsResponse
+	12, // 35: caritas.share.v1.ShareService.PurchaseShares:output_type -> caritas.share.v1.PurchaseSharesResponse
+	14, // 36: caritas.share.v1.ShareService.WithdrawShares:output_type -> caritas.share.v1.WithdrawSharesResponse
+	16, // 37: caritas.share.v1.ShareService.GetShareBalance:output_type -> caritas.share.v1.GetShareBalanceResponse
+	18, // 38: caritas.share.v1.ShareService.ListShareTransactions:output_type -> caritas.share.v1.ListShareTransactionsResponse
+	20, // 39: caritas.share.v1.ShareService.GetShareTransaction:output_type -> caritas.share.v1.GetShareTransactionResponse
+	24, // 40: caritas.share.v1.ShareService.CreateAdjustment:output_type -> caritas.share.v1.CreateAdjustmentResponse
+	22, // 41: caritas.share.v1.ShareService.ApproveShareAdjustment:output_type -> caritas.share.v1.ApproveShareAdjustmentResponse
+	32, // [32:42] is the sub-list for method output_type
+	22, // [22:32] is the sub-list for method input_type
+	22, // [22:22] is the sub-list for extension type_name
+	22, // [22:22] is the sub-list for extension extendee
+	0,  // [0:22] is the sub-list for field type_name
 }
 
 func init() { file_caritas_share_v1_share_proto_init() }
@@ -1694,7 +1839,7 @@ func file_caritas_share_v1_share_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_caritas_share_v1_share_proto_rawDesc), len(file_caritas_share_v1_share_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   21,
+			NumMessages:   23,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

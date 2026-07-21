@@ -12,40 +12,53 @@ import (
 )
 
 const createLoan = `-- name: CreateLoan :one
-INSERT INTO loans (member_id, branch_id, principal, interest_rate, collateral_value, collateral_coverage_ratio, updated_by)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
-RETURNING id, member_id, branch_id, principal, interest_rate, collateral_value, collateral_coverage_ratio, status, disbursed_at, updated_by, previous_status, is_deleted, created_at, updated_at
+INSERT INTO loans (member_id, branch_id, principal, interest_rate, repayment_period_months, updated_by)
+VALUES ($1, $2, $3, $4, $5, $6)
+RETURNING id, member_id, branch_id, principal, interest_rate, repayment_period_months, status, disbursed_at, updated_by, previous_status, is_deleted, created_at, updated_at
 `
 
 type CreateLoanParams struct {
-	MemberID                pgtype.UUID    `json:"memberId"`
-	BranchID                int64          `json:"branchId"`
-	Principal               pgtype.Numeric `json:"principal"`
-	InterestRate            pgtype.Numeric `json:"interestRate"`
-	CollateralValue         pgtype.Numeric `json:"collateralValue"`
-	CollateralCoverageRatio pgtype.Numeric `json:"collateralCoverageRatio"`
-	UpdatedBy               pgtype.UUID    `json:"updatedBy"`
+	MemberID              pgtype.UUID    `json:"memberId"`
+	BranchID              int64          `json:"branchId"`
+	Principal             pgtype.Numeric `json:"principal"`
+	InterestRate          pgtype.Numeric `json:"interestRate"`
+	RepaymentPeriodMonths int32          `json:"repaymentPeriodMonths"`
+	UpdatedBy             pgtype.UUID    `json:"updatedBy"`
 }
 
-func (q *Queries) CreateLoan(ctx context.Context, arg CreateLoanParams) (Loan, error) {
+type CreateLoanRow struct {
+	ID                    pgtype.UUID        `json:"id"`
+	MemberID              pgtype.UUID        `json:"memberId"`
+	BranchID              int64              `json:"branchId"`
+	Principal             pgtype.Numeric     `json:"principal"`
+	InterestRate          pgtype.Numeric     `json:"interestRate"`
+	RepaymentPeriodMonths int32              `json:"repaymentPeriodMonths"`
+	Status                LoanStatus         `json:"status"`
+	DisbursedAt           pgtype.Timestamptz `json:"disbursedAt"`
+	UpdatedBy             pgtype.UUID        `json:"updatedBy"`
+	PreviousStatus        NullLoanStatus     `json:"previousStatus"`
+	IsDeleted             bool               `json:"isDeleted"`
+	CreatedAt             pgtype.Timestamptz `json:"createdAt"`
+	UpdatedAt             pgtype.Timestamptz `json:"updatedAt"`
+}
+
+func (q *Queries) CreateLoan(ctx context.Context, arg CreateLoanParams) (CreateLoanRow, error) {
 	row := q.db.QueryRow(ctx, createLoan,
 		arg.MemberID,
 		arg.BranchID,
 		arg.Principal,
 		arg.InterestRate,
-		arg.CollateralValue,
-		arg.CollateralCoverageRatio,
+		arg.RepaymentPeriodMonths,
 		arg.UpdatedBy,
 	)
-	var i Loan
+	var i CreateLoanRow
 	err := row.Scan(
 		&i.ID,
 		&i.MemberID,
 		&i.BranchID,
 		&i.Principal,
 		&i.InterestRate,
-		&i.CollateralValue,
-		&i.CollateralCoverageRatio,
+		&i.RepaymentPeriodMonths,
 		&i.Status,
 		&i.DisbursedAt,
 		&i.UpdatedBy,
@@ -58,22 +71,37 @@ func (q *Queries) CreateLoan(ctx context.Context, arg CreateLoanParams) (Loan, e
 }
 
 const getLoanByID = `-- name: GetLoanByID :one
-SELECT id, member_id, branch_id, principal, interest_rate, collateral_value, collateral_coverage_ratio, status, disbursed_at, updated_by, previous_status, is_deleted, created_at, updated_at
+SELECT id, member_id, branch_id, principal, interest_rate, repayment_period_months, status, disbursed_at, updated_by, previous_status, is_deleted, created_at, updated_at
 FROM loans
 WHERE id = $1 AND is_deleted = FALSE
 `
 
-func (q *Queries) GetLoanByID(ctx context.Context, id pgtype.UUID) (Loan, error) {
+type GetLoanByIDRow struct {
+	ID                    pgtype.UUID        `json:"id"`
+	MemberID              pgtype.UUID        `json:"memberId"`
+	BranchID              int64              `json:"branchId"`
+	Principal             pgtype.Numeric     `json:"principal"`
+	InterestRate          pgtype.Numeric     `json:"interestRate"`
+	RepaymentPeriodMonths int32              `json:"repaymentPeriodMonths"`
+	Status                LoanStatus         `json:"status"`
+	DisbursedAt           pgtype.Timestamptz `json:"disbursedAt"`
+	UpdatedBy             pgtype.UUID        `json:"updatedBy"`
+	PreviousStatus        NullLoanStatus     `json:"previousStatus"`
+	IsDeleted             bool               `json:"isDeleted"`
+	CreatedAt             pgtype.Timestamptz `json:"createdAt"`
+	UpdatedAt             pgtype.Timestamptz `json:"updatedAt"`
+}
+
+func (q *Queries) GetLoanByID(ctx context.Context, id pgtype.UUID) (GetLoanByIDRow, error) {
 	row := q.db.QueryRow(ctx, getLoanByID, id)
-	var i Loan
+	var i GetLoanByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.MemberID,
 		&i.BranchID,
 		&i.Principal,
 		&i.InterestRate,
-		&i.CollateralValue,
-		&i.CollateralCoverageRatio,
+		&i.RepaymentPeriodMonths,
 		&i.Status,
 		&i.DisbursedAt,
 		&i.UpdatedBy,
@@ -86,7 +114,7 @@ func (q *Queries) GetLoanByID(ctx context.Context, id pgtype.UUID) (Loan, error)
 }
 
 const listLoansByBranch = `-- name: ListLoansByBranch :many
-SELECT id, member_id, branch_id, principal, interest_rate, collateral_value, collateral_coverage_ratio, status, disbursed_at, updated_by, previous_status, is_deleted, created_at, updated_at
+SELECT id, member_id, branch_id, principal, interest_rate, repayment_period_months, status, disbursed_at, updated_by, previous_status, is_deleted, created_at, updated_at
 FROM loans
 WHERE branch_id = $1
   AND is_deleted = FALSE
@@ -104,7 +132,23 @@ type ListLoansByBranchParams struct {
 	StatusFilter NullLoanStatus     `json:"statusFilter"`
 }
 
-func (q *Queries) ListLoansByBranch(ctx context.Context, arg ListLoansByBranchParams) ([]Loan, error) {
+type ListLoansByBranchRow struct {
+	ID                    pgtype.UUID        `json:"id"`
+	MemberID              pgtype.UUID        `json:"memberId"`
+	BranchID              int64              `json:"branchId"`
+	Principal             pgtype.Numeric     `json:"principal"`
+	InterestRate          pgtype.Numeric     `json:"interestRate"`
+	RepaymentPeriodMonths int32              `json:"repaymentPeriodMonths"`
+	Status                LoanStatus         `json:"status"`
+	DisbursedAt           pgtype.Timestamptz `json:"disbursedAt"`
+	UpdatedBy             pgtype.UUID        `json:"updatedBy"`
+	PreviousStatus        NullLoanStatus     `json:"previousStatus"`
+	IsDeleted             bool               `json:"isDeleted"`
+	CreatedAt             pgtype.Timestamptz `json:"createdAt"`
+	UpdatedAt             pgtype.Timestamptz `json:"updatedAt"`
+}
+
+func (q *Queries) ListLoansByBranch(ctx context.Context, arg ListLoansByBranchParams) ([]ListLoansByBranchRow, error) {
 	rows, err := q.db.Query(ctx, listLoansByBranch,
 		arg.BranchID,
 		arg.Column2,
@@ -116,17 +160,16 @@ func (q *Queries) ListLoansByBranch(ctx context.Context, arg ListLoansByBranchPa
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Loan
+	var items []ListLoansByBranchRow
 	for rows.Next() {
-		var i Loan
+		var i ListLoansByBranchRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.MemberID,
 			&i.BranchID,
 			&i.Principal,
 			&i.InterestRate,
-			&i.CollateralValue,
-			&i.CollateralCoverageRatio,
+			&i.RepaymentPeriodMonths,
 			&i.Status,
 			&i.DisbursedAt,
 			&i.UpdatedBy,
@@ -146,7 +189,7 @@ func (q *Queries) ListLoansByBranch(ctx context.Context, arg ListLoansByBranchPa
 }
 
 const listLoansByMember = `-- name: ListLoansByMember :many
-SELECT id, member_id, branch_id, principal, interest_rate, collateral_value, collateral_coverage_ratio, status, disbursed_at, updated_by, previous_status, is_deleted, created_at, updated_at
+SELECT id, member_id, branch_id, principal, interest_rate, repayment_period_months, status, disbursed_at, updated_by, previous_status, is_deleted, created_at, updated_at
 FROM loans
 WHERE member_id = $1
   AND is_deleted = FALSE
@@ -162,7 +205,23 @@ type ListLoansByMemberParams struct {
 	Limit    int32              `json:"limit"`
 }
 
-func (q *Queries) ListLoansByMember(ctx context.Context, arg ListLoansByMemberParams) ([]Loan, error) {
+type ListLoansByMemberRow struct {
+	ID                    pgtype.UUID        `json:"id"`
+	MemberID              pgtype.UUID        `json:"memberId"`
+	BranchID              int64              `json:"branchId"`
+	Principal             pgtype.Numeric     `json:"principal"`
+	InterestRate          pgtype.Numeric     `json:"interestRate"`
+	RepaymentPeriodMonths int32              `json:"repaymentPeriodMonths"`
+	Status                LoanStatus         `json:"status"`
+	DisbursedAt           pgtype.Timestamptz `json:"disbursedAt"`
+	UpdatedBy             pgtype.UUID        `json:"updatedBy"`
+	PreviousStatus        NullLoanStatus     `json:"previousStatus"`
+	IsDeleted             bool               `json:"isDeleted"`
+	CreatedAt             pgtype.Timestamptz `json:"createdAt"`
+	UpdatedAt             pgtype.Timestamptz `json:"updatedAt"`
+}
+
+func (q *Queries) ListLoansByMember(ctx context.Context, arg ListLoansByMemberParams) ([]ListLoansByMemberRow, error) {
 	rows, err := q.db.Query(ctx, listLoansByMember,
 		arg.MemberID,
 		arg.Column2,
@@ -173,17 +232,16 @@ func (q *Queries) ListLoansByMember(ctx context.Context, arg ListLoansByMemberPa
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Loan
+	var items []ListLoansByMemberRow
 	for rows.Next() {
-		var i Loan
+		var i ListLoansByMemberRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.MemberID,
 			&i.BranchID,
 			&i.Principal,
 			&i.InterestRate,
-			&i.CollateralValue,
-			&i.CollateralCoverageRatio,
+			&i.RepaymentPeriodMonths,
 			&i.Status,
 			&i.DisbursedAt,
 			&i.UpdatedBy,
@@ -203,7 +261,7 @@ func (q *Queries) ListLoansByMember(ctx context.Context, arg ListLoansByMemberPa
 }
 
 const listLoansForDelinquencyUpdate = `-- name: ListLoansForDelinquencyUpdate :many
-SELECT id, member_id, branch_id, principal, interest_rate, collateral_value, collateral_coverage_ratio, status, disbursed_at, updated_by, previous_status, is_deleted, created_at, updated_at
+SELECT id, member_id, branch_id, principal, interest_rate, repayment_period_months, status, disbursed_at, updated_by, previous_status, is_deleted, created_at, updated_at
 FROM loans
 WHERE status IN ('active', 'delinquent')
   AND is_deleted = FALSE
@@ -212,23 +270,38 @@ LIMIT $1
 FOR UPDATE SKIP LOCKED
 `
 
-func (q *Queries) ListLoansForDelinquencyUpdate(ctx context.Context, limit int32) ([]Loan, error) {
+type ListLoansForDelinquencyUpdateRow struct {
+	ID                    pgtype.UUID        `json:"id"`
+	MemberID              pgtype.UUID        `json:"memberId"`
+	BranchID              int64              `json:"branchId"`
+	Principal             pgtype.Numeric     `json:"principal"`
+	InterestRate          pgtype.Numeric     `json:"interestRate"`
+	RepaymentPeriodMonths int32              `json:"repaymentPeriodMonths"`
+	Status                LoanStatus         `json:"status"`
+	DisbursedAt           pgtype.Timestamptz `json:"disbursedAt"`
+	UpdatedBy             pgtype.UUID        `json:"updatedBy"`
+	PreviousStatus        NullLoanStatus     `json:"previousStatus"`
+	IsDeleted             bool               `json:"isDeleted"`
+	CreatedAt             pgtype.Timestamptz `json:"createdAt"`
+	UpdatedAt             pgtype.Timestamptz `json:"updatedAt"`
+}
+
+func (q *Queries) ListLoansForDelinquencyUpdate(ctx context.Context, limit int32) ([]ListLoansForDelinquencyUpdateRow, error) {
 	rows, err := q.db.Query(ctx, listLoansForDelinquencyUpdate, limit)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Loan
+	var items []ListLoansForDelinquencyUpdateRow
 	for rows.Next() {
-		var i Loan
+		var i ListLoansForDelinquencyUpdateRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.MemberID,
 			&i.BranchID,
 			&i.Principal,
 			&i.InterestRate,
-			&i.CollateralValue,
-			&i.CollateralCoverageRatio,
+			&i.RepaymentPeriodMonths,
 			&i.Status,
 			&i.DisbursedAt,
 			&i.UpdatedBy,
@@ -248,23 +321,38 @@ func (q *Queries) ListLoansForDelinquencyUpdate(ctx context.Context, limit int32
 }
 
 const lockLoanByID = `-- name: LockLoanByID :one
-SELECT id, member_id, branch_id, principal, interest_rate, collateral_value, collateral_coverage_ratio, status, disbursed_at, updated_by, previous_status, is_deleted, created_at, updated_at
+SELECT id, member_id, branch_id, principal, interest_rate, repayment_period_months, status, disbursed_at, updated_by, previous_status, is_deleted, created_at, updated_at
 FROM loans
 WHERE id = $1 AND is_deleted = FALSE
 FOR UPDATE
 `
 
-func (q *Queries) LockLoanByID(ctx context.Context, id pgtype.UUID) (Loan, error) {
+type LockLoanByIDRow struct {
+	ID                    pgtype.UUID        `json:"id"`
+	MemberID              pgtype.UUID        `json:"memberId"`
+	BranchID              int64              `json:"branchId"`
+	Principal             pgtype.Numeric     `json:"principal"`
+	InterestRate          pgtype.Numeric     `json:"interestRate"`
+	RepaymentPeriodMonths int32              `json:"repaymentPeriodMonths"`
+	Status                LoanStatus         `json:"status"`
+	DisbursedAt           pgtype.Timestamptz `json:"disbursedAt"`
+	UpdatedBy             pgtype.UUID        `json:"updatedBy"`
+	PreviousStatus        NullLoanStatus     `json:"previousStatus"`
+	IsDeleted             bool               `json:"isDeleted"`
+	CreatedAt             pgtype.Timestamptz `json:"createdAt"`
+	UpdatedAt             pgtype.Timestamptz `json:"updatedAt"`
+}
+
+func (q *Queries) LockLoanByID(ctx context.Context, id pgtype.UUID) (LockLoanByIDRow, error) {
 	row := q.db.QueryRow(ctx, lockLoanByID, id)
-	var i Loan
+	var i LockLoanByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.MemberID,
 		&i.BranchID,
 		&i.Principal,
 		&i.InterestRate,
-		&i.CollateralValue,
-		&i.CollateralCoverageRatio,
+		&i.RepaymentPeriodMonths,
 		&i.Status,
 		&i.DisbursedAt,
 		&i.UpdatedBy,
@@ -284,7 +372,7 @@ SET previous_status = status,
     updated_by = $2,
     updated_at = NOW()
 WHERE id = $1 AND status = 'approved' AND is_deleted = FALSE
-RETURNING id, member_id, branch_id, principal, interest_rate, collateral_value, collateral_coverage_ratio, status, disbursed_at, updated_by, previous_status, is_deleted, created_at, updated_at
+RETURNING id, member_id, branch_id, principal, interest_rate, repayment_period_months, status, disbursed_at, updated_by, previous_status, is_deleted, created_at, updated_at
 `
 
 type MarkLoanDisbursedParams struct {
@@ -292,17 +380,32 @@ type MarkLoanDisbursedParams struct {
 	UpdatedBy pgtype.UUID `json:"updatedBy"`
 }
 
-func (q *Queries) MarkLoanDisbursed(ctx context.Context, arg MarkLoanDisbursedParams) (Loan, error) {
+type MarkLoanDisbursedRow struct {
+	ID                    pgtype.UUID        `json:"id"`
+	MemberID              pgtype.UUID        `json:"memberId"`
+	BranchID              int64              `json:"branchId"`
+	Principal             pgtype.Numeric     `json:"principal"`
+	InterestRate          pgtype.Numeric     `json:"interestRate"`
+	RepaymentPeriodMonths int32              `json:"repaymentPeriodMonths"`
+	Status                LoanStatus         `json:"status"`
+	DisbursedAt           pgtype.Timestamptz `json:"disbursedAt"`
+	UpdatedBy             pgtype.UUID        `json:"updatedBy"`
+	PreviousStatus        NullLoanStatus     `json:"previousStatus"`
+	IsDeleted             bool               `json:"isDeleted"`
+	CreatedAt             pgtype.Timestamptz `json:"createdAt"`
+	UpdatedAt             pgtype.Timestamptz `json:"updatedAt"`
+}
+
+func (q *Queries) MarkLoanDisbursed(ctx context.Context, arg MarkLoanDisbursedParams) (MarkLoanDisbursedRow, error) {
 	row := q.db.QueryRow(ctx, markLoanDisbursed, arg.ID, arg.UpdatedBy)
-	var i Loan
+	var i MarkLoanDisbursedRow
 	err := row.Scan(
 		&i.ID,
 		&i.MemberID,
 		&i.BranchID,
 		&i.Principal,
 		&i.InterestRate,
-		&i.CollateralValue,
-		&i.CollateralCoverageRatio,
+		&i.RepaymentPeriodMonths,
 		&i.Status,
 		&i.DisbursedAt,
 		&i.UpdatedBy,
@@ -320,7 +423,7 @@ SET is_deleted = TRUE,
     updated_by = $2,
     updated_at = NOW()
 WHERE id = $1 AND is_deleted = FALSE
-RETURNING id, member_id, branch_id, principal, interest_rate, collateral_value, collateral_coverage_ratio, status, disbursed_at, updated_by, previous_status, is_deleted, created_at, updated_at
+RETURNING id, member_id, branch_id, principal, interest_rate, repayment_period_months, status, disbursed_at, updated_by, previous_status, is_deleted, created_at, updated_at
 `
 
 type SoftDeleteLoanParams struct {
@@ -328,61 +431,32 @@ type SoftDeleteLoanParams struct {
 	UpdatedBy pgtype.UUID `json:"updatedBy"`
 }
 
-func (q *Queries) SoftDeleteLoan(ctx context.Context, arg SoftDeleteLoanParams) (Loan, error) {
+type SoftDeleteLoanRow struct {
+	ID                    pgtype.UUID        `json:"id"`
+	MemberID              pgtype.UUID        `json:"memberId"`
+	BranchID              int64              `json:"branchId"`
+	Principal             pgtype.Numeric     `json:"principal"`
+	InterestRate          pgtype.Numeric     `json:"interestRate"`
+	RepaymentPeriodMonths int32              `json:"repaymentPeriodMonths"`
+	Status                LoanStatus         `json:"status"`
+	DisbursedAt           pgtype.Timestamptz `json:"disbursedAt"`
+	UpdatedBy             pgtype.UUID        `json:"updatedBy"`
+	PreviousStatus        NullLoanStatus     `json:"previousStatus"`
+	IsDeleted             bool               `json:"isDeleted"`
+	CreatedAt             pgtype.Timestamptz `json:"createdAt"`
+	UpdatedAt             pgtype.Timestamptz `json:"updatedAt"`
+}
+
+func (q *Queries) SoftDeleteLoan(ctx context.Context, arg SoftDeleteLoanParams) (SoftDeleteLoanRow, error) {
 	row := q.db.QueryRow(ctx, softDeleteLoan, arg.ID, arg.UpdatedBy)
-	var i Loan
+	var i SoftDeleteLoanRow
 	err := row.Scan(
 		&i.ID,
 		&i.MemberID,
 		&i.BranchID,
 		&i.Principal,
 		&i.InterestRate,
-		&i.CollateralValue,
-		&i.CollateralCoverageRatio,
-		&i.Status,
-		&i.DisbursedAt,
-		&i.UpdatedBy,
-		&i.PreviousStatus,
-		&i.IsDeleted,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const updateLoanCollateral = `-- name: UpdateLoanCollateral :one
-UPDATE loans
-SET collateral_value = $2,
-    collateral_coverage_ratio = $3,
-    updated_by = $4,
-    updated_at = NOW()
-WHERE id = $1 AND is_deleted = FALSE
-RETURNING id, member_id, branch_id, principal, interest_rate, collateral_value, collateral_coverage_ratio, status, disbursed_at, updated_by, previous_status, is_deleted, created_at, updated_at
-`
-
-type UpdateLoanCollateralParams struct {
-	ID                      pgtype.UUID    `json:"id"`
-	CollateralValue         pgtype.Numeric `json:"collateralValue"`
-	CollateralCoverageRatio pgtype.Numeric `json:"collateralCoverageRatio"`
-	UpdatedBy               pgtype.UUID    `json:"updatedBy"`
-}
-
-func (q *Queries) UpdateLoanCollateral(ctx context.Context, arg UpdateLoanCollateralParams) (Loan, error) {
-	row := q.db.QueryRow(ctx, updateLoanCollateral,
-		arg.ID,
-		arg.CollateralValue,
-		arg.CollateralCoverageRatio,
-		arg.UpdatedBy,
-	)
-	var i Loan
-	err := row.Scan(
-		&i.ID,
-		&i.MemberID,
-		&i.BranchID,
-		&i.Principal,
-		&i.InterestRate,
-		&i.CollateralValue,
-		&i.CollateralCoverageRatio,
+		&i.RepaymentPeriodMonths,
 		&i.Status,
 		&i.DisbursedAt,
 		&i.UpdatedBy,
@@ -401,7 +475,7 @@ SET previous_status = status,
     updated_by = $3,
     updated_at = NOW()
 WHERE id = $1 AND is_deleted = FALSE
-RETURNING id, member_id, branch_id, principal, interest_rate, collateral_value, collateral_coverage_ratio, status, disbursed_at, updated_by, previous_status, is_deleted, created_at, updated_at
+RETURNING id, member_id, branch_id, principal, interest_rate, repayment_period_months, status, disbursed_at, updated_by, previous_status, is_deleted, created_at, updated_at
 `
 
 type UpdateLoanStatusParams struct {
@@ -410,17 +484,32 @@ type UpdateLoanStatusParams struct {
 	UpdatedBy pgtype.UUID `json:"updatedBy"`
 }
 
-func (q *Queries) UpdateLoanStatus(ctx context.Context, arg UpdateLoanStatusParams) (Loan, error) {
+type UpdateLoanStatusRow struct {
+	ID                    pgtype.UUID        `json:"id"`
+	MemberID              pgtype.UUID        `json:"memberId"`
+	BranchID              int64              `json:"branchId"`
+	Principal             pgtype.Numeric     `json:"principal"`
+	InterestRate          pgtype.Numeric     `json:"interestRate"`
+	RepaymentPeriodMonths int32              `json:"repaymentPeriodMonths"`
+	Status                LoanStatus         `json:"status"`
+	DisbursedAt           pgtype.Timestamptz `json:"disbursedAt"`
+	UpdatedBy             pgtype.UUID        `json:"updatedBy"`
+	PreviousStatus        NullLoanStatus     `json:"previousStatus"`
+	IsDeleted             bool               `json:"isDeleted"`
+	CreatedAt             pgtype.Timestamptz `json:"createdAt"`
+	UpdatedAt             pgtype.Timestamptz `json:"updatedAt"`
+}
+
+func (q *Queries) UpdateLoanStatus(ctx context.Context, arg UpdateLoanStatusParams) (UpdateLoanStatusRow, error) {
 	row := q.db.QueryRow(ctx, updateLoanStatus, arg.ID, arg.Status, arg.UpdatedBy)
-	var i Loan
+	var i UpdateLoanStatusRow
 	err := row.Scan(
 		&i.ID,
 		&i.MemberID,
 		&i.BranchID,
 		&i.Principal,
 		&i.InterestRate,
-		&i.CollateralValue,
-		&i.CollateralCoverageRatio,
+		&i.RepaymentPeriodMonths,
 		&i.Status,
 		&i.DisbursedAt,
 		&i.UpdatedBy,

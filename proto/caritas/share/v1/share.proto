@@ -16,6 +16,7 @@ service ShareService {
   rpc GetShareBalance(GetShareBalanceRequest) returns (GetShareBalanceResponse);
   rpc ListShareTransactions(ListShareTransactionsRequest) returns (ListShareTransactionsResponse);
   rpc GetShareTransaction(GetShareTransactionRequest) returns (GetShareTransactionResponse);
+  rpc CreateAdjustment(CreateAdjustmentRequest) returns (CreateAdjustmentResponse);
   rpc ApproveShareAdjustment(ApproveShareAdjustmentRequest) returns (ApproveShareAdjustmentResponse);
 }
 
@@ -158,11 +159,24 @@ message GetShareTransactionResponse {
 
 message ApproveShareAdjustmentRequest {
   string transaction_id  = 1;
-  string approver_id     = 2;
+  string approver_id     = 2; // fix this with proper authentication JWT
   string reason          = 3;
   string audit_report_id = 4;
 }
 
 message ApproveShareAdjustmentResponse {
   string adjustment_id = 1;
+}
+
+message CreateAdjustmentRequest {
+  string                  account_id    = 1;
+  caritas.member.v1.Money amount        = 2;
+  string                  reference_id  = 3;
+  string                  originator_id = 4;
+  string                  reason        = 5;
+}
+
+message CreateAdjustmentResponse {
+  string                  transaction_id = 1;
+  caritas.member.v1.Money balance_after  = 2;
 }

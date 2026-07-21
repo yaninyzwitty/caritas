@@ -1,0 +1,122 @@
+syntax = "proto3";
+
+package caritas.loan.v1;
+
+option go_package = "github.com/yaninyzwitty/caritas-backend/gen/caritas/loan/v1";
+
+import "google/protobuf/timestamp.proto";
+
+// RepaymentService handles loan repayment recording and schedule queries.
+service RepaymentService {
+  // RecordRepayment records a loan repayment transaction.
+  rpc RecordRepayment(RecordRepaymentRequest) returns (RecordRepaymentResponse);
+
+  // GetRepaymentSchedule retrieves the full repayment schedule for a loan.
+  rpc GetRepaymentSchedule(GetRepaymentScheduleRequest) returns (GetRepaymentScheduleResponse);
+
+  // GetInstallmentDetails retrieves details of a specific repayment installment.
+  rpc GetInstallmentDetails(GetInstallmentDetailsRequest) returns (GetInstallmentDetailsResponse);
+
+  // GetPaymentHistory retrieves the payment transaction history for a loan.
+  rpc GetPaymentHistory(GetPaymentHistoryRequest) returns (GetPaymentHistoryResponse);
+}
+
+// RepaymentStatus represents the status of a repayment installment.
+enum RepaymentStatus {
+  REPAYMENT_STATUS_UNSPECIFIED = 0;
+  REPAYMENT_STATUS_UPCOMING    = 1;
+  REPAYMENT_STATUS_DUE         = 2;
+  REPAYMENT_STATUS_PAID        = 3;
+  REPAYMENT_STATUS_MISSED      = 4;
+  REPAYMENT_STATUS_PARTIAL     = 5;
+}
+
+// TransactionType represents the type of loan transaction.
+enum TransactionType {
+  TRANSACTION_TYPE_UNSPECIFIED        = 0;
+  TRANSACTION_TYPE_DISBURSEMENT       = 1;
+  TRANSACTION_TYPE_REPAYMENT          = 2;
+  TRANSACTION_TYPE_PENALTY            = 3;
+  TRANSACTION_TYPE_REVERSAL           = 4;
+  TRANSACTION_TYPE_CREDIT_WITHDRAWAL  = 5;
+}
+
+// RepaymentSchedule represents a single loan installment.
+message RepaymentSchedule {
+  string                    id          = 1;
+  string                    loan_id     = 2;
+  int32                     installment_no = 3;
+  google.protobuf.Timestamp  due_date    = 4;
+  string                    amount_due  = 5;  // decimal.Decimal as string
+  RepaymentStatus           status      = 6;
+}
+
+// LoanTransaction represents an append-only ledger entry for loan operations.
+message LoanTransaction {
+  string                           type                           = 1;  // TransactionType as string for flexibility
+  string                           amount                         = 2;  // decimal.Decimal as string
+  string                           reference_id                   = 3;  // Internal tracking ID
+  string                           payment_gateway_transaction_id = 4;  // External gateway ID for idempotency
+  google.protobuf.Timestamp        created_at                     = 5;
+  string                           created_by                     = 6;
+  string                           loan_id                        = 7;
+  string                           transaction_id                 = 8;
+}
+
+// AllocationBreakdown details how a payment was allocated.
+message AllocationBreakdown {
+  string principal = 1;  // decimal.Decimal as string
+  string interest  = 2;  // decimal.Decimal as string
+  string penalty   = 3;  // decimal.Decimal as string
+  string credit    = 4;  // decimal.Decimal as string
+}
+
+// RecordRepaymentRequest contains the information needed to record a loan repayment.
+message RecordRepaymentRequest {
+  string loan_id                         = 1;
+  string amount                          = 2;  // decimal.Decimal as string
+  string payment_gateway_transaction_id   = 3;  // External gateway ID for idempotency
+  string created_by                      = 4;  // Who initiated this repayment
+}
+
+// RecordRepaymentResponse confirms the repayment was recorded.
+message RecordRepaymentResponse {
+  string                           transaction_id = 1;
+  google.protobuf.Timestamp        recorded_at    = 2;
+  AllocationBreakdown             allocation    = 3;
+}
+
+// GetRepaymentScheduleRequest requests the repayment schedule for a loan.
+message GetRepaymentScheduleRequest {
+  string loan_id = 1;
+}
+
+// GetRepaymentScheduleResponse returns the complete repayment schedule.
+message GetRepaymentScheduleResponse {
+  repeated RepaymentSchedule schedule = 1;
+}
+
+// GetInstallmentDetailsRequest requests details of a specific installment.
+message GetInstallmentDetailsRequest {
+  string loan_id        = 1;
+  int32  installment_no = 2;
+}
+
+// GetInstallmentDetailsResponse returns details of the requested installment.
+message GetInstallmentDetailsResponse {
+  RepaymentSchedule installment = 1;
+}
+
+// GetPaymentHistoryRequest requests the payment transaction history for a loan.
+message GetPaymentHistoryRequest {
+  string loan_id  = 1;
+  int32  page_size = 2;
+  string page_token = 3;
+  TransactionType type_filter = 4;  // Optional: filter by transaction type
+}
+
+// GetPaymentHistoryResponse returns the payment transaction history.
+message GetPaymentHistoryResponse {
+  repeated LoanTransaction transactions   = 1;
+  string                    next_page_token = 2;
+}

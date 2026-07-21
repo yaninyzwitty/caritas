@@ -1,0 +1,252 @@
+syntax = "proto3";
+
+package caritas.loan.v1;
+
+option go_package = "github.com/yaninyzwitty/caritas-backend/gen/caritas/loan/v1";
+
+import "google/protobuf/timestamp.proto";
+
+// LoanService manages loan lifecycle operations including application, approval, and disbursement.
+service LoanService {
+  // ApplyForLoan submits a new loan application for a member.
+  rpc ApplyForLoan(ApplyForLoanRequest) returns (ApplyForLoanResponse);
+
+  // ApproveLoan approves a pending loan application.
+  rpc ApproveLoan(ApproveLoanRequest) returns (ApproveLoanResponse);
+
+  // RejectLoan rejects a pending loan application.
+  rpc RejectLoan(RejectLoanRequest) returns (RejectLoanResponse);
+
+  // DisburseLoan disburses approved loan funds to the member.
+  rpc DisburseLoan(DisburseLoanRequest) returns (DisburseLoanResponse);
+
+  // GetLoan retrieves loan details by ID.
+  rpc GetLoan(GetLoanRequest) returns (GetLoanResponse);
+
+  // ListLoans lists loans with cursor-based pagination. Supports optional filtering by status and member.
+  rpc ListLoans(ListLoansRequest) returns (ListLoansResponse);
+
+  // GetLoanStatus retrieves the current status of a loan.
+  rpc GetLoanStatus(GetLoanStatusRequest) returns (GetLoanStatusResponse);
+
+  // AddGuarantor adds a guarantor to a loan application.
+  rpc AddGuarantor(AddGuarantorRequest) returns (AddGuarantorResponse);
+
+  // RemoveGuarantor removes a guarantor from a loan application.
+  rpc RemoveGuarantor(RemoveGuarantorRequest) returns (RemoveGuarantorResponse);
+
+  // ApproveGuarantor approves a pending guarantor for a loan.
+  rpc ApproveGuarantor(ApproveGuarantorRequest) returns (ApproveGuarantorResponse);
+
+  // ListGuarantors lists all guarantors for a specific loan.
+  rpc ListGuarantors(ListGuarantorsRequest) returns (ListGuarantorsResponse);
+}
+
+// LoanStatus represents the lifecycle states of a loan.
+enum LoanStatus {
+  LOAN_STATUS_UNSPECIFIED    = 0;
+  LOAN_STATUS_PENDING        = 1;
+  LOAN_STATUS_APPROVED       = 2;
+  LOAN_STATUS_REJECTED       = 3;
+  LOAN_STATUS_DISBURSED      = 4;
+  LOAN_STATUS_RESTRUCTURING  = 5;
+  LOAN_STATUS_ACTIVE         = 6;
+  LOAN_STATUS_DELINQUENT     = 7;
+  LOAN_STATUS_CLOSED         = 8;
+  LOAN_STATUS_WRITTEN_OFF    = 9;
+  LOAN_STATUS_MANUAL_REVIEW  = 10;
+}
+
+// GuarantorStatus represents the approval status of a loan guarantor.
+enum GuarantorStatus {
+  GUARANTOR_STATUS_UNSPECIFIED = 0;
+  GUARANTOR_STATUS_PENDING     = 1;
+  GUARANTOR_STATUS_APPROVED    = 2;
+  GUARANTOR_STATUS_REJECTED    = 3;
+}
+
+// CreditStatus represents the availability status of a credit balance.
+enum CreditStatus {
+  CREDIT_STATUS_UNSPECIFIED = 0;
+  CREDIT_STATUS_AVAILABLE   = 1;
+  CREDIT_STATUS_FROZEN      = 2;
+  CREDIT_STATUS_WITHDRAWN   = 3;
+}
+
+// Loan represents a SACCO loan with its complete information.
+message Loan {
+  string                           id                       = 1;
+  string                           member_id                = 2;
+  string                           branch_id                = 3;
+  string                           principal                = 4;  // decimal.Decimal as string
+  string                           interest_rate            = 5;  // decimal.Decimal as string (percentage rate)
+  int32                            repayment_period_months  = 6;
+  LoanStatus                       status                   = 7;
+  google.protobuf.Timestamp        disbursed_at             = 8;
+  google.protobuf.Timestamp        created_at               = 9;
+  google.protobuf.Timestamp        updated_at               = 10;
+  string                           updated_by               = 11;
+  string                           previous_status          = 12;
+}
+
+// LoanGuarantor represents a member who guarantees a loan.
+message LoanGuarantor {
+  string                    loan_id          = 1;
+  string                    guarantor_id     = 2;  // Member ID who guarantees the loan
+  string                    guaranteed_amount = 3;  // decimal.Decimal as string
+  GuarantorStatus           status           = 4;
+  google.protobuf.Timestamp approved_at       = 5;
+  string                    approved_by       = 6;
+  google.protobuf.Timestamp created_at        = 7;
+}
+
+// CreditBalance represents overpayment tracking for a loan.
+message CreditBalance {
+  string                    id              = 1;
+  string                    member_id       = 2;
+  string                    loan_id         = 3;  // Nullable. Credit can be general or loan-specific
+  string                    amount          = 4;  // decimal.Decimal as string (current balance)
+  string                    source          = 5;  // How credit was accumulated: "overpayment", "refund", "adjustment"
+  CreditStatus              status          = 6;
+  google.protobuf.Timestamp created_at      = 7;
+  google.protobuf.Timestamp last_activity_at = 8;
+}
+
+// ApplyForLoanRequest contains the information needed to apply for a new loan.
+message ApplyForLoanRequest {
+  string  member_id               = 1;
+  string  branch_id               = 2;
+  string  principal               = 3;  // decimal.Decimal as string
+  string  interest_rate           = 4;  // decimal.Decimal as string (percentage rate)
+  int32   repayment_period_months = 5;
+  repeated string guarantor_ids   = 6;  // Initial list of proposed guarantors
+}
+
+// ApplyForLoanResponse returns the newly created loan application's identifiers.
+message ApplyForLoanResponse {
+  string     loan_id = 1;
+  LoanStatus status  = 2;
+}
+
+// ApproveLoanRequest specifies the loan to approve.
+message ApproveLoanRequest {
+  string loan_id = 1;
+  string reason  = 2;
+}
+
+// ApproveLoanResponse confirms the loan approval.
+message ApproveLoanResponse {
+  LoanStatus              new_status = 1;
+  google.protobuf.Timestamp approved_at = 2;
+}
+
+// RejectLoanRequest specifies the loan to reject with a reason.
+message RejectLoanRequest {
+  string loan_id = 1;
+  string reason  = 2;
+}
+
+// RejectLoanResponse confirms the loan rejection.
+message RejectLoanResponse {
+  LoanStatus              new_status = 1;
+  google.protobuf.Timestamp rejected_at = 2;
+}
+
+// DisburseLoanRequest specifies the loan to disburse.
+message DisburseLoanRequest {
+  string loan_id = 1;
+}
+
+// DisburseLoanResponse confirms the loan disbursement.
+message DisburseLoanResponse {
+  LoanStatus              new_status   = 1;
+  google.protobuf.Timestamp disbursed_at = 2;
+  string                  reference_id = 3;
+}
+
+// GetLoanRequest specifies which loan to retrieve.
+message GetLoanRequest {
+  string loan_id = 1;
+}
+
+// GetLoanResponse returns the requested loan.
+message GetLoanResponse {
+  Loan loan = 1;
+}
+
+// ListLoansRequest specifies filtering and pagination for listing loans.
+message ListLoansRequest {
+  int32        page_size     = 1;
+  string       page_token    = 2;
+  LoanStatus   status_filter = 3;
+  string       member_id     = 4;  // Optional: filter by member
+  string       branch_id     = 5;  // Optional: filter by branch
+}
+
+// ListLoansResponse returns a paginated list of loans.
+message ListLoansResponse {
+  repeated Loan loans          = 1;
+  string       next_page_token = 2;
+}
+
+// GetLoanStatusRequest requests the current status of a loan.
+message GetLoanStatusRequest {
+  string loan_id = 1;
+}
+
+// GetLoanStatusResponse returns the loan's current status.
+message GetLoanStatusResponse {
+  LoanStatus status         = 1;
+  string     previous_status = 2;
+  google.protobuf.Timestamp last_updated = 3;
+}
+
+// AddGuarantorRequest specifies the loan and guarantor to add.
+message AddGuarantorRequest {
+  string loan_id      = 1;
+  string guarantor_id = 2;
+  string guaranteed_amount = 3;  // decimal.Decimal as string
+}
+
+// AddGuarantorResponse confirms the guarantor was added.
+message AddGuarantorResponse {
+  GuarantorStatus status    = 1;
+  google.protobuf.Timestamp created_at = 2;
+}
+
+// RemoveGuarantorRequest specifies the loan and guarantor to remove.
+message RemoveGuarantorRequest {
+  string loan_id      = 1;
+  string guarantor_id = 2;
+}
+
+// RemoveGuarantorResponse confirms the guarantor was removed.
+message RemoveGuarantorResponse {
+  bool success = 1;
+}
+
+// ApproveGuarantorRequest specifies the guarantor to approve.
+message ApproveGuarantorRequest {
+  string loan_id      = 1;
+  string guarantor_id = 2;
+  string approved_by  = 3;  // Admin ID who is approving
+}
+
+// ApproveGuarantorResponse confirms the guarantor approval.
+message ApproveGuarantorResponse {
+  GuarantorStatus           new_status = 1;
+  google.protobuf.Timestamp approved_at = 2;
+}
+
+// ListGuarantorsRequest requests guarantors for a specific loan.
+message ListGuarantorsRequest {
+  string loan_id  = 1;
+  int32  page_size = 2;
+  string page_token = 3;
+}
+
+// ListGuarantorsResponse returns guarantors for a loan.
+message ListGuarantorsResponse {
+  repeated LoanGuarantor guarantors      = 1;
+  string                 next_page_token = 2;
+}

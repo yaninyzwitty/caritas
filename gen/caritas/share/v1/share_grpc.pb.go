@@ -27,6 +27,7 @@ const (
 	ShareService_GetShareBalance_FullMethodName        = "/caritas.share.v1.ShareService/GetShareBalance"
 	ShareService_ListShareTransactions_FullMethodName  = "/caritas.share.v1.ShareService/ListShareTransactions"
 	ShareService_GetShareTransaction_FullMethodName    = "/caritas.share.v1.ShareService/GetShareTransaction"
+	ShareService_CreateAdjustment_FullMethodName       = "/caritas.share.v1.ShareService/CreateAdjustment"
 	ShareService_ApproveShareAdjustment_FullMethodName = "/caritas.share.v1.ShareService/ApproveShareAdjustment"
 )
 
@@ -42,6 +43,7 @@ type ShareServiceClient interface {
 	GetShareBalance(ctx context.Context, in *GetShareBalanceRequest, opts ...grpc.CallOption) (*GetShareBalanceResponse, error)
 	ListShareTransactions(ctx context.Context, in *ListShareTransactionsRequest, opts ...grpc.CallOption) (*ListShareTransactionsResponse, error)
 	GetShareTransaction(ctx context.Context, in *GetShareTransactionRequest, opts ...grpc.CallOption) (*GetShareTransactionResponse, error)
+	CreateAdjustment(ctx context.Context, in *CreateAdjustmentRequest, opts ...grpc.CallOption) (*CreateAdjustmentResponse, error)
 	ApproveShareAdjustment(ctx context.Context, in *ApproveShareAdjustmentRequest, opts ...grpc.CallOption) (*ApproveShareAdjustmentResponse, error)
 }
 
@@ -133,6 +135,16 @@ func (c *shareServiceClient) GetShareTransaction(ctx context.Context, in *GetSha
 	return out, nil
 }
 
+func (c *shareServiceClient) CreateAdjustment(ctx context.Context, in *CreateAdjustmentRequest, opts ...grpc.CallOption) (*CreateAdjustmentResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateAdjustmentResponse)
+	err := c.cc.Invoke(ctx, ShareService_CreateAdjustment_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *shareServiceClient) ApproveShareAdjustment(ctx context.Context, in *ApproveShareAdjustmentRequest, opts ...grpc.CallOption) (*ApproveShareAdjustmentResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ApproveShareAdjustmentResponse)
@@ -155,6 +167,7 @@ type ShareServiceServer interface {
 	GetShareBalance(context.Context, *GetShareBalanceRequest) (*GetShareBalanceResponse, error)
 	ListShareTransactions(context.Context, *ListShareTransactionsRequest) (*ListShareTransactionsResponse, error)
 	GetShareTransaction(context.Context, *GetShareTransactionRequest) (*GetShareTransactionResponse, error)
+	CreateAdjustment(context.Context, *CreateAdjustmentRequest) (*CreateAdjustmentResponse, error)
 	ApproveShareAdjustment(context.Context, *ApproveShareAdjustmentRequest) (*ApproveShareAdjustmentResponse, error)
 	mustEmbedUnimplementedShareServiceServer()
 }
@@ -189,6 +202,9 @@ func (UnimplementedShareServiceServer) ListShareTransactions(context.Context, *L
 }
 func (UnimplementedShareServiceServer) GetShareTransaction(context.Context, *GetShareTransactionRequest) (*GetShareTransactionResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetShareTransaction not implemented")
+}
+func (UnimplementedShareServiceServer) CreateAdjustment(context.Context, *CreateAdjustmentRequest) (*CreateAdjustmentResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateAdjustment not implemented")
 }
 func (UnimplementedShareServiceServer) ApproveShareAdjustment(context.Context, *ApproveShareAdjustmentRequest) (*ApproveShareAdjustmentResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ApproveShareAdjustment not implemented")
@@ -358,6 +374,24 @@ func _ShareService_GetShareTransaction_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ShareService_CreateAdjustment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateAdjustmentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ShareServiceServer).CreateAdjustment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ShareService_CreateAdjustment_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ShareServiceServer).CreateAdjustment(ctx, req.(*CreateAdjustmentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _ShareService_ApproveShareAdjustment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ApproveShareAdjustmentRequest)
 	if err := dec(in); err != nil {
@@ -414,6 +448,10 @@ var ShareService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetShareTransaction",
 			Handler:    _ShareService_GetShareTransaction_Handler,
+		},
+		{
+			MethodName: "CreateAdjustment",
+			Handler:    _ShareService_CreateAdjustment_Handler,
 		},
 		{
 			MethodName: "ApproveShareAdjustment",
