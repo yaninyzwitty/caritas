@@ -10,7 +10,7 @@ CREATE TABLE loan_transactions (
     payment_gateway_transaction_id TEXT,
     allocation_breakdown JSONB NOT NULL DEFAULT '{}'::jsonb,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    created_by UUID,
+    created_by UUID, -- loan officer id or something
 
     CONSTRAINT fk_loan_transactions_loan FOREIGN KEY (loan_id) REFERENCES loans(id) ON DELETE RESTRICT,
     CONSTRAINT chk_loan_transactions_amount_positive CHECK (amount > 0),

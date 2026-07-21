@@ -180,6 +180,100 @@ func (s *Service) WithdrawShares(
 	return s.postTransaction(ctx, accountID, sharesqlc.ShareTransactionTypeWithdrawal, amount, referenceID, originatorID, reason)
 }
 
+// CreateAdjustment creates a manual adjustment transaction (spec I6). Supports
+// both credits (positive amount) and debits (negative amount). The adjustment
+// transaction is created but not yet approved; approval happens via
+// ApproveShareAdjustment which adds the audit trail. Without this, manual
+// corrections for audit failures cannot be initiated. Uses ExecTx to enforce
+// the no-negative-balance invariant within a locked transaction.
+func (s *Service) CreateAdjustment(
+	ctx context.Context,
+	accountID pgtype.UUID,
+	amount pgtype.Numeric,
+	referenceID, originatorID pgtype.UUID,
+	reason string,
+) (sharesqlc.ShareTransaction, error) {
+	var result sharesqlc.ShareTransaction
+	err := s.store.ExecTx(ctx, func(q sharesqlc.Querier) error {
+		account, err := q.LockAndReadAccount(ctx, accountID)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return ErrAccountNotFound
+			}
+			return fmt.Errorf("lock account: %w", err)
+		}
+		if account.Status != sharesqlc.ShareAccountStatusActive {
+			return ErrAccountNotActive
+		}
+
+		result, err = q.GetTransactionByReference(ctx, sharesqlc.GetTransactionByReferenceParams{
+			ShareAccountID: accountID,
+			ReferenceID:    referenceID,
+			Type:           sharesqlc.ShareTransactionTypeAdjustment,
+		})
+
+		switch {
+		case err == nil:
+			return nil
+
+		case !errors.Is(err, pgx.ErrNoRows):
+			return fmt.Errorf("lookup existing transaction: %w", err)
+		}
+
+		balanceNanos := new(big.Int)
+
+		latest, err := q.GetLatestBalance(ctx, accountID)
+		switch {
+		case err == nil:
+			balanceNanos = numericToNanos(latest)
+
+		case !errors.Is(err, pgx.ErrNoRows):
+			return fmt.Errorf("read latest balance: %w", err)
+		}
+		amountNanos := numericToNanos(amount)
+
+		newBalance := new(big.Int).Set(balanceNanos)
+		newBalance.Add(newBalance, amountNanos)
+
+		if newBalance.Sign() < 0 {
+			return ErrInsufficientBalance
+		}
+
+		result, err = q.InsertShareTransaction(ctx, sharesqlc.InsertShareTransactionParams{
+			ShareAccountID: accountID,
+			Type:           sharesqlc.ShareTransactionTypeAdjustment,
+			Amount:         amount,
+			BalanceAfter:   pgtype.Numeric{Int: newBalance, Exp: -9, Valid: true},
+			ReferenceID:    referenceID,
+			Reason:         pgtype.Text{String: reason, Valid: reason != ""},
+			OriginatorID:   originatorID,
+		})
+
+		switch {
+		case err == nil:
+			return nil
+
+		case errors.Is(err, pgx.ErrNoRows):
+			result, err = q.GetTransactionByReference(ctx, sharesqlc.GetTransactionByReferenceParams{
+				ShareAccountID: accountID,
+				ReferenceID:    referenceID,
+				Type:           sharesqlc.ShareTransactionTypeAdjustment,
+			})
+			if err != nil {
+				return fmt.Errorf("read existing transaction: %w", err)
+			}
+			return nil
+
+		default:
+			return fmt.Errorf("insert transaction: %w", err)
+		}
+	})
+	if err != nil {
+		return sharesqlc.ShareTransaction{}, err
+	}
+	return result, nil
+}
+
 // ApproveShareAdjustment records the audit approval for an existing adjustment
 // transaction (spec I6). The adjustment transaction must already exist with type
 // 'adjustment'; this only writes the share_adjustments audit row with the

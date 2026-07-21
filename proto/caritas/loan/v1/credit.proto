@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package caritas.loan.v1;
+
+option go_package = "github.com/yaninyzwitty/caritas-backend/gen/caritas/loan/v1";
+
+import "google/protobuf/timestamp.proto";
+
+// CreditService manages credit balance operations for overpayment handling.
+service CreditService {
+  // GetCreditBalance retrieves the credit balance for a member.
+  rpc GetCreditBalance(GetCreditBalanceRequest) returns (GetCreditBalanceResponse);
+
+  // RequestCreditWithdrawal submits a request to withdraw available credit.
+  rpc RequestCreditWithdrawal(RequestCreditWithdrawalRequest) returns (RequestCreditWithdrawalResponse);
+}
+
+// GetCreditBalanceRequest requests credit balance information.
+message GetCreditBalanceRequest {
+  string member_id = 1;
+  string loan_id   = 2;  // Optional: filter by specific loan
+}
+
+// GetCreditBalanceResponse returns credit balance information.
+message GetCreditBalanceResponse {
+  repeated CreditBalance credits = 1;
+}
+
+// RequestCreditWithdrawalRequest submits a credit withdrawal request.
+message RequestCreditWithdrawalRequest {
+  string credit_balance_id = 1;
+  string amount           = 2;  // decimal.Decimal as string to withdraw
+  string reason           = 3;
+  string requested_by     = 4;  // Member ID requesting withdrawal
+}
+
+// RequestCreditWithdrawalResponse confirms the withdrawal request was submitted.
+message RequestCreditWithdrawalResponse {
+  bool                      success       = 1;
+  string                    request_id    = 2;
+  google.protobuf.Timestamp submitted_at = 3;
+}
