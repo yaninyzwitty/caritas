@@ -91,15 +91,15 @@ func decodeCursor(token string) (pgtype.Timestamptz, pgtype.UUID, error) {
 func (h *Handlers) OpenShareAccount(ctx context.Context, req *sharev1.OpenShareAccountRequest) (*sharev1.OpenShareAccountResponse, error) {
 	memberID, err := stringToUUID(req.GetMemberId())
 	if err != nil {
-		return nil, err
+		return nil, status.Error(codes.InvalidArgument, "invalid member_id")
 	}
 	account, err := h.service.OpenShareAccount(ctx, memberID, resolveBranchID(req.GetBranchId()))
 	if err != nil {
-		return nil, err
+		return nil, mapServiceError(err)
 	}
 	accountID, err := uuidToString(account.ID)
 	if err != nil {
-		return nil, err
+		return nil, status.Error(codes.Internal, "failed to encode account id")
 	}
 	return &sharev1.OpenShareAccountResponse{
 		AccountId: accountID,
@@ -116,22 +116,22 @@ func (h *Handlers) GetShareAccount(ctx context.Context, req *sharev1.GetShareAcc
 	case *sharev1.GetShareAccountRequest_AccountId:
 		accountID, err := stringToUUID(id.AccountId)
 		if err != nil {
-			return nil, fmt.Errorf("invalid uuid, %w", err)
+			return nil, status.Error(codes.InvalidArgument, "invalid account_id")
 		}
 
 		account, err = h.store.GetAccountByID(ctx, accountID)
 		if err != nil {
-			return nil, status.Errorf(codes.NotFound, "failed to get account by id, %v", err)
+			return nil, mapServiceError(err)
 		}
 	case *sharev1.GetShareAccountRequest_MemberId:
 		memberID, err := stringToUUID(id.MemberId)
 		if err != nil {
-			return nil, fmt.Errorf("invalid uuid, %w", err)
+			return nil, status.Error(codes.InvalidArgument, "invalid member_id")
 		}
 
 		account, err = h.store.GetAccountByMemberID(ctx, memberID)
 		if err != nil {
-			return nil, status.Errorf(codes.NotFound, "failed to get account by member id, %v", err)
+			return nil, mapServiceError(err)
 		}
 	default:
 		return nil, status.Errorf(codes.InvalidArgument, "identifier is required")
@@ -160,7 +160,7 @@ func (h *Handlers) ListShareAccounts(ctx context.Context, req *sharev1.ListShare
 
 	cursorTS, cursorID, err := decodeCursor(req.GetPageToken())
 	if err != nil {
-		return nil, err
+		return nil, status.Error(codes.InvalidArgument, "invalid page_token")
 	}
 
 	var statusFilter sharesqlc.NullShareAccountStatus
@@ -179,7 +179,7 @@ func (h *Handlers) ListShareAccounts(ctx context.Context, req *sharev1.ListShare
 		Limit:        limit + 1, // fetch one extra to determine if there's a next page
 	})
 	if err != nil {
-		return nil, err
+		return nil, mapServiceError(err)
 	}
 
 	resp := &sharev1.ListShareAccountsResponse{}
@@ -191,7 +191,7 @@ func (h *Handlers) ListShareAccounts(ctx context.Context, req *sharev1.ListShare
 
 		token, err := encodeCursor(last.CreatedAt, last.ID)
 		if err != nil {
-			return nil, fmt.Errorf("encode cursor: %w", err)
+			return nil, status.Error(codes.Internal, "failed to encode next page token")
 		}
 		resp.NextPageToken = token
 		// we then drop the look ahead row from the response
@@ -224,11 +224,11 @@ func (h *Handlers) PurchaseShares(ctx context.Context, req *sharev1.PurchaseShar
 	}
 	tx, err := h.service.PurchaseShares(ctx, accountID, moneyToNumeric(req.GetAmount()), referenceID, originatorID, req.GetReason())
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to purchase shares: %v", err)
+		return nil, mapServiceError(err)
 	}
 	txID, err := uuidToString(tx.ID)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to convert transaction ID: %v", err)
+		return nil, status.Error(codes.Internal, "failed to convert transaction ID")
 	}
 	return &sharev1.PurchaseSharesResponse{
 		TransactionId: txID,
@@ -253,11 +253,11 @@ func (h *Handlers) WithdrawShares(ctx context.Context, req *sharev1.WithdrawShar
 	}
 	tx, err := h.service.WithdrawShares(ctx, accountID, moneyToNumeric(req.GetAmount()), referenceID, originatorID, req.GetReason())
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to withdraw shares: %v", err)
+		return nil, mapServiceError(err)
 	}
 	txID, err := uuidToString(tx.ID)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to convert transaction ID: %v", err)
+		return nil, status.Error(codes.Internal, "failed to convert transaction ID")
 	}
 	return &sharev1.WithdrawSharesResponse{
 		TransactionId: txID,
@@ -275,21 +275,21 @@ func (h *Handlers) GetShareBalance(ctx context.Context, req *sharev1.GetShareBal
 	}
 	if _, err := h.store.GetAccountByID(ctx, accountID); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrAccountNotFound
+			return nil, mapServiceError(ErrAccountNotFound)
 		}
-		return nil, status.Errorf(codes.Internal, "failed to get account: %v", err)
+		return nil, status.Error(codes.Internal, "failed to get account")
 	}
 
 	balance := &memberv1.Money{CurrencyCode: "KES"}
 	if latest, err := h.store.GetLatestBalance(ctx, accountID); err == nil {
 		balance = numericToMoney(latest)
 	} else if !errors.Is(err, pgx.ErrNoRows) {
-		return nil, status.Errorf(codes.Internal, "failed to get latest balance: %v", err)
+		return nil, status.Error(codes.Internal, "failed to get latest balance")
 	}
 
 	accountIDStr, err := uuidToString(accountID)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to convert account ID: %v", err)
+		return nil, status.Error(codes.Internal, "failed to convert account ID")
 	}
 	return &sharev1.GetShareBalanceResponse{
 		Balance:   balance,
@@ -328,7 +328,7 @@ func (h *Handlers) ListShareTransactions(ctx context.Context, req *sharev1.ListS
 		Limit:          limit + 1,
 	})
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to list transactions: %v", err)
+		return nil, status.Error(codes.Internal, "failed to list transactions")
 	}
 
 	resp := &sharev1.ListShareTransactionsResponse{}
@@ -339,7 +339,7 @@ func (h *Handlers) ListShareTransactions(ctx context.Context, req *sharev1.ListS
 		last := txs[limit-1]
 		token, err := encodeCursor(last.CreatedAt, last.ID)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "failed to encode cursor: %v", err)
+			return nil, status.Error(codes.Internal, "failed to encode cursor")
 		}
 		resp.NextPageToken = token
 		txs = txs[:limit]
@@ -362,9 +362,9 @@ func (h *Handlers) GetShareTransaction(ctx context.Context, req *sharev1.GetShar
 	tx, err := h.store.GetTransactionByID(ctx, txID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrTransactionNotFound
+			return nil, mapServiceError(ErrTransactionNotFound)
 		}
-		return nil, status.Errorf(codes.Internal, "failed to get transaction: %v", err)
+		return nil, status.Error(codes.Internal, "failed to get transaction")
 	}
 	return &sharev1.GetShareTransactionResponse{Transaction: convertTransactionToProto(tx)}, nil
 }
@@ -386,11 +386,11 @@ func (h *Handlers) CreateAdjustment(ctx context.Context, req *sharev1.CreateAdju
 	}
 	tx, err := h.service.CreateAdjustment(ctx, accountID, moneyToNumeric(req.GetAmount()), referenceID, originatorID, req.GetReason())
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to create adjustment: %v", err)
+		return nil, mapServiceError(err)
 	}
 	txID, err := uuidToString(tx.ID)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to convert transaction ID: %v", err)
+		return nil, status.Error(codes.Internal, "failed to convert transaction ID")
 	}
 	return &sharev1.CreateAdjustmentResponse{
 		TransactionId: txID,

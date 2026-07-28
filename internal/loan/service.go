@@ -607,21 +607,7 @@ func insertStatusAudit(
 }
 
 func markRowFromLock(loan loansqlc.LockLoanByIDRow) loansqlc.MarkLoanDisbursedRow {
-	return loansqlc.MarkLoanDisbursedRow{
-		ID:                    loan.ID,
-		MemberID:              loan.MemberID,
-		BranchID:              loan.BranchID,
-		Principal:             loan.Principal,
-		InterestRate:          loan.InterestRate,
-		RepaymentPeriodMonths: loan.RepaymentPeriodMonths,
-		Status:                loan.Status,
-		DisbursedAt:           loan.DisbursedAt,
-		UpdatedBy:             loan.UpdatedBy,
-		PreviousStatus:        loan.PreviousStatus,
-		IsDeleted:             loan.IsDeleted,
-		CreatedAt:             loan.CreatedAt,
-		UpdatedAt:             loan.UpdatedAt,
-	}
+	return loansqlc.MarkLoanDisbursedRow(loan)
 }
 
 func normalizeLimit(limit int32) int32 {
