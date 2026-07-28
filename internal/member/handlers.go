@@ -2,12 +2,15 @@ package member
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"math/big"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	memberv1 "github.com/yaninyzwitty/caritas-backend/gen/member/v1"
 	"github.com/yaninyzwitty/caritas-backend/internal/repository/sqlc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -26,6 +29,26 @@ func resolveBranchID(branchID int64) int64 {
 		return DefaultBranchID
 	}
 	return branchID
+}
+
+// mapServiceError keeps member RPCs from leaking raw Go/database errors as
+// codes.Unknown. Without it, clients cannot reliably distinguish bad input,
+// missing members, invalid transitions, and server failures.
+func mapServiceError(err error) error {
+	switch {
+	case errors.Is(err, ErrInvalidIdentifier):
+		return status.Error(codes.InvalidArgument, err.Error())
+	case errors.Is(err, pgx.ErrNoRows):
+		return status.Error(codes.NotFound, "member not found")
+	case errors.Is(err, ErrInvalidStatusTransition), errors.Is(err, ErrMemberAlreadyClosed):
+		return status.Error(codes.FailedPrecondition, err.Error())
+	case errors.Is(err, context.Canceled):
+		return status.Error(codes.Canceled, err.Error())
+	case errors.Is(err, context.DeadlineExceeded):
+		return status.Error(codes.DeadlineExceeded, err.Error())
+	default:
+		return status.Error(codes.Internal, "internal server error")
+	}
 }
 
 func (h *Handlers) RegisterMember(ctx context.Context, req *memberv1.RegisterMemberRequest) (*memberv1.RegisterMemberResponse, error) {
@@ -59,12 +82,12 @@ func (h *Handlers) RegisterMember(ctx context.Context, req *memberv1.RegisterMem
 
 	member, err := h.memberService.RegisterMember(ctx, branchID, req.NationalId, profile)
 	if err != nil {
-		return nil, err
+		return nil, mapServiceError(err)
 	}
 
 	memberIDStr, err := uuidToString(member.ID)
 	if err != nil {
-		return nil, err
+		return nil, status.Error(codes.Internal, "failed to encode member id")
 	}
 
 	return &memberv1.RegisterMemberResponse{
@@ -84,12 +107,12 @@ func (h *Handlers) GetMember(
 	case *memberv1.GetMemberRequest_MemberId:
 		memberID, err := stringToUUID(identifier.MemberId)
 		if err != nil {
-			return nil, err
+			return nil, status.Error(codes.InvalidArgument, "invalid member_id")
 		}
 
 		member, err = h.memberService.GetMember(ctx, memberID)
 		if err != nil {
-			return nil, err
+			return nil, mapServiceError(err)
 		}
 
 	case *memberv1.GetMemberRequest_NationalId:
@@ -101,14 +124,11 @@ func (h *Handlers) GetMember(
 			identifier.NationalId,
 		)
 		if err != nil {
-			return nil, err
+			return nil, mapServiceError(err)
 		}
 
 	default:
-		return nil, fmt.Errorf(
-			"%w: must provide member_id or national_id",
-			ErrInvalidIdentifier,
-		)
+		return nil, status.Error(codes.InvalidArgument, "must provide member_id or national_id")
 	}
 
 	return &memberv1.GetMemberResponse{
@@ -139,14 +159,14 @@ func (h *Handlers) ListMembers(
 	if req.PageToken != "" {
 		cursorUUID, err := stringToUUID(req.PageToken)
 		if err != nil {
-			return nil, err
+			return nil, status.Error(codes.InvalidArgument, "invalid page_token")
 		}
 		cursor = &cursorUUID
 	}
 
 	members, err := h.memberService.ListMembers(ctx, branchID, cursor, limit)
 	if err != nil {
-		return nil, err
+		return nil, mapServiceError(err)
 	}
 
 	resp := &memberv1.ListMembersResponse{
@@ -161,7 +181,7 @@ func (h *Handlers) ListMembers(
 		last := members[len(members)-1]
 		lastIDStr, err := uuidToString(last.ID)
 		if err != nil {
-			return nil, err
+			return nil, status.Error(codes.Internal, "failed to encode next page token")
 		}
 		resp.NextPageToken = lastIDStr
 	}
@@ -172,7 +192,7 @@ func (h *Handlers) ListMembers(
 func (h *Handlers) UpdateMemberProfile(ctx context.Context, req *memberv1.UpdateMemberProfileRequest) (*memberv1.UpdateMemberProfileResponse, error) {
 	memberID, err := stringToUUID(req.MemberId)
 	if err != nil {
-		return nil, err
+		return nil, status.Error(codes.InvalidArgument, "invalid member_id")
 	}
 
 	var dateOfBirth pgtype.Date
@@ -203,7 +223,7 @@ func (h *Handlers) UpdateMemberProfile(ctx context.Context, req *memberv1.Update
 	}
 
 	if err := h.memberService.UpdateMemberProfile(ctx, memberID, profile); err != nil {
-		return nil, err
+		return nil, mapServiceError(err)
 	}
 
 	return &memberv1.UpdateMemberProfileResponse{
@@ -214,13 +234,13 @@ func (h *Handlers) UpdateMemberProfile(ctx context.Context, req *memberv1.Update
 func (h *Handlers) UpdateMemberStatus(ctx context.Context, req *memberv1.UpdateMemberStatusRequest) (*memberv1.UpdateMemberStatusResponse, error) {
 	memberID, err := stringToUUID(req.MemberId)
 	if err != nil {
-		return nil, err
+		return nil, status.Error(codes.InvalidArgument, "invalid member_id")
 	}
 
 	status := statusProtoToString(req.NewStatus)
 	member, err := h.memberService.UpdateMemberStatus(ctx, memberID, status, req.Reason)
 	if err != nil {
-		return nil, err
+		return nil, mapServiceError(err)
 	}
 
 	return &memberv1.UpdateMemberStatusResponse{
@@ -237,12 +257,12 @@ func (h *Handlers) UpdateMemberStatus(ctx context.Context, req *memberv1.UpdateM
 func (h *Handlers) CloseMember(ctx context.Context, req *memberv1.CloseMemberRequest) (*memberv1.CloseMemberResponse, error) {
 	memberID, err := stringToUUID(req.MemberId)
 	if err != nil {
-		return nil, err
+		return nil, status.Error(codes.InvalidArgument, "invalid member_id")
 	}
 
 	_, err = h.memberService.CloseMember(ctx, memberID, req.Reason)
 	if err != nil {
-		return nil, err
+		return nil, mapServiceError(err)
 	}
 
 	return &memberv1.CloseMemberResponse{
@@ -253,12 +273,12 @@ func (h *Handlers) CloseMember(ctx context.Context, req *memberv1.CloseMemberReq
 func (h *Handlers) GetMemberStatusHistory(ctx context.Context, req *memberv1.GetMemberStatusHistoryRequest) (*memberv1.GetMemberStatusHistoryResponse, error) {
 	memberID, err := stringToUUID(req.MemberId)
 	if err != nil {
-		return nil, err
+		return nil, status.Error(codes.InvalidArgument, "invalid member_id")
 	}
 
 	history, err := h.store.GetMemberStatusHistory(ctx, memberID)
 	if err != nil {
-		return nil, err
+		return nil, mapServiceError(err)
 	}
 
 	var transitions []*memberv1.StatusTransition

@@ -3,12 +3,14 @@ package loan
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	loanv1 "github.com/yaninyzwitty/caritas-backend/gen/loan/v1"
 	loansqlc "github.com/yaninyzwitty/caritas-backend/internal/loan/repository/sqlc"
@@ -34,6 +36,31 @@ func NewHandlers(store *Store, service *Service) *Handlers {
 
 const defaultBranchID = 1
 
+// mapServiceError keeps loan RPCs on stable gRPC codes while preserving service
+// sentinel errors for Go callers. Without it, expected domain failures are sent
+// to clients as Internal/Unknown and cannot be handled safely.
+func mapServiceError(err error) error {
+	switch {
+	case errors.Is(err, ErrLoanNotFound), errors.Is(err, ErrGuarantorNotFound):
+		return status.Error(codes.NotFound, err.Error())
+	case errors.Is(err, pgx.ErrNoRows):
+		return status.Error(codes.NotFound, "not found")
+	case errors.Is(err, ErrInvalidLoanAmount), errors.Is(err, ErrInvalidInterestRate), errors.Is(err, ErrInvalidRepaymentPeriod),
+		errors.Is(err, ErrInvalidGuaranteedAmount), errors.Is(err, ErrGatewayTransactionID):
+		return status.Error(codes.InvalidArgument, err.Error())
+	case errors.Is(err, ErrInvalidStatusTransition), errors.Is(err, ErrInvalidGuarantorStatus), errors.Is(err, ErrSelfGuarantee),
+		errors.Is(err, ErrTooManyGuarantors), errors.Is(err, ErrInsufficientGuarantors), errors.Is(err, ErrInsufficientGuarantee),
+		errors.Is(err, ErrPaymentNotAllowed):
+		return status.Error(codes.FailedPrecondition, err.Error())
+	case errors.Is(err, context.Canceled):
+		return status.Error(codes.Canceled, err.Error())
+	case errors.Is(err, context.DeadlineExceeded):
+		return status.Error(codes.DeadlineExceeded, err.Error())
+	default:
+		return status.Error(codes.Internal, "internal server error")
+	}
+}
+
 func (h *Handlers) ApplyForLoan(ctx context.Context, req *loanv1.ApplyForLoanRequest) (*loanv1.ApplyForLoanResponse, error) {
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "request must never be nil")
@@ -55,30 +82,30 @@ func (h *Handlers) ApplyForLoan(ctx context.Context, req *loanv1.ApplyForLoanReq
 		interestRate = "0.01" // equitable to 0.01 of previous loan balance
 	}
 
+	interestAmountInPercentage, err := parseNumeric(interestRate)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "interest rate must be a valid numeric value")
+	}
+
 	if len(req.GetGuarantorIds()) <= 0 || len(req.GetGuarantorIds()) > 20 {
 		return nil, status.Error(codes.InvalidArgument, "guarantor_ids must contain between 1 and 20 guarantors")
 	}
 
 	memberID, err := stringToUUID(req.GetMemberId())
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "encode to uuid: %v", err)
+		return nil, status.Error(codes.InvalidArgument, "invalid member_id")
 	}
 
 	branchID := resolveBranchID(0)
 
 	principalAmount, err := parseNumeric(req.GetPrincipal())
 	if err != nil {
-		return nil, status.Error(codes.Internal, "principal must be a valid numeric value")
-	}
-
-	interestAmountInPercentage, err := parseNumeric(req.GetInterestRate())
-	if err != nil {
-		return nil, status.Error(codes.Internal, "interest rate must be a valid numeric value")
+		return nil, status.Error(codes.InvalidArgument, "principal must be a valid numeric value")
 	}
 
 	loanOfficerID, err := stringToUUID(req.GetOfficerId())
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "encode to uuid: %v", err)
+		return nil, status.Error(codes.InvalidArgument, "invalid officer_id")
 	}
 
 	loan, err := h.service.ApplyForLoan(ctx, loansqlc.CreateLoanParams{
@@ -92,7 +119,7 @@ func (h *Handlers) ApplyForLoan(ctx context.Context, req *loanv1.ApplyForLoanReq
 	})
 
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "apply for loan %v", err)
+		return nil, mapServiceError(err)
 	}
 
 	return &loanv1.ApplyForLoanResponse{
@@ -113,19 +140,19 @@ func (h *Handlers) ApproveLoan(ctx context.Context, req *loanv1.ApproveLoanReque
 
 	loanID, err := stringToUUID(req.GetLoanId())
 	if err != nil {
-		status.Error(codes.Internal, "loan id is required")
+		return nil, status.Error(codes.InvalidArgument, "loan id is required")
 	}
 
 	loanOfficerID, err := stringToUUID(req.GetOfficerId())
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "encode to uuid: %v", err)
+		return nil, status.Error(codes.InvalidArgument, "invalid officer_id")
 	}
 
 	reason := req.GetReason()
 
 	loanApproval, err := h.service.ApproveLoan(ctx, loanID, loanOfficerID, reason)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "approve loan %v", err)
+		return nil, mapServiceError(err)
 	}
 
 	return &loanv1.ApproveLoanResponse{
@@ -146,17 +173,17 @@ func (h *Handlers) RejectLoan(ctx context.Context, req *loanv1.RejectLoanRequest
 
 	loanOfficerID, err := stringToUUID(req.GetLoanOfficer())
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "encode to uuid: %v", err)
+		return nil, status.Error(codes.InvalidArgument, "invalid loan_officer")
 	}
 
 	loanID, err := stringToUUID(req.GetLoanId())
 	if err != nil {
-		status.Error(codes.Internal, "loan id is required")
+		return nil, status.Error(codes.InvalidArgument, "loan id is required")
 	}
 
 	loanRejection, err := h.service.RejectLoan(ctx, loanID, loanOfficerID, req.Reason)
 	if err != nil {
-		status.Errorf(codes.Internal, "loan rejection: %v", err)
+		return nil, mapServiceError(err)
 	}
 
 	return &loanv1.RejectLoanResponse{
@@ -176,20 +203,20 @@ func (h *Handlers) DisburseLoan(ctx context.Context, req *loanv1.DisburseLoanReq
 
 	loanID, err := stringToUUID(req.GetLoanId())
 	if err != nil {
-		status.Error(codes.Internal, "loan id is required")
+		return nil, status.Error(codes.InvalidArgument, "invalid loan_id")
 	}
 
 	// TODO--implement real and great authentication and supply automatically
 	disbursedByID, err := stringToUUID(req.GetLoanOfficer())
 	if err != nil {
-		status.Error(codes.Internal, "loan officer id is required")
+		return nil, status.Error(codes.InvalidArgument, "invalid loan_officer")
 	}
 
 	transaction, loanDisbursed, err := h.service.DisburseLoan(ctx, loanID, disbursedByID, req.GetReason())
 
 	// TODO-look to handle errors for different conditions ie based on status, fail preconditon, no rows etc
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "disburse loan: %v", err)
+		return nil, mapServiceError(err)
 
 	}
 
@@ -202,24 +229,24 @@ func (h *Handlers) DisburseLoan(ctx context.Context, req *loanv1.DisburseLoanReq
 }
 func (h *Handlers) GetLoan(ctx context.Context, req *loanv1.GetLoanRequest) (*loanv1.GetLoanResponse, error) {
 	if req.GetLoanId() == "" {
-		return nil, status.Error(codes.Internal, "loan id is required")
+		return nil, status.Error(codes.InvalidArgument, "loan id is required")
 	}
 
 	loanID, err := stringToUUID(req.GetLoanId())
 	if err != nil {
-		status.Error(codes.Internal, "loan id is required")
+		return nil, status.Error(codes.InvalidArgument, "invalid loan_id")
 	}
 
 	loan, err := h.service.GetLoan(ctx, loanID)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "get loan %v", err)
+		return nil, mapServiceError(err)
 	}
 
 	branchID := strconv.FormatInt(loan.BranchID, 10)
 
 	return &loanv1.GetLoanResponse{
 		Loan: &loanv1.Loan{
-			Id:                    loan.ID.String(), // we can drop the returned loan id
+			Id:                    loan.ID.String(), // TODO we can drop the returned loan id
 			MemberId:              loan.MemberID.String(),
 			BranchId:              branchID,
 			Principal:             numericToString(loan.Principal),
@@ -250,7 +277,7 @@ func (h *Handlers) ListLoans(ctx context.Context, req *loanv1.ListLoansRequest) 
 
 	memberID, err := stringToUUID(req.GetMemberId())
 	if err != nil {
-		status.Error(codes.Internal, "member id is required")
+		return nil, status.Error(codes.InvalidArgument, "invalid member_id")
 	}
 
 	limit := req.GetPageSize()
@@ -264,7 +291,7 @@ func (h *Handlers) ListLoans(ctx context.Context, req *loanv1.ListLoansRequest) 
 
 	cursorTS, cursorID, err := decodeCursor(req.GetPageToken())
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "decode cursor: %v", err)
+		return nil, status.Error(codes.InvalidArgument, "invalid page_token")
 	}
 
 	loans, err := h.store.ListLoansByMember(ctx, loansqlc.ListLoansByMemberParams{
@@ -275,7 +302,7 @@ func (h *Handlers) ListLoans(ctx context.Context, req *loanv1.ListLoansRequest) 
 	})
 
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list loans by member: %v", err)
+		return nil, mapServiceError(err)
 	}
 
 	resp := loanv1.ListLoansResponse{}
@@ -287,7 +314,7 @@ func (h *Handlers) ListLoans(ctx context.Context, req *loanv1.ListLoansRequest) 
 
 		token, err := encodeCursor(last.CreatedAt, last.ID)
 		if err != nil {
-			return nil, fmt.Errorf("encode cursor: %w", err)
+			return nil, status.Error(codes.Internal, "failed to encode next page token")
 		}
 
 		resp.NextPageToken = token
@@ -330,12 +357,12 @@ func (h *Handlers) GetLoanStatus(ctx context.Context, req *loanv1.GetLoanStatusR
 
 	loanID, err := stringToUUID(req.GetLoanId())
 	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to decode to uuid")
+		return nil, status.Error(codes.InvalidArgument, "invalid loan_id")
 	}
 
 	loanStatus, err := h.service.GetLoanStatus(ctx, loanID)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "get loan status: %v", err)
+		return nil, mapServiceError(err)
 	}
 
 	return &loanv1.GetLoanStatusResponse{
@@ -359,21 +386,21 @@ func (h *Handlers) AddGuarantor(ctx context.Context, req *loanv1.AddGuarantorReq
 
 	loanID, err := stringToUUID(req.GetLoanId())
 	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to decode loan id to uuid")
+		return nil, status.Error(codes.InvalidArgument, "invalid loan_id")
 	}
 	guarantorID, err := stringToUUID(req.GetGuarantorId())
 	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to decode guarantor id to uuid")
+		return nil, status.Error(codes.InvalidArgument, "invalid guarantor_id")
 	}
 
 	guaranteedAmount, err := parseNumeric(req.GuaranteedAmount)
 	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to parse g")
+		return nil, status.Error(codes.InvalidArgument, "guaranteed amount must be a valid numeric value")
 	}
 
 	guarantor, err := h.service.AddGuarantor(ctx, loanID, guarantorID, guaranteedAmount)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "add guarantor: %v", err)
+		return nil, mapServiceError(err)
 	}
 
 	return &loanv1.AddGuarantorResponse{
@@ -394,15 +421,15 @@ func (h *Handlers) RemoveGuarantor(ctx context.Context, req *loanv1.RemoveGuaran
 
 	guarantorID, err := stringToUUID(req.GetGuarantorId())
 	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to decode guarantor id to uuid")
+		return nil, status.Error(codes.InvalidArgument, "invalid guarantor_id")
 	}
 	loanID, err := stringToUUID(req.GetLoanId())
 	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to decode loan is to uuid")
+		return nil, status.Error(codes.InvalidArgument, "invalid loan_id")
 	}
 
 	if err := h.service.RemoveGuarantor(ctx, loanID, guarantorID); err != nil {
-		return nil, status.Errorf(codes.Internal, "remove guarantor: %v", err)
+		return nil, mapServiceError(err)
 	}
 
 	return &loanv1.RemoveGuarantorResponse{Success: true}, nil
@@ -422,20 +449,20 @@ func (h *Handlers) ApproveGuarantor(ctx context.Context, req *loanv1.ApproveGuar
 
 	loanID, err := stringToUUID(req.GetLoanId())
 	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to decode loan id to uuid")
+		return nil, status.Error(codes.InvalidArgument, "invalid loan_id")
 	}
 	guarantorID, err := stringToUUID(req.GetGuarantorId())
 	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to decode guarantor id to uuid")
+		return nil, status.Error(codes.InvalidArgument, "invalid guarantor_id")
 	}
 	loanOfficerID, err := stringToUUID(req.GetApprovedBy())
 	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to decode guarantor id to uuid")
+		return nil, status.Error(codes.InvalidArgument, "invalid approved_by")
 	}
 
 	guarantorApproval, err := h.service.ApproveGuarantor(ctx, loanID, guarantorID, loanOfficerID)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "approve guarantor: %v", err)
+		return nil, mapServiceError(err)
 	}
 
 	return &loanv1.ApproveGuarantorResponse{
@@ -464,7 +491,7 @@ func (h *Handlers) ListGuarantors(ctx context.Context, req *loanv1.ListGuarantor
 
 	cursorTS, cursorID, err := decodeCursor(req.GetPageToken())
 	if err != nil {
-		return nil, status.Error(codes.Internal, "decode cursor")
+		return nil, status.Error(codes.InvalidArgument, "invalid page_token")
 	}
 	var cursor *LoanCursor
 	if req.GetPageToken() != "" {
@@ -473,12 +500,12 @@ func (h *Handlers) ListGuarantors(ctx context.Context, req *loanv1.ListGuarantor
 
 	loanID, err := stringToUUID(req.GetLoanId())
 	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to decode string to uuid")
+		return nil, status.Error(codes.InvalidArgument, "invalid loan_id")
 	}
 
 	guarantors, err := h.service.ListGuarantors(ctx, loanID, cursor, limit+1)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to list guarantors: %v", err)
+		return nil, mapServiceError(err)
 
 	}
 
@@ -490,7 +517,7 @@ func (h *Handlers) ListGuarantors(ctx context.Context, req *loanv1.ListGuarantor
 
 		token, err := encodeCursor(last.CreatedAt, last.GuarantorID)
 		if err != nil {
-			return nil, fmt.Errorf("encode cursor: %w", err)
+			return nil, status.Error(codes.Internal, "failed to encode next page token")
 		}
 
 		resp.NextPageToken = token
@@ -534,7 +561,7 @@ func (h *Handlers) RecordRepayment(ctx context.Context, req *loanv1.RecordRepaym
 
 	loanID, err := stringToUUID(req.GetLoanId())
 	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to decode loan id to uuid")
+		return nil, status.Error(codes.InvalidArgument, "invalid loan_id")
 	}
 	amount, err := parseNumeric(req.GetAmount())
 	if err != nil {
@@ -542,12 +569,12 @@ func (h *Handlers) RecordRepayment(ctx context.Context, req *loanv1.RecordRepaym
 	}
 	createdBy, err := stringToUUID(req.GetCreatedBy())
 	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to decode created by to uuid")
+		return nil, status.Error(codes.InvalidArgument, "invalid created_by")
 	}
 
 	tx, err := h.service.RecordRepayment(ctx, loanID, amount, req.GetPaymentGatewayTransactionId(), createdBy)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "record repayment: %v", err)
+		return nil, mapServiceError(err)
 	}
 
 	return &loanv1.RecordRepaymentResponse{
@@ -566,12 +593,12 @@ func (h *Handlers) GetRepaymentSchedule(ctx context.Context, req *loanv1.GetRepa
 
 	loanID, err := stringToUUID(req.GetLoanId())
 	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to decode loan id to uuid")
+		return nil, status.Error(codes.InvalidArgument, "invalid loan_id")
 	}
 
 	schedules, err := h.service.ListRepaymentSchedules(ctx, loanID)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list repayment schedule: %v", err)
+		return nil, mapServiceError(err)
 	}
 
 	resp := loanv1.GetRepaymentScheduleResponse{
@@ -593,12 +620,12 @@ func (h *Handlers) GetInstallmentDetails(ctx context.Context, req *loanv1.GetIns
 
 	loanID, err := stringToUUID(req.GetLoanId())
 	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to decode loan id to uuid")
+		return nil, status.Error(codes.InvalidArgument, "invalid loan_id")
 	}
 
 	schedules, err := h.service.ListRepaymentSchedules(ctx, loanID)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list repayment schedule: %v", err)
+		return nil, mapServiceError(err)
 	}
 	for _, schedule := range schedules {
 		if schedule.InstallmentNo == req.GetInstallmentNo() {
@@ -631,7 +658,7 @@ func (h *Handlers) GetPaymentHistory(ctx context.Context, req *loanv1.GetPayment
 
 	cursorTS, cursorID, err := decodeCursor(req.GetPageToken())
 	if err != nil {
-		return nil, status.Error(codes.Internal, "decode cursor")
+		return nil, status.Error(codes.InvalidArgument, "invalid page_token")
 	}
 	var cursor *LoanCursor
 	if req.GetPageToken() != "" {
@@ -640,12 +667,12 @@ func (h *Handlers) GetPaymentHistory(ctx context.Context, req *loanv1.GetPayment
 
 	loanID, err := stringToUUID(req.GetLoanId())
 	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to decode loan id to uuid")
+		return nil, status.Error(codes.InvalidArgument, "invalid loan_id")
 	}
 
 	transactions, err := h.service.ListLoanTransactions(ctx, loanID, cursor, limit+1)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list payment history: %v", err)
+		return nil, mapServiceError(err)
 	}
 
 	resp := loanv1.GetPaymentHistoryResponse{}
@@ -654,7 +681,7 @@ func (h *Handlers) GetPaymentHistory(ctx context.Context, req *loanv1.GetPayment
 		last := transactions[limit-1]
 		token, err := encodeCursor(last.CreatedAt, last.ID)
 		if err != nil {
-			return nil, fmt.Errorf("encode cursor: %w", err)
+			return nil, status.Error(codes.Internal, "failed to encode next page token")
 		}
 		resp.NextPageToken = token
 		transactions = transactions[:limit]
@@ -674,20 +701,20 @@ func (h *Handlers) GetCreditBalance(ctx context.Context, req *loanv1.GetCreditBa
 
 	memberID, err := stringToUUID(req.GetMemberId())
 	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to decode member id to uuid")
+		return nil, status.Error(codes.InvalidArgument, "invalid member_id")
 	}
 
 	var loanID pgtype.UUID
 	if req.GetLoanId() != "" {
 		loanID, err = stringToUUID(req.GetLoanId())
 		if err != nil {
-			return nil, status.Error(codes.Internal, "failed to decode loan id to uuid")
+			return nil, status.Error(codes.InvalidArgument, "invalid loan_id")
 		}
 	}
 
 	credits, err := h.service.ListCreditBalances(ctx, memberID, 100)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list credit balances: %v", err)
+		return nil, mapServiceError(err)
 	}
 
 	resp := loanv1.GetCreditBalanceResponse{

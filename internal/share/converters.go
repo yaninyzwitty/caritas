@@ -5,6 +5,7 @@ import (
 	"errors"
 	"math/big"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	memberv1 "github.com/yaninyzwitty/caritas-backend/gen/member/v1"
 	sharev1 "github.com/yaninyzwitty/caritas-backend/gen/share/v1"
@@ -162,6 +163,16 @@ func convertTransactionToProto(t sharesqlc.ShareTransaction) *sharev1.ShareTrans
 
 func mapServiceError(err error) error {
 	switch {
+	case errors.Is(err, ErrInvalidIdentifier):
+		return status.Error(codes.InvalidArgument, err.Error())
+	case errors.Is(err, ErrAccountNotFound), errors.Is(err, ErrTransactionNotFound):
+		return status.Error(codes.NotFound, err.Error())
+	case errors.Is(err, pgx.ErrNoRows):
+		return status.Error(codes.NotFound, "not found")
+	case errors.Is(err, ErrAccountAlreadyExists), errors.Is(err, ErrAdjustmentExists), errors.Is(err, ErrDuplicateReference):
+		return status.Error(codes.AlreadyExists, err.Error())
+	case errors.Is(err, ErrAccountNotActive), errors.Is(err, ErrInsufficientBalance):
+		return status.Error(codes.FailedPrecondition, err.Error())
 	case errors.Is(err, ErrNotAdjustment):
 		return status.Error(codes.NotFound, "share adjustment not found")
 
@@ -170,9 +181,6 @@ func mapServiceError(err error) error {
 
 	case errors.Is(err, ErrUnauthorizedApprover):
 		return status.Error(codes.PermissionDenied, "approver is not authorized")
-
-	case errors.Is(err, ErrDuplicateReference):
-		return status.Error(codes.AlreadyExists, "duplicate reference")
 
 	case errors.Is(err, context.Canceled):
 		return status.Error(codes.Canceled, err.Error())
