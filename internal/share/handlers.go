@@ -10,8 +10,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
-	memberv1 "github.com/yaninyzwitty/caritas-backend/gen/caritas/member/v1"
-	sharev1 "github.com/yaninyzwitty/caritas-backend/gen/caritas/share/v1"
+	memberv1 "github.com/yaninyzwitty/caritas-backend/gen/member/v1"
+	sharev1 "github.com/yaninyzwitty/caritas-backend/gen/share/v1"
 	sharesqlc "github.com/yaninyzwitty/caritas-backend/internal/share/repository/sqlc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
