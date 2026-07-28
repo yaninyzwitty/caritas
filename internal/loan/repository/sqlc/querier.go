@@ -29,7 +29,7 @@ type Querier interface {
 	ListDueRepaymentSchedules(ctx context.Context, dueDate pgtype.Date) ([]RepaymentSchedule, error)
 	ListGuarantorLoans(ctx context.Context, guarantorID pgtype.UUID) ([]ListGuarantorLoansRow, error)
 	ListLoanAuditTrail(ctx context.Context, arg ListLoanAuditTrailParams) ([]LoanAuditTrail, error)
-	ListLoanGuarantors(ctx context.Context, loanID pgtype.UUID) ([]LoanGuarantor, error)
+	ListLoanGuarantors(ctx context.Context, arg ListLoanGuarantorsParams) ([]LoanGuarantor, error)
 	ListLoanTransactions(ctx context.Context, arg ListLoanTransactionsParams) ([]LoanTransaction, error)
 	ListLoansByBranch(ctx context.Context, arg ListLoansByBranchParams) ([]ListLoansByBranchRow, error)
 	ListLoansByMember(ctx context.Context, arg ListLoansByMemberParams) ([]ListLoansByMemberRow, error)

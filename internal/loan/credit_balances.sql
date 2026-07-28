@@ -12,9 +12,8 @@ WHERE id = $1;
 SELECT id, member_id, loan_id, amount, source, status, created_at, last_activity_at
 FROM credit_balances
 WHERE member_id = $1
-  AND ($2::credit_balance_status IS NULL OR status = $2)
 ORDER BY created_at DESC, id DESC
-LIMIT $3;
+LIMIT $2;
 
 -- name: LockCreditBalanceByID :one
 SELECT id, member_id, loan_id, amount, source, status, created_at, last_activity_at

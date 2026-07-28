@@ -12,7 +12,9 @@ WHERE loan_id = $1 AND guarantor_id = $2;
 SELECT loan_id, guarantor_id, guaranteed_amount, status, approved_at, approved_by, created_at
 FROM loan_guarantors
 WHERE loan_id = $1
-ORDER BY created_at DESC;
+  AND ($2::timestamptz IS NULL OR created_at < $2 OR (created_at = $2 AND guarantor_id < $3))
+ORDER BY created_at DESC, guarantor_id DESC
+LIMIT $4;
 
 -- name: ListGuarantorLoans :many
 SELECT lg.loan_id, lg.guarantor_id, lg.guaranteed_amount, lg.status, lg.approved_at, lg.approved_by, lg.created_at,

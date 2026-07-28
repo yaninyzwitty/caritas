@@ -1,8 +1,7 @@
 syntax = "proto3";
 
-package caritas.loan.v1;
+package loan.v1;
 
-option go_package = "github.com/yaninyzwitty/caritas-backend/gen/caritas/loan/v1";
 
 import "google/protobuf/timestamp.proto";
 
@@ -119,7 +118,8 @@ message ApplyForLoanRequest {
   string  principal               = 3;  // decimal.Decimal as string
   string  interest_rate           = 4;  // decimal.Decimal as string (percentage rate)
   int32   repayment_period_months = 5;
-  repeated string guarantor_ids   = 6;  // Initial list of proposed guarantors
+  string officer_id  = 6; //TODO -remove this handle carefully with authentication
+  repeated string guarantor_ids   = 7;  // Initial list of proposed guarantors
 }
 
 // ApplyForLoanResponse returns the newly created loan application's identifiers.
@@ -132,6 +132,8 @@ message ApplyForLoanResponse {
 message ApproveLoanRequest {
   string loan_id = 1;
   string reason  = 2;
+  string officer_id  = 3; //TODO -remove this handle carefully with authentication
+
 }
 
 // ApproveLoanResponse confirms the loan approval.
@@ -144,6 +146,7 @@ message ApproveLoanResponse {
 message RejectLoanRequest {
   string loan_id = 1;
   string reason  = 2;
+  string loan_officer = 3;
 }
 
 // RejectLoanResponse confirms the loan rejection.
@@ -155,6 +158,8 @@ message RejectLoanResponse {
 // DisburseLoanRequest specifies the loan to disburse.
 message DisburseLoanRequest {
   string loan_id = 1;
+  string reason = 2;
+  string loan_officer = 3; 
 }
 
 // DisburseLoanResponse confirms the loan disbursement.

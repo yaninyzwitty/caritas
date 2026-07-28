@@ -14,8 +14,10 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/yaninyzwitty/caritas-backend/config"
-	memberv1 "github.com/yaninyzwitty/caritas-backend/gen/caritas/member/v1"
-	sharev1 "github.com/yaninyzwitty/caritas-backend/gen/caritas/share/v1"
+	loanv1 "github.com/yaninyzwitty/caritas-backend/gen/loan/v1"
+	memberv1 "github.com/yaninyzwitty/caritas-backend/gen/member/v1"
+	sharev1 "github.com/yaninyzwitty/caritas-backend/gen/share/v1"
+	"github.com/yaninyzwitty/caritas-backend/internal/loan"
 	"github.com/yaninyzwitty/caritas-backend/internal/member"
 	"github.com/yaninyzwitty/caritas-backend/internal/share"
 	"google.golang.org/grpc"
@@ -94,6 +96,9 @@ func main() {
 	shareStore := share.NewStore(pool)
 	shareService := share.NewService(shareStore)
 	shareServer := share.NewHandlers(shareService, shareStore)
+	loanStore := loan.NewStore(pool)
+	loanService := loan.NewService(loanStore)
+	loanServer := loan.NewHandlers(loanStore, loanService)
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.GRPC.Port))
 	if err != nil {
@@ -103,6 +108,9 @@ func main() {
 	s := grpc.NewServer()
 	memberv1.RegisterMemberServiceServer(s, server)
 	sharev1.RegisterShareServiceServer(s, shareServer)
+	loanv1.RegisterLoanServiceServer(s, loanServer)
+	loanv1.RegisterRepaymentServiceServer(s, loanServer)
+	loanv1.RegisterCreditServiceServer(s, loanServer)
 
 	go func() {
 		log.Printf("Starting gRPC server on port %d", cfg.GRPC.Port)

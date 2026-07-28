@@ -155,11 +155,25 @@ const listLoanGuarantors = `-- name: ListLoanGuarantors :many
 SELECT loan_id, guarantor_id, guaranteed_amount, status, approved_at, approved_by, created_at
 FROM loan_guarantors
 WHERE loan_id = $1
-ORDER BY created_at DESC
+  AND ($2::timestamptz IS NULL OR created_at < $2 OR (created_at = $2 AND guarantor_id < $3))
+ORDER BY created_at DESC, guarantor_id DESC
+LIMIT $4
 `
 
-func (q *Queries) ListLoanGuarantors(ctx context.Context, loanID pgtype.UUID) ([]LoanGuarantor, error) {
-	rows, err := q.db.Query(ctx, listLoanGuarantors, loanID)
+type ListLoanGuarantorsParams struct {
+	LoanID      pgtype.UUID        `json:"loanId"`
+	Column2     pgtype.Timestamptz `json:"column2"`
+	GuarantorID pgtype.UUID        `json:"guarantorId"`
+	Limit       int32              `json:"limit"`
+}
+
+func (q *Queries) ListLoanGuarantors(ctx context.Context, arg ListLoanGuarantorsParams) ([]LoanGuarantor, error) {
+	rows, err := q.db.Query(ctx, listLoanGuarantors,
+		arg.LoanID,
+		arg.Column2,
+		arg.GuarantorID,
+		arg.Limit,
+	)
 	if err != nil {
 		return nil, err
 	}

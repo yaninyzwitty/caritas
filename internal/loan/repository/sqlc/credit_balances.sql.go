@@ -71,19 +71,17 @@ const listCreditBalancesByMember = `-- name: ListCreditBalancesByMember :many
 SELECT id, member_id, loan_id, amount, source, status, created_at, last_activity_at
 FROM credit_balances
 WHERE member_id = $1
-  AND ($2::credit_balance_status IS NULL OR status = $2)
 ORDER BY created_at DESC, id DESC
-LIMIT $3
+LIMIT $2
 `
 
 type ListCreditBalancesByMemberParams struct {
-	MemberID pgtype.UUID         `json:"memberId"`
-	Column2  CreditBalanceStatus `json:"column2"`
-	Limit    int32               `json:"limit"`
+	MemberID pgtype.UUID `json:"memberId"`
+	Limit    int32       `json:"limit"`
 }
 
 func (q *Queries) ListCreditBalancesByMember(ctx context.Context, arg ListCreditBalancesByMemberParams) ([]CreditBalance, error) {
-	rows, err := q.db.Query(ctx, listCreditBalancesByMember, arg.MemberID, arg.Column2, arg.Limit)
+	rows, err := q.db.Query(ctx, listCreditBalancesByMember, arg.MemberID, arg.Limit)
 	if err != nil {
 		return nil, err
 	}

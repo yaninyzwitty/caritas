@@ -6,7 +6,7 @@ import (
 	"math/big"
 
 	"github.com/jackc/pgx/v5/pgtype"
-	memberv1 "github.com/yaninyzwitty/caritas-backend/gen/caritas/member/v1"
+	memberv1 "github.com/yaninyzwitty/caritas-backend/gen/member/v1"
 	"github.com/yaninyzwitty/caritas-backend/internal/repository/sqlc"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 )
