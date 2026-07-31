@@ -17,6 +17,7 @@ var (
 	ErrInsufficientGuarantors   = errors.New("loan requires at least one approved guarantor")
 	ErrInsufficientGuarantee    = errors.New("approved guarantees do not cover principal")
 	ErrPaymentNotAllowed        = errors.New("loan status does not allow repayment")
+	ErrRepaymentScheduleMissing = errors.New("loan has no active repayment schedule")
 	ErrGatewayTransactionID     = errors.New("payment gateway transaction id is required")
 	ErrUnsupportedLoanOperation = errors.New("loan operation is not supported by current schema")
 )

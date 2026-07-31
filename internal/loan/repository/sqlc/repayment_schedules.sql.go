@@ -120,6 +120,44 @@ func (q *Queries) ListRepaymentSchedulesByLoan(ctx context.Context, loanID pgtyp
 	return items, nil
 }
 
+const lockActiveRepaymentSchedulesByLoan = `-- name: LockActiveRepaymentSchedulesByLoan :many
+SELECT id, loan_id, installment_no, due_date, amount_due, status, created_at, updated_at
+FROM repayment_schedules
+WHERE loan_id = $1
+  AND status <> 'superseded'
+ORDER BY installment_no ASC
+FOR UPDATE
+`
+
+func (q *Queries) LockActiveRepaymentSchedulesByLoan(ctx context.Context, loanID pgtype.UUID) ([]RepaymentSchedule, error) {
+	rows, err := q.db.Query(ctx, lockActiveRepaymentSchedulesByLoan, loanID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []RepaymentSchedule
+	for rows.Next() {
+		var i RepaymentSchedule
+		if err := rows.Scan(
+			&i.ID,
+			&i.LoanID,
+			&i.InstallmentNo,
+			&i.DueDate,
+			&i.AmountDue,
+			&i.Status,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const lockRepaymentSchedulesByLoan = `-- name: LockRepaymentSchedulesByLoan :many
 SELECT id, loan_id, installment_no, due_date, amount_due, status, created_at, updated_at
 FROM repayment_schedules

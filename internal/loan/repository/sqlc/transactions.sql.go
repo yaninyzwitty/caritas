@@ -184,6 +184,19 @@ func (q *Queries) ListLoanTransactions(ctx context.Context, arg ListLoanTransact
 	return items, nil
 }
 
+const sumLoanAppliedRepayments = `-- name: SumLoanAppliedRepayments :one
+SELECT COALESCE(SUM(amount - COALESCE((allocation_breakdown->>'credit')::numeric, 0)), 0)::numeric AS total
+FROM loan_transactions
+WHERE loan_id = $1 AND type = 'repayment'
+`
+
+func (q *Queries) SumLoanAppliedRepayments(ctx context.Context, loanID pgtype.UUID) (pgtype.Numeric, error) {
+	row := q.db.QueryRow(ctx, sumLoanAppliedRepayments, loanID)
+	var total pgtype.Numeric
+	err := row.Scan(&total)
+	return total, err
+}
+
 const sumLoanTransactionsByType = `-- name: SumLoanTransactionsByType :one
 SELECT COALESCE(SUM(amount), 0)::numeric AS total
 FROM loan_transactions

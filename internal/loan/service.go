@@ -3,6 +3,7 @@ package loan
 import (
 	"context"
 	"crypto/rand"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -506,11 +507,6 @@ func (s *Service) RecordRepayment(
 			}
 			return fmt.Errorf("lock loan: %w", err)
 		}
-		switch current.Status {
-		case loansqlc.LoanStatusClosed, loansqlc.LoanStatusWrittenOff, loansqlc.LoanStatusRestructuring:
-			return ErrPaymentNotAllowed
-		}
-
 		tx, err = q.GetLoanTransactionByGatewayID(ctx, loansqlc.GetLoanTransactionByGatewayIDParams{
 			LoanID:                      loanID,
 			PaymentGatewayTransactionID: pgtype.Text{String: gatewayTransactionID, Valid: true},
@@ -520,6 +516,30 @@ func (s *Service) RecordRepayment(
 			return nil
 		case !errors.Is(err, pgx.ErrNoRows):
 			return fmt.Errorf("check existing repayment: %w", err)
+		}
+
+		switch current.Status {
+		case loansqlc.LoanStatusClosed, loansqlc.LoanStatusWrittenOff, loansqlc.LoanStatusRestructuring:
+			return ErrPaymentNotAllowed
+		}
+
+		schedules, err := q.LockActiveRepaymentSchedulesByLoan(ctx, loanID)
+		if err != nil {
+			return fmt.Errorf("lock repayment schedules: %w", err)
+		}
+		if len(schedules) == 0 {
+			return ErrRepaymentScheduleMissing
+		}
+
+		priorApplied, err := q.SumLoanAppliedRepayments(ctx, loanID)
+		if err != nil {
+			return fmt.Errorf("sum applied repayments: %w", err)
+		}
+
+		allocation := allocateRepayment(amount, priorApplied, schedules)
+		allocationJSON, err := json.Marshal(allocation)
+		if err != nil {
+			return fmt.Errorf("encode allocation: %w", err)
 		}
 
 		referenceID, err := newUUID()
@@ -532,11 +552,40 @@ func (s *Service) RecordRepayment(
 			Amount:                      amount,
 			ReferenceID:                 referenceID,
 			PaymentGatewayTransactionID: pgtype.Text{String: gatewayTransactionID, Valid: true},
-			AllocationBreakdown:         []byte("{}"),
+			AllocationBreakdown:         allocationJSON,
 			CreatedBy:                   createdBy,
 		})
 		if err != nil {
 			return fmt.Errorf("insert repayment transaction: %w", err)
+		}
+
+		if allocation.Credit != "0" {
+			if _, err := q.CreateCreditBalance(ctx, loansqlc.CreateCreditBalanceParams{
+				MemberID: current.MemberID,
+				LoanID:   loanID,
+				Amount:   numericFromScale(allocation.creditAmount),
+				Source:   loansqlc.CreditBalanceSourceOverpayment,
+			}); err != nil {
+				return fmt.Errorf("create credit balance: %w", err)
+			}
+		}
+
+		totalApplied := numericToScale(priorApplied, -4)
+		totalApplied.Add(totalApplied, allocation.loanAppliedAmount)
+		if err := updateScheduleStatuses(ctx, q, schedules, totalApplied); err != nil {
+			return err
+		}
+		if allocation.loanClosed {
+			if _, err := q.UpdateLoanStatus(ctx, loansqlc.UpdateLoanStatusParams{
+				ID:        loanID,
+				Status:    loansqlc.LoanStatusClosed,
+				UpdatedBy: createdBy,
+			}); err != nil {
+				return fmt.Errorf("close loan: %w", err)
+			}
+			if err := insertStatusAudit(ctx, q, loanID, current.Status, loansqlc.LoanStatusClosed, createdBy, "loan fully repaid"); err != nil {
+				return err
+			}
 		}
 		return nil
 	})
@@ -607,6 +656,77 @@ func (s *Service) ListCreditBalances(ctx context.Context, memberID pgtype.UUID, 
 		return nil, fmt.Errorf("list credit balances: %w", err)
 	}
 	return credits, nil
+}
+
+type repaymentAllocation struct {
+	Principal string `json:"principal"`
+	Interest  string `json:"interest"`
+	Penalty   string `json:"penalty"`
+	Credit    string `json:"credit"`
+
+	loanAppliedAmount *big.Int
+	creditAmount      *big.Int
+	loanClosed        bool
+}
+
+func allocateRepayment(amount, priorApplied pgtype.Numeric, schedules []loansqlc.RepaymentSchedule) repaymentAllocation {
+	payment := numericToScale(amount, -4)
+	prior := numericToScale(priorApplied, -4)
+	totalDue := sumScheduleAmountDue(schedules)
+
+	outstanding := new(big.Int).Sub(totalDue, prior)
+	if outstanding.Sign() < 0 {
+		outstanding.SetInt64(0)
+	}
+
+	loanApplied := minBigInt(payment, outstanding)
+	credit := new(big.Int).Sub(payment, loanApplied)
+	totalApplied := new(big.Int).Add(prior, loanApplied)
+
+	return repaymentAllocation{
+		Principal:         decimalStringFromScale(loanApplied, -4),
+		Interest:          "0",
+		Penalty:           "0",
+		Credit:            decimalStringFromScale(credit, -4),
+		loanAppliedAmount: loanApplied,
+		creditAmount:      credit,
+		loanClosed:        totalApplied.Cmp(totalDue) >= 0,
+	}
+}
+
+func updateScheduleStatuses(ctx context.Context, q loansqlc.Querier, schedules []loansqlc.RepaymentSchedule, applied *big.Int) error {
+	remaining := new(big.Int).Set(applied)
+	for _, schedule := range schedules {
+		due := numericToScale(schedule.AmountDue, -4)
+		nextStatus := schedule.Status
+		switch {
+		case remaining.Cmp(due) >= 0:
+			nextStatus = loansqlc.RepaymentScheduleStatusPaid
+			remaining.Sub(remaining, due)
+		case remaining.Sign() > 0:
+			nextStatus = loansqlc.RepaymentScheduleStatusPartial
+			remaining.SetInt64(0)
+		}
+
+		if nextStatus == schedule.Status {
+			continue
+		}
+		if _, err := q.UpdateRepaymentScheduleStatus(ctx, loansqlc.UpdateRepaymentScheduleStatusParams{
+			ID:     schedule.ID,
+			Status: nextStatus,
+		}); err != nil {
+			return fmt.Errorf("update repayment schedule status: %w", err)
+		}
+	}
+	return nil
+}
+
+func sumScheduleAmountDue(schedules []loansqlc.RepaymentSchedule) *big.Int {
+	total := new(big.Int)
+	for _, schedule := range schedules {
+		total.Add(total, numericToScale(schedule.AmountDue, -4))
+	}
+	return total
 }
 
 func verifyApprovedGuarantees(ctx context.Context, q loansqlc.Querier, loanID pgtype.UUID, principal pgtype.Numeric) error {
@@ -694,6 +814,47 @@ func numericToScale(n pgtype.Numeric, scale int32) *big.Int {
 		out.Quo(out, pow10(-diff))
 	}
 	return out
+}
+
+func numericFromScale(n *big.Int) pgtype.Numeric {
+	return pgtype.Numeric{Int: new(big.Int).Set(n), Exp: -4, Valid: true}
+}
+
+func minBigInt(a, b *big.Int) *big.Int {
+	if a.Cmp(b) < 0 {
+		return new(big.Int).Set(a)
+	}
+	return new(big.Int).Set(b)
+}
+
+func decimalStringFromScale(n *big.Int, scale int32) string {
+	if n.Sign() == 0 {
+		return "0"
+	}
+	if scale >= 0 {
+		out := new(big.Int).Set(n)
+		out.Mul(out, pow10(scale))
+		return out.String()
+	}
+
+	digits := new(big.Int).Abs(n).String()
+	places := int(-scale)
+	for len(digits) <= places {
+		digits = "0" + digits
+	}
+
+	whole := digits[:len(digits)-places]
+	frac := strings.TrimRight(digits[len(digits)-places:], "0")
+	if frac == "" {
+		if n.Sign() < 0 {
+			return "-" + whole
+		}
+		return whole
+	}
+	if n.Sign() < 0 {
+		return "-" + whole + "." + frac
+	}
+	return whole + "." + frac
 }
 
 func splitNumeric(n pgtype.Numeric, count int) []pgtype.Numeric {
