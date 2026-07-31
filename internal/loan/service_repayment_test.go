@@ -237,6 +237,7 @@ func applyMigrations(ctx context.Context, pool *pgxpool.Pool) error {
 
 func createRepaymentLoan(t *testing.T, ctx context.Context, pool *pgxpool.Pool, status loansqlc.LoanStatus) pgtype.UUID {
 	t.Helper()
+	q := loansqlc.New(pool)
 
 	memberID, err := newUUID()
 	if err != nil {
@@ -250,64 +251,63 @@ func createRepaymentLoan(t *testing.T, ctx context.Context, pool *pgxpool.Pool, 
 		t.Fatalf("insert member: %v", err)
 	}
 
-	loanID, err := newUUID()
+	loan, err := q.CreateLoan(ctx, loansqlc.CreateLoanParams{
+		MemberID:              memberID,
+		BranchID:              1,
+		Principal:             mustNumeric(t, "100000"),
+		InterestRate:          mustNumeric(t, "0"),
+		RepaymentPeriodMonths: 2,
+		UpdatedBy:             testUUID("00000000-0000-0000-0000-000000000001"),
+	})
 	if err != nil {
-		t.Fatalf("generate loan id: %v", err)
+		t.Fatalf("create loan: %v", err)
 	}
-	disbursedAt := pgtype.Timestamptz{}
-	if status == loansqlc.LoanStatusDisbursed {
-		disbursedAt = pgtype.Timestamptz{Time: time.Now(), Valid: true}
+	if status != loan.Status {
+		if _, err := q.UpdateLoanStatus(ctx, loansqlc.UpdateLoanStatusParams{
+			ID:        loan.ID,
+			Status:    status,
+			UpdatedBy: testUUID("00000000-0000-0000-0000-000000000001"),
+		}); err != nil {
+			t.Fatalf("update loan status: %v", err)
+		}
 	}
-	_, err = pool.Exec(ctx, `
-		INSERT INTO loans (id, member_id, branch_id, principal, interest_rate, repayment_period_months, status, disbursed_at, updated_by)
-		VALUES ($1, $2, 1, 100000, 0, 2, $3, $4, $5)
-	`, loanID, memberID, status, disbursedAt, testUUID("00000000-0000-0000-0000-000000000001"))
-	if err != nil {
-		t.Fatalf("insert loan: %v", err)
-	}
-	return loanID
+	return loan.ID
 }
 
 func createSchedule(t *testing.T, ctx context.Context, pool *pgxpool.Pool, loanID pgtype.UUID, installmentNo int, amount string) {
 	t.Helper()
-	_, err := pool.Exec(ctx, `
-		INSERT INTO repayment_schedules (loan_id, installment_no, due_date, amount_due, status)
-		VALUES ($1, $2, CURRENT_DATE + ($2 || ' months')::interval, $3, 'upcoming')
-	`, loanID, installmentNo, amount)
+	_, err := loansqlc.New(pool).CreateRepaymentSchedule(ctx, loansqlc.CreateRepaymentScheduleParams{
+		LoanID:        loanID,
+		InstallmentNo: int32(installmentNo),
+		DueDate:       pgtype.Date{Time: time.Now().AddDate(0, installmentNo, 0), Valid: true},
+		AmountDue:     mustNumeric(t, amount),
+		Status:        loansqlc.RepaymentScheduleStatusUpcoming,
+	})
 	if err != nil {
-		t.Fatalf("insert schedule: %v", err)
+		t.Fatalf("create schedule: %v", err)
 	}
 }
 
 func assertLoanStatus(t *testing.T, ctx context.Context, pool *pgxpool.Pool, loanID pgtype.UUID, want string) {
 	t.Helper()
-	var got string
-	if err := pool.QueryRow(ctx, "SELECT status::text FROM loans WHERE id = $1", loanID).Scan(&got); err != nil {
-		t.Fatalf("query loan status: %v", err)
+	loan, err := loansqlc.New(pool).GetLoanByID(ctx, loanID)
+	if err != nil {
+		t.Fatalf("get loan: %v", err)
 	}
-	if got != want {
-		t.Fatalf("loan status = %q, want %q", got, want)
+	if string(loan.Status) != want {
+		t.Fatalf("loan status = %q, want %q", loan.Status, want)
 	}
 }
 
 func assertScheduleStatuses(t *testing.T, ctx context.Context, pool *pgxpool.Pool, loanID pgtype.UUID, want []string) {
 	t.Helper()
-	rows, err := pool.Query(ctx, "SELECT status::text FROM repayment_schedules WHERE loan_id = $1 ORDER BY installment_no", loanID)
+	schedules, err := loansqlc.New(pool).ListRepaymentSchedulesByLoan(ctx, loanID)
 	if err != nil {
-		t.Fatalf("query schedule statuses: %v", err)
+		t.Fatalf("list repayment schedules: %v", err)
 	}
-	defer rows.Close()
-
-	var got []string
-	for rows.Next() {
-		var status string
-		if err := rows.Scan(&status); err != nil {
-			t.Fatalf("scan schedule status: %v", err)
-		}
-		got = append(got, status)
-	}
-	if err := rows.Err(); err != nil {
-		t.Fatalf("schedule rows: %v", err)
+	got := make([]string, 0, len(schedules))
+	for _, schedule := range schedules {
+		got = append(got, string(schedule.Status))
 	}
 	if strings.Join(got, ",") != strings.Join(want, ",") {
 		t.Fatalf("schedule statuses = %v, want %v", got, want)
@@ -328,6 +328,7 @@ func assertCreditAmount(t *testing.T, ctx context.Context, pool *pgxpool.Pool, l
 	if len(credits) != 1 {
 		t.Fatalf("credit count = %d, want 1", len(credits))
 	}
+
 	got := decimalStringFromScale(numericToScale(credits[0].Amount, -4), -4)
 	if got != want {
 		t.Fatalf("credit amount = %q, want %q", got, want)
@@ -356,6 +357,7 @@ func listAllLoanTransactions(t *testing.T, ctx context.Context, pool *pgxpool.Po
 	q := loansqlc.New(pool)
 	var all []loansqlc.LoanTransaction
 	var cursor LoanCursor
+
 	for {
 		transactions, err := q.ListLoanTransactions(ctx, loansqlc.ListLoanTransactionsParams{
 			LoanID:  loanID,
@@ -366,10 +368,12 @@ func listAllLoanTransactions(t *testing.T, ctx context.Context, pool *pgxpool.Po
 		if err != nil {
 			t.Fatalf("list loan transactions: %v", err)
 		}
+
 		all = append(all, transactions...)
 		if len(transactions) < 100 {
 			return all
 		}
+
 		last := transactions[len(transactions)-1]
 		cursor = LoanCursor{CreatedAt: last.CreatedAt, ID: last.ID}
 	}
