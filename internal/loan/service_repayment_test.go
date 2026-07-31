@@ -316,7 +316,7 @@ func assertScheduleStatuses(t *testing.T, ctx context.Context, pool *pgxpool.Poo
 
 func assertCreditCount(t *testing.T, ctx context.Context, pool *pgxpool.Pool, loanID pgtype.UUID, want int) {
 	t.Helper()
-	got := creditCountByLoan(t, ctx, pool, loanID)
+	got := len(listCreditsByLoan(t, ctx, pool, loanID))
 	if got != want {
 		t.Fatalf("credit count = %d, want %d", got, want)
 	}
@@ -324,24 +324,12 @@ func assertCreditCount(t *testing.T, ctx context.Context, pool *pgxpool.Pool, lo
 
 func assertCreditAmount(t *testing.T, ctx context.Context, pool *pgxpool.Pool, loanID pgtype.UUID, want string) {
 	t.Helper()
-	loan, err := loansqlc.New(pool).GetLoanByID(ctx, loanID)
-	if err != nil {
-		t.Fatalf("get loan: %v", err)
+	credits := listCreditsByLoan(t, ctx, pool, loanID)
+	if len(credits) != 1 {
+		t.Fatalf("credit count = %d, want 1", len(credits))
 	}
-	credits, err := loansqlc.New(pool).ListCreditBalancesByMember(ctx, loansqlc.ListCreditBalancesByMemberParams{
-		MemberID: loan.MemberID,
-		Limit:    100,
-	})
-	if err != nil {
-		t.Fatalf("list credit balances: %v", err)
-	}
-	var got string
-	for _, credit := range credits {
-		if sameUUID(credit.LoanID, loanID) {
-			got = decimalStringFromScale(numericToScale(credit.Amount, -4), -4)
-			break
-		}
-	}
+
+	got := decimalStringFromScale(numericToScale(credits[0].Amount, -4), -4)
 	if got != want {
 		t.Fatalf("credit amount = %q, want %q", got, want)
 	}
@@ -349,39 +337,46 @@ func assertCreditAmount(t *testing.T, ctx context.Context, pool *pgxpool.Pool, l
 
 func assertTransactionCount(t *testing.T, ctx context.Context, pool *pgxpool.Pool, loanID pgtype.UUID, want int) {
 	t.Helper()
-	transactions, err := loansqlc.New(pool).ListLoanTransactions(ctx, loansqlc.ListLoanTransactionsParams{
-		LoanID: loanID,
-		Limit:  100,
-	})
-	if err != nil {
-		t.Fatalf("list loan transactions: %v", err)
-	}
-	got := len(transactions)
+	got := len(listAllLoanTransactions(t, ctx, pool, loanID))
 	if got != want {
 		t.Fatalf("transaction count = %d, want %d", got, want)
 	}
 }
 
-func creditCountByLoan(t *testing.T, ctx context.Context, pool *pgxpool.Pool, loanID pgtype.UUID) int {
+func listCreditsByLoan(t *testing.T, ctx context.Context, pool *pgxpool.Pool, loanID pgtype.UUID) []loansqlc.CreditBalance {
 	t.Helper()
-	loan, err := loansqlc.New(pool).GetLoanByID(ctx, loanID)
+	credits, err := loansqlc.New(pool).ListCreditBalancesByLoan(ctx, loanID)
 	if err != nil {
-		t.Fatalf("get loan: %v", err)
+		t.Fatalf("list credit balances by loan: %v", err)
 	}
-	credits, err := loansqlc.New(pool).ListCreditBalancesByMember(ctx, loansqlc.ListCreditBalancesByMemberParams{
-		MemberID: loan.MemberID,
-		Limit:    100,
-	})
-	if err != nil {
-		t.Fatalf("list credit balances: %v", err)
-	}
-	count := 0
-	for _, credit := range credits {
-		if sameUUID(credit.LoanID, loanID) {
-			count++
+	return credits
+}
+
+func listAllLoanTransactions(t *testing.T, ctx context.Context, pool *pgxpool.Pool, loanID pgtype.UUID) []loansqlc.LoanTransaction {
+	t.Helper()
+	q := loansqlc.New(pool)
+	var all []loansqlc.LoanTransaction
+	var cursor LoanCursor
+
+	for {
+		transactions, err := q.ListLoanTransactions(ctx, loansqlc.ListLoanTransactionsParams{
+			LoanID:  loanID,
+			Column2: cursor.CreatedAt,
+			ID:      cursor.ID,
+			Limit:   100,
+		})
+		if err != nil {
+			t.Fatalf("list loan transactions: %v", err)
 		}
+
+		all = append(all, transactions...)
+		if len(transactions) < 100 {
+			return all
+		}
+
+		last := transactions[len(transactions)-1]
+		cursor = LoanCursor{CreatedAt: last.CreatedAt, ID: last.ID}
 	}
-	return count
 }
 
 func mustNumeric(t *testing.T, value string) pgtype.Numeric {

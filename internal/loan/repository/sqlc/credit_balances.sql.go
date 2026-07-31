@@ -67,6 +67,42 @@ func (q *Queries) GetCreditBalanceByID(ctx context.Context, id pgtype.UUID) (Cre
 	return i, err
 }
 
+const listCreditBalancesByLoan = `-- name: ListCreditBalancesByLoan :many
+SELECT id, member_id, loan_id, amount, source, status, created_at, last_activity_at
+FROM credit_balances
+WHERE loan_id = $1
+ORDER BY created_at DESC, id DESC
+`
+
+func (q *Queries) ListCreditBalancesByLoan(ctx context.Context, loanID pgtype.UUID) ([]CreditBalance, error) {
+	rows, err := q.db.Query(ctx, listCreditBalancesByLoan, loanID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []CreditBalance
+	for rows.Next() {
+		var i CreditBalance
+		if err := rows.Scan(
+			&i.ID,
+			&i.MemberID,
+			&i.LoanID,
+			&i.Amount,
+			&i.Source,
+			&i.Status,
+			&i.CreatedAt,
+			&i.LastActivityAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listCreditBalancesByMember = `-- name: ListCreditBalancesByMember :many
 SELECT id, member_id, loan_id, amount, source, status, created_at, last_activity_at
 FROM credit_balances
