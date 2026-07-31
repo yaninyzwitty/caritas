@@ -229,25 +229,37 @@ func (q *Queries) LockGuarantor(ctx context.Context, arg LockGuarantorParams) (L
 
 const updateGuarantorStatus = `-- name: UpdateGuarantorStatus :one
 UPDATE loan_guarantors
-SET status = $2,
-    approved_at = CASE WHEN $2 = 'approved' THEN NOW() ELSE approved_at END,
-    approved_by = $3
-WHERE loan_id = $1 AND guarantor_id = $4
-RETURNING loan_id, guarantor_id, guaranteed_amount, status, approved_at, approved_by, created_at
+SET status = $1::guarantor_status,
+    approved_at = CASE
+        WHEN $1::guarantor_status =
+             'approved'::guarantor_status
+        THEN NOW()
+        ELSE approved_at
+    END,
+    approved_by = $2
+WHERE loan_id = $3
+  AND guarantor_id = $4
+RETURNING loan_id,
+          guarantor_id,
+          guaranteed_amount,
+          status,
+          approved_at,
+          approved_by,
+          created_at
 `
 
 type UpdateGuarantorStatusParams struct {
-	LoanID      pgtype.UUID     `json:"loanId"`
 	Status      GuarantorStatus `json:"status"`
 	ApprovedBy  pgtype.UUID     `json:"approvedBy"`
+	LoanID      pgtype.UUID     `json:"loanId"`
 	GuarantorID pgtype.UUID     `json:"guarantorId"`
 }
 
 func (q *Queries) UpdateGuarantorStatus(ctx context.Context, arg UpdateGuarantorStatusParams) (LoanGuarantor, error) {
 	row := q.db.QueryRow(ctx, updateGuarantorStatus,
-		arg.LoanID,
 		arg.Status,
 		arg.ApprovedBy,
+		arg.LoanID,
 		arg.GuarantorID,
 	)
 	var i LoanGuarantor

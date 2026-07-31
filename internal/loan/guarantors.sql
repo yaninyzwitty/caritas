@@ -26,11 +26,23 @@ ORDER BY lg.created_at DESC;
 
 -- name: UpdateGuarantorStatus :one
 UPDATE loan_guarantors
-SET status = $2,
-    approved_at = CASE WHEN $2 = 'approved' THEN NOW() ELSE approved_at END,
-    approved_by = $3
-WHERE loan_id = $1 AND guarantor_id = $4
-RETURNING loan_id, guarantor_id, guaranteed_amount, status, approved_at, approved_by, created_at;
+SET status = sqlc.arg(status)::guarantor_status,
+    approved_at = CASE
+        WHEN sqlc.arg(status)::guarantor_status =
+             'approved'::guarantor_status
+        THEN NOW()
+        ELSE approved_at
+    END,
+    approved_by = sqlc.arg(approved_by)
+WHERE loan_id = sqlc.arg(loan_id)
+  AND guarantor_id = sqlc.arg(guarantor_id)
+RETURNING loan_id,
+          guarantor_id,
+          guaranteed_amount,
+          status,
+          approved_at,
+          approved_by,
+          created_at;
 
 -- name: GetTotalGuaranteedAmount :one
 SELECT COALESCE(SUM(guaranteed_amount), 0) as total_guaranteed

@@ -5,8 +5,10 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"log/slog"
 	"math/big"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -28,7 +30,11 @@ func NewService(store *Store) *Service {
 	return &Service{store: store}
 }
 
-func (s *Service) ApplyForLoan(ctx context.Context, params loansqlc.CreateLoanParams) (loansqlc.CreateLoanRow, error) {
+func (s *Service) ApplyForLoan(ctx context.Context, params loansqlc.CreateLoanParams, guarantorIDs []pgtype.UUID) (loansqlc.CreateLoanRow, error) {
+
+	// increase timeout to prevent defer tx rollback errors, due to context time getting done
+	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
 	if !positive(params.Principal) {
 		return loansqlc.CreateLoanRow{}, ErrInvalidLoanAmount
 	}
@@ -38,10 +44,57 @@ func (s *Service) ApplyForLoan(ctx context.Context, params loansqlc.CreateLoanPa
 	if params.RepaymentPeriodMonths < 1 || params.RepaymentPeriodMonths > 36 {
 		return loansqlc.CreateLoanRow{}, ErrInvalidRepaymentPeriod
 	}
+	if len(guarantorIDs) < 1 {
+		return loansqlc.CreateLoanRow{}, ErrInsufficientGuarantors
+	}
+	if len(guarantorIDs) > maxGuarantors {
+		return loansqlc.CreateLoanRow{}, ErrTooManyGuarantors
+	}
 
-	loan, err := s.store.CreateLoan(ctx, params)
+	var loan loansqlc.CreateLoanRow
+	err := s.store.ExecTx(ctx, func(q loansqlc.Querier) error {
+		var err error
+		loan, err = q.CreateLoan(ctx, params)
+		if err != nil {
+			return fmt.Errorf("create loan: %w", err)
+		}
+
+		// TODO-implement proper logic management etc
+		// instead of splitting evenly for the guarantors
+		amounts := splitNumeric(params.Principal, len(guarantorIDs))
+		seen := make(map[pgtype.UUID]struct{}, len(guarantorIDs))
+		for i, guarantorID := range guarantorIDs {
+			if sameUUID(params.MemberID, guarantorID) {
+				return ErrSelfGuarantee
+			}
+			if _, ok := seen[guarantorID]; ok {
+				return ErrDuplicateGuarantor
+			}
+			seen[guarantorID] = struct{}{}
+
+			if _, err := q.CreateLoanGuarantor(ctx, loansqlc.CreateLoanGuarantorParams{
+				LoanID:           loan.ID,
+				GuarantorID:      guarantorID,
+				GuaranteedAmount: amounts[i],
+				Status:           loansqlc.GuarantorStatusPending,
+			}); err != nil {
+				return fmt.Errorf("create guarantor: %w", err)
+			}
+		}
+
+		if _, err := q.InsertLoanAuditTrail(ctx, loansqlc.InsertLoanAuditTrailParams{
+			LoanID:       loan.ID,
+			FieldChanged: "loan.application",
+			NewValue:     string(loansqlc.LoanStatusPending),
+			ChangedBy:    params.UpdatedBy,
+			ChangeReason: "loan application submitted",
+		}); err != nil {
+			return fmt.Errorf("insert audit trail: %w", err)
+		}
+		return nil
+	})
 	if err != nil {
-		return loansqlc.CreateLoanRow{}, fmt.Errorf("create loan: %w", err)
+		return loansqlc.CreateLoanRow{}, err
 	}
 	return loan, nil
 }
@@ -197,17 +250,19 @@ func (s *Service) ApproveGuarantor(
 			}
 			return fmt.Errorf("lock guarantor: %w", err)
 		}
+
 		if current.Status != loansqlc.GuarantorStatusPending {
 			return fmt.Errorf("%w: cannot approve %s guarantor", ErrInvalidGuarantorStatus, current.Status)
 		}
 
 		guarantor, err = q.UpdateGuarantorStatus(ctx, loansqlc.UpdateGuarantorStatusParams{
 			LoanID:      loanID,
-			Status:      loansqlc.GuarantorStatusApproved,
 			ApprovedBy:  approvedBy,
 			GuarantorID: guarantorID,
+			Status:      loansqlc.GuarantorStatusApproved,
 		})
 		if err != nil {
+			slog.Error("approve guarantor", "error", err)
 			return fmt.Errorf("approve guarantor: %w", err)
 		}
 
@@ -639,6 +694,23 @@ func numericToScale(n pgtype.Numeric, scale int32) *big.Int {
 		out.Quo(out, pow10(-diff))
 	}
 	return out
+}
+
+func splitNumeric(n pgtype.Numeric, count int) []pgtype.Numeric {
+	total := numericToScale(n, -4)
+	divisor := big.NewInt(int64(count))
+	share, remainder := new(big.Int).QuoRem(total, divisor, new(big.Int))
+
+	amounts := make([]pgtype.Numeric, count)
+	for i := range amounts {
+		amount := new(big.Int).Set(share)
+		if remainder.Sign() > 0 {
+			amount.Add(amount, big.NewInt(1))
+			remainder.Sub(remainder, big.NewInt(1))
+		}
+		amounts[i] = pgtype.Numeric{Int: amount, Exp: -4, Valid: true}
+	}
+	return amounts
 }
 
 func pow10(exp int32) *big.Int {

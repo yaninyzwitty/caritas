@@ -46,7 +46,7 @@ func mapServiceError(err error) error {
 	case errors.Is(err, pgx.ErrNoRows):
 		return status.Error(codes.NotFound, "not found")
 	case errors.Is(err, ErrInvalidLoanAmount), errors.Is(err, ErrInvalidInterestRate), errors.Is(err, ErrInvalidRepaymentPeriod),
-		errors.Is(err, ErrInvalidGuaranteedAmount), errors.Is(err, ErrGatewayTransactionID):
+		errors.Is(err, ErrInvalidGuaranteedAmount), errors.Is(err, ErrGatewayTransactionID), errors.Is(err, ErrDuplicateGuarantor):
 		return status.Error(codes.InvalidArgument, err.Error())
 	case errors.Is(err, ErrInvalidStatusTransition), errors.Is(err, ErrInvalidGuarantorStatus), errors.Is(err, ErrSelfGuarantee),
 		errors.Is(err, ErrTooManyGuarantors), errors.Is(err, ErrInsufficientGuarantors), errors.Is(err, ErrInsufficientGuarantee),
@@ -108,6 +108,15 @@ func (h *Handlers) ApplyForLoan(ctx context.Context, req *loanv1.ApplyForLoanReq
 		return nil, status.Error(codes.InvalidArgument, "invalid officer_id")
 	}
 
+	guarantorIDs := make([]pgtype.UUID, 0, len(req.GetGuarantorIds()))
+	for _, guarantorID := range req.GetGuarantorIds() {
+		id, err := stringToUUID(guarantorID)
+		if err != nil {
+			return nil, status.Error(codes.InvalidArgument, "invalid guarantor_id")
+		}
+		guarantorIDs = append(guarantorIDs, id)
+	}
+
 	loan, err := h.service.ApplyForLoan(ctx, loansqlc.CreateLoanParams{
 		MemberID:              memberID,
 		BranchID:              branchID,
@@ -116,7 +125,7 @@ func (h *Handlers) ApplyForLoan(ctx context.Context, req *loanv1.ApplyForLoanReq
 		RepaymentPeriodMonths: req.GetRepaymentPeriodMonths(),
 		// updated by should only be handled by the admin
 		UpdatedBy: loanOfficerID,
-	})
+	}, guarantorIDs)
 
 	if err != nil {
 		return nil, mapServiceError(err)
@@ -136,6 +145,11 @@ func (h *Handlers) ApproveLoan(ctx context.Context, req *loanv1.ApproveLoanReque
 
 	if req.GetReason() == "" {
 		return nil, status.Error(codes.InvalidArgument, "reason for the loan approval is required")
+	}
+	//
+
+	if req.GetOfficerId() == "" {
+		return nil, status.Error(codes.InvalidArgument, "loan officer id is required")
 	}
 
 	loanID, err := stringToUUID(req.GetLoanId())
@@ -268,6 +282,7 @@ func (h *Handlers) ListLoans(ctx context.Context, req *loanv1.ListLoansRequest) 
 		maxPageSize     = 1000
 	)
 
+	// TODO-check the use of the branch id in this prospection
 	if req.BranchId == "" {
 		return nil, status.Error(codes.InvalidArgument, "branch id is required")
 	}
@@ -464,9 +479,10 @@ func (h *Handlers) ApproveGuarantor(ctx context.Context, req *loanv1.ApproveGuar
 	if err != nil {
 		return nil, mapServiceError(err)
 	}
+	// TODO-map guarantor approval status well in the client
 
 	return &loanv1.ApproveGuarantorResponse{
-		NewStatus:  loanv1.GuarantorStatus(loanv1.LoanStatus_value[string(guarantorApproval.Status)]),
+		NewStatus:  loanv1.GuarantorStatus(loanv1.GuarantorStatus_value[string(guarantorApproval.Status)]),
 		ApprovedAt: timestamppb.New(guarantorApproval.ApprovedAt.Time),
 	}, nil
 
