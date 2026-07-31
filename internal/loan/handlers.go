@@ -3,6 +3,7 @@ package loan
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
@@ -50,7 +51,7 @@ func mapServiceError(err error) error {
 		return status.Error(codes.InvalidArgument, err.Error())
 	case errors.Is(err, ErrInvalidStatusTransition), errors.Is(err, ErrInvalidGuarantorStatus), errors.Is(err, ErrSelfGuarantee),
 		errors.Is(err, ErrTooManyGuarantors), errors.Is(err, ErrInsufficientGuarantors), errors.Is(err, ErrInsufficientGuarantee),
-		errors.Is(err, ErrPaymentNotAllowed):
+		errors.Is(err, ErrPaymentNotAllowed), errors.Is(err, ErrRepaymentScheduleMissing):
 		return status.Error(codes.FailedPrecondition, err.Error())
 	case errors.Is(err, context.Canceled):
 		return status.Error(codes.Canceled, err.Error())
@@ -596,9 +597,7 @@ func (h *Handlers) RecordRepayment(ctx context.Context, req *loanv1.RecordRepaym
 	return &loanv1.RecordRepaymentResponse{
 		TransactionId: tx.ID.String(),
 		RecordedAt:    timestamppb.New(tx.CreatedAt.Time),
-		Allocation: &loanv1.AllocationBreakdown{
-			Principal: numericToString(tx.Amount),
-		},
+		Allocation:    allocationBreakdownToProto(tx.AllocationBreakdown),
 	}, nil
 }
 
@@ -839,6 +838,26 @@ func repaymentScheduleToProto(schedule loansqlc.RepaymentSchedule) *loanv1.Repay
 		DueDate:       timestamppb.New(schedule.DueDate.Time),
 		AmountDue:     numericToString(schedule.AmountDue),
 		Status:        repaymentStatusToProto(schedule.Status),
+	}
+}
+
+func allocationBreakdownToProto(raw []byte) *loanv1.AllocationBreakdown {
+	var allocation struct {
+		Principal string `json:"principal"`
+		Interest  string `json:"interest"`
+		Penalty   string `json:"penalty"`
+		Credit    string `json:"credit"`
+	}
+	if len(raw) > 0 {
+		if err := json.Unmarshal(raw, &allocation); err != nil {
+			return &loanv1.AllocationBreakdown{}
+		}
+	}
+	return &loanv1.AllocationBreakdown{
+		Principal: allocation.Principal,
+		Interest:  allocation.Interest,
+		Penalty:   allocation.Penalty,
+		Credit:    allocation.Credit,
 	}
 }
 

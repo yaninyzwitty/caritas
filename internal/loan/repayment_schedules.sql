@@ -17,6 +17,14 @@ WHERE loan_id = $1
 ORDER BY installment_no ASC
 FOR UPDATE;
 
+-- name: LockActiveRepaymentSchedulesByLoan :many
+SELECT id, loan_id, installment_no, due_date, amount_due, status, created_at, updated_at
+FROM repayment_schedules
+WHERE loan_id = $1
+  AND status <> 'superseded'
+ORDER BY installment_no ASC
+FOR UPDATE;
+
 -- name: UpdateRepaymentScheduleStatus :one
 UPDATE repayment_schedules
 SET status = $2,
