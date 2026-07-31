@@ -15,6 +15,12 @@ WHERE member_id = $1
 ORDER BY created_at DESC, id DESC
 LIMIT $2;
 
+-- name: ListCreditBalancesByLoan :many
+SELECT id, member_id, loan_id, amount, source, status, created_at, last_activity_at
+FROM credit_balances
+WHERE loan_id = $1
+ORDER BY created_at DESC, id DESC;
+
 -- name: LockCreditBalanceByID :one
 SELECT id, member_id, loan_id, amount, source, status, created_at, last_activity_at
 FROM credit_balances

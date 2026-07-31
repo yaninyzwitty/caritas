@@ -25,6 +25,7 @@ type Querier interface {
 	GetTotalGuaranteedAmount(ctx context.Context, loanID pgtype.UUID) (interface{}, error)
 	InsertLoanAuditTrail(ctx context.Context, arg InsertLoanAuditTrailParams) (LoanAuditTrail, error)
 	InsertLoanTransaction(ctx context.Context, arg InsertLoanTransactionParams) (LoanTransaction, error)
+	ListCreditBalancesByLoan(ctx context.Context, loanID pgtype.UUID) ([]CreditBalance, error)
 	ListCreditBalancesByMember(ctx context.Context, arg ListCreditBalancesByMemberParams) ([]CreditBalance, error)
 	ListDueRepaymentSchedules(ctx context.Context, dueDate pgtype.Date) ([]RepaymentSchedule, error)
 	ListGuarantorLoans(ctx context.Context, guarantorID pgtype.UUID) ([]ListGuarantorLoansRow, error)
