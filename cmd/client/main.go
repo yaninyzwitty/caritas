@@ -10,12 +10,13 @@ import (
 	"time"
 
 	"github.com/yaninyzwitty/caritas-backend/config"
+	loanv1 "github.com/yaninyzwitty/caritas-backend/gen/loan/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
 func main() {
-	_, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	configPath := flag.String("config", "config.yaml", "the path to your config file")
 	flag.Parse()
@@ -36,12 +37,20 @@ func main() {
 		}
 	}()
 
-	// shareClient := sharev1.NewShareServiceClient(conn)
+	repaymentServiceClient := loanv1.NewRepaymentServiceClient(conn)
 
-	// reference_id is the idempotency key (NOT NULL, part of the unique
-	// constraint on share_transactions) so the client must supply it; a fresh
-	// UUID per run makes each purchase a distinct, retry-safe operation.
+	recordPayment, err := repaymentServiceClient.RecordRepayment(ctx, &loanv1.RecordRepaymentRequest{
+		LoanId:                      "c5398380-a8c7-4545-9bf0-2c2d1dfd0c6b",
+		Amount:                      "60000",
+		PaymentGatewayTransactionId: "71393be9-2298-4bb5-87ab-7527fea24194", // enforced by payment provider
+		CreatedBy:                   "c9b9f2e3-e782-4df3-958b-26cb50e2e5c4",
+	})
 
-	// reversal of
+	if err != nil {
+		slog.Error("failed to record payment", "error", err)
+		os.Exit(1)
+	}
+
+	slog.Info("record payment", "transaction_id", recordPayment.TransactionId, "credit", recordPayment.Allocation.Credit)
 
 }

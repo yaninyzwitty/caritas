@@ -381,3 +381,5 @@ All security alerts must:
 3. Freeze affected accounts/loans if attack confirmed
 4. Require manual security review before unfreezing
 5. Create detailed audit trail of security incident and response
+
+Only active members can apply for a loan

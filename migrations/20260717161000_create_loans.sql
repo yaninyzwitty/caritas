@@ -33,7 +33,6 @@ CREATE TABLE loans (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
--- TODO-re-check these constrains
     CONSTRAINT fk_loans_member FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE RESTRICT,
     CONSTRAINT chk_loans_principal_positive CHECK (principal > 0),
     CONSTRAINT chk_loans_interest_rate_non_negative CHECK (interest_rate >= 0),

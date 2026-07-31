@@ -12,6 +12,7 @@ var (
 	ErrInvalidStatusTransition  = errors.New("invalid loan status transition")
 	ErrInvalidGuarantorStatus   = errors.New("invalid guarantor status")
 	ErrSelfGuarantee            = errors.New("member cannot guarantee own loan")
+	ErrDuplicateGuarantor       = errors.New("duplicate guarantor")
 	ErrTooManyGuarantors        = errors.New("loan cannot have more than 20 guarantors")
 	ErrInsufficientGuarantors   = errors.New("loan requires at least one approved guarantor")
 	ErrInsufficientGuarantee    = errors.New("approved guarantees do not cover principal")

@@ -2,9 +2,11 @@ package loan
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	loansqlc "github.com/yaninyzwitty/caritas-backend/internal/loan/repository/sqlc"
 )
@@ -28,8 +30,12 @@ func (s *Store) ExecTx(ctx context.Context, fn func(q loansqlc.Querier) error) e
 	}
 
 	defer func() {
-		if err := tx.Rollback(ctx); err != nil {
-			slog.Error("rollback error", "error", err)
+		if err := tx.Rollback(ctx); err != nil &&
+			!errors.Is(err, pgx.ErrTxClosed) {
+			// ignore only pgx.ErrTxClosed errors
+			// for noise
+			slog.Error("rollback transaction", "error", err)
+
 		}
 
 	}()
