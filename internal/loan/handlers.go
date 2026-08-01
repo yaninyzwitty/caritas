@@ -51,7 +51,8 @@ func mapServiceError(err error) error {
 		return status.Error(codes.InvalidArgument, err.Error())
 	case errors.Is(err, ErrInvalidStatusTransition), errors.Is(err, ErrInvalidGuarantorStatus), errors.Is(err, ErrSelfGuarantee),
 		errors.Is(err, ErrTooManyGuarantors), errors.Is(err, ErrInsufficientGuarantors), errors.Is(err, ErrInsufficientGuarantee),
-		errors.Is(err, ErrPaymentNotAllowed), errors.Is(err, ErrRepaymentScheduleMissing):
+		errors.Is(err, ErrPaymentNotAllowed), errors.Is(err, ErrRepaymentScheduleMissing), errors.Is(err, ErrMemberNotActive),
+		errors.Is(err, ErrGuarantorNotActive):
 		return status.Error(codes.FailedPrecondition, err.Error())
 	case errors.Is(err, context.Canceled):
 		return status.Error(codes.Canceled, err.Error())
@@ -134,7 +135,7 @@ func (h *Handlers) ApplyForLoan(ctx context.Context, req *loanv1.ApplyForLoanReq
 
 	return &loanv1.ApplyForLoanResponse{
 		LoanId: loan.ID.String(),
-		Status: loanv1.LoanStatus(loanv1.LoanStatus_value[string(loan.Status)]),
+		Status: loanStatusToProto(loan.Status),
 	}, nil
 
 }
@@ -171,7 +172,7 @@ func (h *Handlers) ApproveLoan(ctx context.Context, req *loanv1.ApproveLoanReque
 	}
 
 	return &loanv1.ApproveLoanResponse{
-		NewStatus:  loanv1.LoanStatus(loanv1.LoanStatus_value[string(loanApproval.Status)]),
+		NewStatus:  loanStatusToProto(loanApproval.Status),
 		ApprovedAt: timestamppb.New(loanApproval.UpdatedAt.Time),
 	}, nil
 
@@ -202,7 +203,7 @@ func (h *Handlers) RejectLoan(ctx context.Context, req *loanv1.RejectLoanRequest
 	}
 
 	return &loanv1.RejectLoanResponse{
-		NewStatus:  loanv1.LoanStatus(loanv1.LoanStatus_value[string(loanRejection.Status)]),
+		NewStatus:  loanStatusToProto(loanRejection.Status),
 		RejectedAt: timestamppb.New(loanRejection.UpdatedAt.Time),
 	}, nil
 }
@@ -236,7 +237,7 @@ func (h *Handlers) DisburseLoan(ctx context.Context, req *loanv1.DisburseLoanReq
 	}
 
 	return &loanv1.DisburseLoanResponse{
-		NewStatus:   loanv1.LoanStatus(loanv1.LoanStatus_value[string(loanDisbursed.Status)]),
+		NewStatus:   loanStatusToProto(loanDisbursed.Status),
 		DisbursedAt: timestamppb.New(loanDisbursed.UpdatedAt.Time),
 		ReferenceId: transaction.ReferenceID.String(),
 	}, nil
@@ -267,7 +268,7 @@ func (h *Handlers) GetLoan(ctx context.Context, req *loanv1.GetLoanRequest) (*lo
 			Principal:             numericToString(loan.Principal),
 			InterestRate:          numericToString(loan.InterestRate),
 			RepaymentPeriodMonths: loan.RepaymentPeriodMonths,
-			Status:                loanv1.LoanStatus(loanv1.LoanStatus_value[string(loan.Status)]),
+			Status:                loanStatusToProto(loan.Status),
 			DisbursedAt:           timestamppb.New(loan.DisbursedAt.Time),
 			CreatedAt:             timestamppb.New(loan.CreatedAt.Time),
 			UpdatedAt:             timestamppb.New(loan.UpdatedAt.Time),
@@ -354,7 +355,7 @@ func (h *Handlers) ListLoans(ctx context.Context, req *loanv1.ListLoansRequest) 
 			Id:                    loan.ID.String(),
 			InterestRate:          interestRate,
 			RepaymentPeriodMonths: loan.RepaymentPeriodMonths,
-			Status:                loanv1.LoanStatus(loanv1.LoanStatus_value[string(loan.Status)]),
+			Status:                loanStatusToProto(loan.Status),
 			DisbursedAt:           timestamppb.New(loan.DisbursedAt.Time),
 			CreatedAt:             timestamppb.New(loan.CreatedAt.Time),
 			UpdatedAt:             timestamppb.New(loan.UpdatedAt.Time),
@@ -382,7 +383,7 @@ func (h *Handlers) GetLoanStatus(ctx context.Context, req *loanv1.GetLoanStatusR
 	}
 
 	return &loanv1.GetLoanStatusResponse{
-		Status: loanv1.LoanStatus(loanv1.LoanStatus_value[string(loanStatus.Status)]),
+		Status: loanStatusToProto(loanStatus.Status),
 	}, nil
 
 }
@@ -420,7 +421,7 @@ func (h *Handlers) AddGuarantor(ctx context.Context, req *loanv1.AddGuarantorReq
 	}
 
 	return &loanv1.AddGuarantorResponse{
-		Status:    loanv1.GuarantorStatus(loanv1.LoanStatus_value[string(guarantor.Status)]),
+		Status:    guarantorStatusToProto(guarantor.Status),
 		CreatedAt: timestamppb.New(guarantor.CreatedAt.Time),
 	}, nil
 
@@ -483,7 +484,7 @@ func (h *Handlers) ApproveGuarantor(ctx context.Context, req *loanv1.ApproveGuar
 	// TODO-map guarantor approval status well in the client
 
 	return &loanv1.ApproveGuarantorResponse{
-		NewStatus:  loanv1.GuarantorStatus(loanv1.GuarantorStatus_value[string(guarantorApproval.Status)]),
+		NewStatus:  guarantorStatusToProto(guarantorApproval.Status),
 		ApprovedAt: timestamppb.New(guarantorApproval.ApprovedAt.Time),
 	}, nil
 
@@ -551,7 +552,7 @@ func (h *Handlers) ListGuarantors(ctx context.Context, req *loanv1.ListGuarantor
 			LoanId:           guarantor.LoanID.String(),
 			GuarantorId:      guarantor.GuarantorID.String(),
 			GuaranteedAmount: numericToString(guarantor.GuaranteedAmount),
-			Status:           loanv1.GuarantorStatus(loanv1.LoanStatus_value[string(guarantor.Status)]),
+			Status:           guarantorStatusToProto(guarantor.Status),
 			ApprovedAt:       timestamppb.New(guarantor.ApprovedAt.Time),
 			ApprovedBy:       guarantor.ApprovedBy.String(),
 			CreatedAt:        timestamppb.New(guarantor.CreatedAt.Time),
@@ -776,11 +777,11 @@ func parseNumeric(val string) (pgtype.Numeric, error) {
 }
 
 func numericToString(n pgtype.Numeric) string {
-	if !n.Valid {
+	if !n.Valid || n.Int == nil {
 		return ""
 	}
 
-	return n.Int.String()
+	return decimalStringFromScale(n.Int, n.Exp)
 }
 
 func decodeCursor(token string) (pgtype.Timestamptz, pgtype.UUID, error) {
@@ -838,6 +839,46 @@ func repaymentScheduleToProto(schedule loansqlc.RepaymentSchedule) *loanv1.Repay
 		DueDate:       timestamppb.New(schedule.DueDate.Time),
 		AmountDue:     numericToString(schedule.AmountDue),
 		Status:        repaymentStatusToProto(schedule.Status),
+	}
+}
+
+func loanStatusToProto(status loansqlc.LoanStatus) loanv1.LoanStatus {
+	switch status {
+	case loansqlc.LoanStatusPending:
+		return loanv1.LoanStatus_LOAN_STATUS_PENDING
+	case loansqlc.LoanStatusApproved:
+		return loanv1.LoanStatus_LOAN_STATUS_APPROVED
+	case loansqlc.LoanStatusRejected:
+		return loanv1.LoanStatus_LOAN_STATUS_REJECTED
+	case loansqlc.LoanStatusDisbursed:
+		return loanv1.LoanStatus_LOAN_STATUS_DISBURSED
+	case loansqlc.LoanStatusRestructuring:
+		return loanv1.LoanStatus_LOAN_STATUS_RESTRUCTURING
+	case loansqlc.LoanStatusActive:
+		return loanv1.LoanStatus_LOAN_STATUS_ACTIVE
+	case loansqlc.LoanStatusDelinquent:
+		return loanv1.LoanStatus_LOAN_STATUS_DELINQUENT
+	case loansqlc.LoanStatusClosed:
+		return loanv1.LoanStatus_LOAN_STATUS_CLOSED
+	case loansqlc.LoanStatusWrittenOff:
+		return loanv1.LoanStatus_LOAN_STATUS_WRITTEN_OFF
+	case loansqlc.LoanStatusManualReview:
+		return loanv1.LoanStatus_LOAN_STATUS_MANUAL_REVIEW
+	default:
+		return loanv1.LoanStatus_LOAN_STATUS_UNSPECIFIED
+	}
+}
+
+func guarantorStatusToProto(status loansqlc.GuarantorStatus) loanv1.GuarantorStatus {
+	switch status {
+	case loansqlc.GuarantorStatusPending:
+		return loanv1.GuarantorStatus_GUARANTOR_STATUS_PENDING
+	case loansqlc.GuarantorStatusApproved:
+		return loanv1.GuarantorStatus_GUARANTOR_STATUS_APPROVED
+	case loansqlc.GuarantorStatusRejected:
+		return loanv1.GuarantorStatus_GUARANTOR_STATUS_REJECTED
+	default:
+		return loanv1.GuarantorStatus_GUARANTOR_STATUS_UNSPECIFIED
 	}
 }
 

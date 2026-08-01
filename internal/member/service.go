@@ -65,6 +65,17 @@ func (s *Service) GetMember(ctx context.Context, memberID pgtype.UUID) (sqlc.Get
 	return s.store.GetMemberByID(ctx, memberID)
 }
 
+func (s *Service) RequireActiveMember(ctx context.Context, memberID pgtype.UUID) error {
+	member, err := s.GetMember(ctx, memberID)
+	if err != nil {
+		return err
+	}
+	if member.Status != "active" {
+		return ErrMemberNotActive
+	}
+	return nil
+}
+
 func (s *Service) GetMemberByNationalID(ctx context.Context, branchID int64, nationalID string) (sqlc.GetMemberByIDRow, error) {
 	existing, err := s.store.MemberExistsByBranchAndNationalID(ctx, sqlc.MemberExistsByBranchAndNationalIDParams{
 		BranchID:   branchID,
@@ -82,7 +93,7 @@ func (s *Service) ListMembers(ctx context.Context, branchID int64, cursor *pgtyp
 	if cursor != nil {
 		cursorUUID = *cursor
 	}
-	
+
 	return s.store.ListMembersByBranchCursor(ctx, sqlc.ListMembersByBranchCursorParams{
 		BranchID: branchID,
 		Column2:  cursorUUID,

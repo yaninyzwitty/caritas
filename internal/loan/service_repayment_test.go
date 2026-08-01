@@ -23,7 +23,7 @@ var repaymentMemberNumber int64
 func TestRecordRepaymentExactPaymentClosesLoanWithoutCredit(t *testing.T) {
 	ctx := context.Background()
 	store, pool := repaymentStore(t, ctx)
-	service := NewService(store)
+	service := NewService(store, nil)
 
 	loanID := createRepaymentLoan(t, ctx, pool, loansqlc.LoanStatusActive)
 	createSchedule(t, ctx, pool, loanID, 1, "50000")
@@ -46,7 +46,7 @@ func TestRecordRepaymentExactPaymentClosesLoanWithoutCredit(t *testing.T) {
 func TestRecordRepaymentOverpaymentClosesLoanAndCreatesCredit(t *testing.T) {
 	ctx := context.Background()
 	store, pool := repaymentStore(t, ctx)
-	service := NewService(store)
+	service := NewService(store, nil)
 
 	loanID := createRepaymentLoan(t, ctx, pool, loansqlc.LoanStatusActive)
 	createSchedule(t, ctx, pool, loanID, 1, "150000")
@@ -64,7 +64,7 @@ func TestRecordRepaymentOverpaymentClosesLoanAndCreatesCredit(t *testing.T) {
 func TestRecordRepaymentPartialPaymentMarksFirstUnpaidSchedulePartial(t *testing.T) {
 	ctx := context.Background()
 	store, pool := repaymentStore(t, ctx)
-	service := NewService(store)
+	service := NewService(store, nil)
 
 	loanID := createRepaymentLoan(t, ctx, pool, loansqlc.LoanStatusActive)
 	createSchedule(t, ctx, pool, loanID, 1, "50000")
@@ -83,7 +83,7 @@ func TestRecordRepaymentPartialPaymentMarksFirstUnpaidSchedulePartial(t *testing
 func TestRecordRepaymentDuplicateGatewayIDReturnsOriginalTransaction(t *testing.T) {
 	ctx := context.Background()
 	store, pool := repaymentStore(t, ctx)
-	service := NewService(store)
+	service := NewService(store, nil)
 
 	loanID := createRepaymentLoan(t, ctx, pool, loansqlc.LoanStatusActive)
 	createSchedule(t, ctx, pool, loanID, 1, "100000")
@@ -107,13 +107,17 @@ func TestRecordRepaymentDuplicateGatewayIDReturnsOriginalTransaction(t *testing.
 func TestRecordRepaymentRejectsBlockedStatuses(t *testing.T) {
 	ctx := context.Background()
 	store, pool := repaymentStore(t, ctx)
-	service := NewService(store)
+	service := NewService(store, nil)
 	createdBy := testUUID("00000000-0000-0000-0000-000000000014")
 
 	for _, status := range []loansqlc.LoanStatus{
+		loansqlc.LoanStatusPending,
+		loansqlc.LoanStatusApproved,
+		loansqlc.LoanStatusRejected,
 		loansqlc.LoanStatusClosed,
 		loansqlc.LoanStatusWrittenOff,
 		loansqlc.LoanStatusRestructuring,
+		loansqlc.LoanStatusManualReview,
 	} {
 		t.Run(string(status), func(t *testing.T) {
 			loanID := createRepaymentLoan(t, ctx, pool, status)

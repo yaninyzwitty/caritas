@@ -37,20 +37,16 @@ func main() {
 		}
 	}()
 
-	repaymentServiceClient := loanv1.NewRepaymentServiceClient(conn)
+	loanServiceClient := loanv1.NewLoanServiceClient(conn)
 
-	recordPayment, err := repaymentServiceClient.RecordRepayment(ctx, &loanv1.RecordRepaymentRequest{
-		LoanId:                      "c5398380-a8c7-4545-9bf0-2c2d1dfd0c6b",
-		Amount:                      "60000",
-		PaymentGatewayTransactionId: "71393be9-2298-4bb5-87ab-7527fea24194", // enforced by payment provider
-		CreatedBy:                   "c9b9f2e3-e782-4df3-958b-26cb50e2e5c4",
+	loan, err := loanServiceClient.GetLoan(ctx, &loanv1.GetLoanRequest{
+		LoanId: "c5398380-a8c7-4545-9bf0-2c2d1dfd0c6b",
 	})
-
 	if err != nil {
-		slog.Error("failed to record payment", "error", err)
+		slog.Error("failed to get loan", "error", err)
 		os.Exit(1)
 	}
 
-	slog.Info("record payment", "transaction_id", recordPayment.TransactionId, "credit", recordPayment.Allocation.Credit)
+	slog.Error("get loan", "id", loan.Loan.Id, "loan.amount", loan.Loan.Principal, "loan.status", loan.Loan.Status)
 
 }
