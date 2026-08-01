@@ -1,385 +1,452 @@
 # Loans Domain Specification
 
-_Note: This specification covers only loans and repayment tracking. It does not handle member management._
+This spec owns loan applications, approvals, disbursements, repayment schedules, repayments, loan interest, penalties, overpayment credit, guarantor commitments and loan audit history.
 
-## 1. Important Definitions
+It does not own member identity, member lifecycle, share balances, share pledges or contribution reporting.
 
-- **Scope and Non-Goals:** What this system controls and what it specifically leaves to other systems.
-- **Entities and Fields:** The core data objects. _Rule: Always use `decimal.Decimal` for money, never `float64`._
-- **State Machine:** The valid statuses a loan can have, how it moves between them, and what triggers the change.
-- **Invariants:** Strict rules that must always be true when data is saved, not just at the end of a process.
-- **Failure Modes:** Potential error scenarios and the exact steps to recover from them.
-- **Concurrency & Consistency:** Rules for locking data, adding new records, and preventing duplicate actions (idempotency).
-- **External Triggers & Side Effects:** How this system interacts with scheduled background jobs (Temporal) and other domains.
+## 1. Domain Boundaries
 
-## 2. Scope
+- Member status and identity are owned by `member_service`.
+- Shares, share balances, share contribution history and pledged shares are owned by the Shares domain.
+- Contributions and CEEP reporting are coordinated by the cross-domain contribution spec.
+- The Loans domain may read member eligibility and share security with strong consistency. It must not write member or share state directly.
+- Loan decisions must store member ID, branch ID and verification references. Do not copy member profile details into Loans except as legally required immutable audit snapshots.
 
-- **What it owns:** Loan applications, approvals, disbursements (giving out the money), repayment schedules, and tracking repayments.
-- **What it does NOT own:** Share balances (it reads this to check collateral) and Member statuses (it reads this to check eligibility).
+## 2. Core Records
 
-## 3. Core Entities (Data Models)
+Use decimal money types only. Do not use floats.
+
+### LoanApplication
+
+- `id`
+- `member_id`
+- `branch_id`
+- `requested_amount`
+- `purpose`
+- `declared_monthly_income`, if required for review
+- `status`: Draft, Pending, Approved, Rejected, Cancelled, Expired, ManualReview
+- `member_verification_ref`
+- `share_verification_ref`
+- `created_at`
+- `updated_at`
 
 ### Loan
 
-- `id`: UUID
-- `member_id`: UUID
-- `branch_id`: UUID
-- `principal`: `decimal.Decimal` (The original loan amount)
-- `interest_rate`: `decimal.Decimal` (Stored as a percentage rate, not a pre-calculated money amount)
-- `repayment_period_months`: Integer (Maximum 36 months)
-- `status`: Pending, Approved, Rejected, Disbursed, Restructuring, Active, Delinquent, Closed, Written Off, or Manual Review
-- `disbursed_at`: Timestamp (Optional, filled when money is given out)
-- `created_at`: Timestamp
-- `updated_at`: Timestamp
-- `updated_by`: UUID (Who last modified this record)
-- `previous_status`: String (For audit trail of status changes)
+- `id`
+- `application_id`
+- `member_id`
+- `branch_id`
+- `approved_principal`
+- `disbursed_principal`
+- `interest_rate`
+- `repayment_period_months`
+- `status`: Approved, Disbursed, Active, Delinquent, Restructuring, ManualReview, Closed, WrittenOff
+- `approved_at`
+- `disbursed_at`
+- `closed_at`
+- `created_at`
+- `updated_at`
+- `updated_by`
 
 ### RepaymentSchedule
 
-- `id`: UUID
-- `loan_id`: UUID
-- `installment_no`: Integer
-- `due_date`: Date
-- `amount_due`: `decimal.Decimal`
-- `status`: Upcoming, Due, Paid, Missed, or Partial
+- `id`
+- `loan_id`
+- `installment_no`
+- `due_date`
+- `principal_due`
+- `interest_due`
+- `penalty_due`
+- `status`: Upcoming, Due, Partial, Paid, Missed, Superseded
+
+Schedules are append-only after creation. Restructuring supersedes old rows and creates new rows.
 
 ### LoanTransaction
 
-_An append-only ledger (records are added, never updated or deleted)._
+Loan transactions are append-only. They are never updated or deleted.
 
-- `id`: UUID
-- `loan_id`: UUID
-- `type`: Disbursement, Repayment, Penalty, Reversal, or Credit Withdrawal
-- `amount`: `decimal.Decimal`
-- `reference_id`: UUID (Used to prevent duplicate transactions)
-- `payment_gateway_transaction_id`: String (External payment gateway's unique transaction ID for idempotency)
-- `allocation_breakdown`: JSON (Details of how payment was allocated: principal, interest, penalty, credit)
-- `created_at`: Timestamp
-- `created_by`: UUID (Who initiated this transaction)
+- `id`
+- `loan_id`
+- `type`: Disbursement, Repayment, Penalty, Reversal, CreditCreated, CreditWithdrawal, Adjustment
+- `amount`
+- `reference_id`
+- `payment_gateway_transaction_id`, when from an external payment source
+- `reversal_of`, nullable
+- `allocation_breakdown`
+- `created_at`
+- `created_by`
 
 ### LoanGuarantor
 
-- `loan_id`: UUID
-- `guarantor_id`: UUID (Member ID who guarantees the loan)
-- `guaranteed_amount`: `decimal.Decimal` (Amount this guarantor is responsible for)
-- `status`: Pending, Approved, or Rejected
-- `approved_at`: Timestamp (Optional, filled when guarantor approval is confirmed)
-- `approved_by`: UUID (Who approved this guarantor)
-- `created_at`: Timestamp
-
-_Separate tracking system for overpayments with strict withdrawal controls._
-
-- `id`: UUID
-- `member_id`: UUID
-- `loan_id`: UUID (Nullable. Credit can be general or loan-specific)
-- `amount`: `decimal.Decimal` (Current credit balance)
-- `source`: String (How this credit was accumulated: "overpayment", "refund", "adjustment")
-- `status`: Available, Frozen, or Withdrawn
-- `created_at`: Timestamp
-- `last_activity_at`: Timestamp
+- `id`
+- `loan_id`
+- `guarantor_member_id`
+- `guaranteed_amount`
+- `status`: Pending, Approved, Rejected, Released
+- `approved_at`
+- `approved_by`
+- `released_at`
+- `created_at`
 
 ### CreditBalance
 
-_Comprehensive audit logging for all critical loan changes._
+Overpayments are tracked separately from loan principal.
 
-- `id`: UUID
-- `loan_id`: UUID
-- `field_changed`: String (Which field was modified: "status", "interest_rate", "schedule")
-- `previous_value`: String (Before the change)
-- `new_value`: String (After the change)
-- `changed_by`: UUID (Who made the change)
-- `change_reason`: String (Why the change was made)
-- `approval_reference`: String (Reference to approval document if required)
-- `created_at`: Timestamp
+- `id`
+- `member_id`
+- `loan_id`, nullable
+- `amount`
+- `source`: Overpayment, Refund, Adjustment
+- `status`: Available, Frozen, Withdrawn
+- `created_at`
+- `last_activity_at`
 
-## 4. State Machine: Loan Status
+### LoanAuditTrail
 
-**The Flow:**
+Audit entries are append-only.
 
-- `Pending` ➔ `Approved` (via `approve()`)
-- `Pending` ➔ `Rejected` (via `reject()`)
-- `Pending` ➔ `Manual Review` (If automatic approval fails and requires human intervention)
-- `Approved` ➔ `Rejected` (If it times out or is withdrawn)
-- `Approved` ➔ `Manual Review` (If collateral check fails at disbursement time)
-- `Approved` ➔ `Disbursed` (via `disburse()` - only after successful guarantor verification and eligibility checks)
-- `Disbursed` ➔ `Active` (Repayment period begins)
+- `id`
+- `loan_id`
+- `event_type`
+- `field_changed`, nullable
+- `previous_value`, nullable
+- `new_value`, nullable
+- `changed_by`
+- `change_reason`
+- `approval_reference`, nullable
+- `created_at`
 
-**Ongoing Management:**
+## 3. State Model
 
-- `Active` ➔ `Restructuring` (Via official restructure request - requires board approval for rate changes)
-- `Restructuring` ➔ `Active` (When restructure completes and new schedule is active)
-- `Active` ➔ `Delinquent` (Automatically calculated by background job checking for missed payments)
-- `Delinquent` ➔ `Active` (When borrower catches up on payments)
-- `Active` ➔ `Manual Review` (If unusual activity detected or manual intervention requested)
-- `Delinquent` ➔ `Manual Review` (If collection strategies need human oversight)
-- `Active` ➔ `Closed` (When fully repaid)
-- `Delinquent` ➔ `Written Off` (If business decides to take the loss - requires balance = 0 check)
-- `Manual Review` ➔ `Active` (When review complete and loan returns to normal status)
-- `Manual Review` ➔ `Delinquent` (When review confirms delinquency)
-- `Manual Review` ➔ `Closed` (When review leads to closure)
-- `Manual Review` ➔ `Written Off` (When review leads to write-off)
+Application status flow:
 
-**Important Rules:**
+```text
+Draft -> Pending
+Pending -> Approved
+Pending -> Rejected
+Pending -> ManualReview
+Pending -> Cancelled
+Approved -> Expired
+```
 
-- **Disbursed vs. Active:** These are two different statuses. "Disbursed" means the money has left the business, but the repayment clock hasn't started yet (for example, during a grace period). This is an intentional business feature.
-- **Closed vs. Written Off:** Both mean the loan has ended, but they mean completely different things (Success vs. Loss). They must never be mixed up in reports.
-- **Restructuring is a Protected State:** When a loan is in `Restructuring` status, no automated processes (delinquency checks, payment processing) can modify it. This prevents race conditions during schedule rewrites.
-- **Manual Review is Only Path for Human Intervention:** Admins cannot directly set any status except `Manual Review`. All other status changes must go through proper automated or approved processes.
-- **Delinquent is Calculated, Never Manual:** The `Delinquent` status can only be set by the automated delinquency calculation job. Humans can only flag for `Manual Review`.
-- **Interest Rate Changes Require Board Approval:** Any reduction in interest rate requires documented board-level approval and compensating term extension.
+Loan status flow:
 
-## 5. Invariants (Strict System Rules)
+```text
+Approved -> Disbursed -> Active -> Closed
+Active -> Delinquent -> Active
+Active -> Restructuring -> Active
+Active -> ManualReview -> Active
+Active -> ManualReview -> Closed
+Delinquent -> ManualReview -> Delinquent
+Delinquent -> WrittenOff
+ManualReview -> WrittenOff
+```
 
-- **I1 — Approval Eligibility Verification:** A member can only receive a loan if:
-  1. They have been consistently contributing shares for 6+ months
-  2. Loan amount does not exceed 3x their total share balance
-  3. They have sufficient guarantors (minimum 1, maximum 20)
-  4. Minimum amount payable per month is Principal / 36 months
-  5. All eligibility checks must happen at approval time and be re-verified before disbursement.
+Rules:
 
-- **I2 — Exact-Once Disbursement with Row Locking:** A loan can only be disbursed once. The disbursement operation must:
-  1. Start with `FOR UPDATE` lock on the loan row
-  2. Verify loan status is `Approved` (not `Disbursed`)
-  3. Re-verify eligibility: 6-month contribution consistency, 3x shares limit, and guarantor approvals
-  4. Write disbursement transaction
-  5. Update loan status to `Disbursed`
-     All steps must happen in a single database transaction. Database-level unique constraint on `(loan_id, type)` where type = 'Disbursement' provides final protection.
+- `Rejected`, `Cancelled`, `Expired`, `Closed` and `WrittenOff` are terminal.
+- `Disbursed` means money has left the SACCO but repayment has not started.
+- `Active` means the repayment schedule is running.
+- `Delinquent` is calculated by the delinquency job, not manually set by admins.
+- Admins may move a loan to `ManualReview`; they must not directly force normal business statuses.
+- `Restructuring` blocks automated repayment processing and delinquency updates.
+- `Closed` and `WrittenOff` are different outcomes and must not be merged in reports.
 
-- **I3 — Protected Schedule Restructuring:** Once a repayment schedule is created, it cannot be silently changed. If a schedule needs to change:
-  1. Loan status must change to `Restructuring` first
-  2. Restructuring process must lock the loan row for entire duration
-  3. Delinquency job must skip loans with `Restructuring` status
-  4. Full audit trail must record old and new schedules
-  5. Interest rate changes require board-level approval
+## 4. Eligibility and Collateral
 
-- **I4 — Controlled Overpayment Handling:** The total amount of repayments can never be higher than the original principal plus earned interest. Overpayments must:
-  1. Be tracked in separate `CreditBalance` table
-  2. Require same approval process as new loans for withdrawal
-  3. Never auto-convert to withdrawable funds
-  4. Be frozen if fraud suspected or account under investigation
+Only active members may apply for loans.
 
-- **I5 — Calculated Delinquency Only:** The `Delinquent` status is automatically calculated by a background job checking for `Missed` repayment schedules. Critical rules:
-  1. Delinquent status can only be set by automated calculation
-  2. Humans can only flag loans for `Manual Review`
-  3. Delinquency job must skip `Restructuring` and `Manual Review` status
-  4. Use `SELECT ... FOR UPDATE SKIP LOCKED` to avoid conflicts with active payments
+Approval requires:
 
-- **I6 — Strong Idempotency with Gateway IDs:** A single payment must only apply once, even if payment gateway sends duplicate requests:
-  1. Unique constraint on `(loan_id, payment_gateway_transaction_id)` - not reference_id
-  2. Use payment gateway's internal transaction ID as primary idempotency key
-  3. reference_id used only for internal tracking
-  4. Duplicate attempts return original transaction result
+- member is active at approval time
+- member has 6+ months of qualifying share contribution history
+- repayment period is between 1 and 36 months
+- at least 1 and at most 20 approved guarantors, unless this rule is explicitly changed
+- applicant does not guarantee their own loan
+- collateral rule passes
+- minimum monthly principal is respected or explicitly approved as an exception
 
-- **I7 — Write-off Balance Validation:** A loan can only be written off if the remaining balance is exactly 0 or if the business explicitly accepts the loss:
-  1. Write-off process must check balance within locked transaction
-  2. If balance > 0, write-off rejected unless explicitly approved
-  3. Repayment process must reject payments on `Written Off` or `Closed` loans
-  4. Write-off requires two-admin approval and incident report
+Eligibility must be checked at approval time and re-checked before disbursement.
 
-- **I8 — Batched Payment Processing:** All payments for a single loan within a configurable time window (default 1 hour) must be batched and processed together:
-  1. Individual payments held in pending state
-  2. Allocation rules applied to total batch amount
-  3. Prevents manipulation of penalty calculation through multiple small payments
-  4. Batch processing happens under single loan row lock
+Collateral rule:
 
-- **I7 — Guarantor Limits and Verification:** A loan can have 1-20 guarantors. Total guaranteed amounts from all approved guarantors must cover at least the loan principal. Guarantor verification must:
-  1. Check guarantor is an active member with sufficient share balance
-  2. Verify guarantor has not exceeded their guarantee limit (configurable, e.g., 5x their shares)
-  3. Lock guarantor record during verification
-  4. Track guarantor approval status and who approved it
+```text
+approved_amount <= min(
+  3 * applicant_eligible_shares,
+  applicant_eligible_shares
+    + approved_guarantor_available_shares
+    + eligible_deposits
+)
+```
 
-- **I8 — Repayment Period Validation:** Loan repayment period cannot exceed 36 months. This must be enforced:
-  1. At application submission (reject if > 36 months)
-  2. During approval process
-  3. During restructuring (term extensions cannot exceed original 36-month limit)
-  4. Database constraint: `CHECK (repayment_period_months > 0 AND repayment_period_months <= 36)`
+Minimum monthly principal:
 
-- **I9 — Share Contribution Consistency Verification:** Member must have 6+ months of consistent share contributions. Verification must:
-  1. Check member's share transaction history for 6-month period
-  2. Verify no gaps longer than 1 month in contribution history
-  3. Calculate contribution consistency score (e.g., percentage of months with contributions)
-  4. Reject if consistency score below threshold (e.g., 80%)
-  5. Cache result for disbursement re-verification
+```text
+minimum_monthly_principal = approved_principal / 36
+```
 
-- **I10 — Comprehensive Audit Trail:** All critical changes must be logged in `LoanAuditTrail`:
-  1. Status changes: record previous_status, new_status, changed_by, reason
-  2. Interest rate changes: record previous_rate, new_rate, approval_reference
-  3. Schedule modifications: record full before/after schedule snapshot
-  4. Guarantor changes: record guarantor_id, previous_status, new_status, approval_reference
-  5. Admin interventions: always require documented business reason
-  6. Audit trail is append-only, never updated or deleted
+Any lower monthly principal requires explicit approval and audit trail.
 
-- **I11 — Database-Level Constraint Enforcement:** Critical invariants enforced at database level:
+Share balances, contribution history, guarantor share availability and pledged share checks must come from the Shares domain using strongly consistent reads.
 
-  ```sql
-  -- Prevent negative balances
-  ALTER TABLE loan_transactions
-  ADD CONSTRAINT chk_positive_amounts
-  CHECK (amount > 0);
+## 5. Disbursement
 
-  -- Prevent repayment period exceeding 36 months
-  ALTER TABLE loans
-  ADD CONSTRAINT chk_repayment_period_valid
-  CHECK (repayment_period_months > 0 AND repayment_period_months <= 36);
+A loan may be disbursed exactly once.
 
-  -- Prevent loans without sufficient guarantors
-  ALTER TABLE loan_guarantors
-  ADD CONSTRAINT chk_guarantor_count_valid
-  CHECK (
-     (SELECT COUNT(*) FROM loan_guarantors WHERE loan_id = loan_guarantors.loan_id AND status = 'approved') >= 1
-  );
+Disbursement must run in one `ExecTx` and:
 
-  -- Prevent status changes to Delinquent outside automated process
-  ALTER TABLE loans
-  ADD CONSTRAINT chk_delinquent_automated_only
-  CHECK (
-    status != 'Delinquent' OR
-    updated_by = 'system_delinquency_job'
-  );
-  ```
+- lock the loan row with `FOR UPDATE`
+- verify loan status is `Approved`
+- re-check member eligibility through `member_service`
+- re-check share and guarantor collateral through the Shares domain
+- verify approved guarantor coverage
+- write one disbursement transaction
+- set loan status to `Disbursed`
 
-- **I12 — Event Ordering and Processing:** All events must include sequence numbers per loan:
-  1. Events emitted in strict order per loan
-  2. Consumers must acknowledge receipt and processing
-  3. Failed event processing triggers alerts and retry logic
-  4. Never rely on events for critical business logic - database is source of truth
+The database must enforce at most one disbursement transaction per loan.
 
-## 6. Failure Modes & Recovery
+The disbursed amount must equal the approved principal unless a formally approved amendment exists before disbursement.
 
-| Scenario                                                              | Required Behavior                                                                                                                                                                                                                                                                                                   |
-| :-------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Approval given, but member becomes ineligible before disbursement** | Re-verify eligibility: 6-month contribution consistency, 3x shares limit, and guarantor approvals (Rule I1). If fails, block disbursement and move loan to "Manual Review" status for human investigation.                                                                                                          |
-| **Workflow crashes between saving disbursement and updating status**  | Both actions must happen inside single database transaction with loan row locked. If separate, second action must be safely retryable with idempotency checks.                                                                                                                                                      |
-| **Payment gateway sends same repayment twice**                        | Rely on database unique constraint (`loan_id`, `payment_gateway_transaction_id`). Second attempt ignored and returns first result.                                                                                                                                                                                  |
-| **Repayment doesn't perfectly match due amount (Partial Payment)**    | Code must follow strict business rule for allocation (Pay Penalty first, then Interest, then Principal). Multiple payments within 1 hour batched together (Rule I8).                                                                                                                                                |
-| **Write-off happens at same time as repayment arrives**               | Lock loan row during status change. Write-off must verify balance = 0 within locked transaction (Rule I7). Repayment checks loan status before applying.                                                                                                                                                            |
-| **Delinquency job runs while loan being restructured**                | Job must check `status != Restructuring` and `status != Manual Review`. If restructuring, skip and check next time (Rule I3, I5).                                                                                                                                                                                   |
-| **Member attempts to manipulate contribution history**                | Use full 6-month contribution history verification, not just current balance (Rule I9). Track contribution patterns and flag irregular patterns for manual review.                                                                                                                                                  |
-| **Attacker overpays to manipulate credit system**                     | Overpayments tracked in separate CreditBalance table with withdrawal controls (Rule I4). Credit withdrawals require same approval as new loans.                                                                                                                                                                     |
-| **Payment gateway sends different reference IDs for same payment**    | Use `payment_gateway_transaction_id` for idempotency, not generated reference_id (Rule I6). Unique constraint on gateway ID prevents duplicate processing.                                                                                                                                                          |
-| **Insufficient guarantor coverage before disbursement**               | Verify total guaranteed amount from approved guarantors >= loan principal (Rule I7). If insufficient, block disbursement and move to "Manual Review" for additional guarantors or adjustment.                                                                                                                       |
-| **Data corruption or invariant violation detected**                   | **Recovery Procedure:**<br>1. Lock affected loans from all operations<br>2. Create detailed incident report<br>3. Manual investigation by two separate admins<br>4. Recovery transactions approved by both admins<br>5. Re-run validation to verify fix<br>6. Document lessons learned<br>7. Monitor for recurrence |
+## 6. Repayment and Interest
 
-## 7. Concurrency & Consistency
+Repayments may be accepted only for `Active`, `Disbursed` where repayment is allowed, or `Delinquent` loans. Repayments must be rejected for `Closed`, `WrittenOff`, `Restructuring` and terminal application states.
 
-- **Disbursements:** Must follow strict sequence:
-  1. Lock loan row with `FOR UPDATE`
-  2. Verify loan status = `Approved`
-  3. Re-verify eligibility: 6-month contribution consistency, 3x shares limit, and guarantor approvals
-  4. Write disbursement transaction
-  5. Update loan status to `Disbursed`
-  6. Release lock
-     All steps in single database transaction.
+Loan interest for monthly contribution reporting is:
 
-- **Repayments:** Must follow strict sequence:
-  1. Lock loan row with `FOR UPDATE`
-  2. Check loan status allows payments (not `Written Off`, `Closed`, `Restructuring`)
-  3. Check for pending payments in batching window
-  4. If window active, add to pending batch
-  5. If window expired, process entire batch together
-  6. Apply allocation rules to batch total
-  7. Write individual transaction records with allocation breakdown
-  8. Update repayment schedule statuses
-  9. Release lock
+```text
+interest_due = previous_loan_balance * 1%
+```
 
-- **Delinquency Checks:** Background job uses `SELECT ... FOR UPDATE SKIP LOCKED` to:
-  1. Skip loans currently being paid (locked)
-  2. Skip loans in `Restructuring` status
-  3. Skip loans in `Manual Review` status
-  4. Process next batch of available loans
-  5. Set `Delinquent` status only via automated calculation
+Interest is zero when the previous loan balance is zero. Interest must not accrue after the loan is fully repaid.
 
-- **Restructuring Process:** Must follow strict sequence:
-  1. Lock loan row with `FOR UPDATE`
-  2. Change status to `Restructuring`
-  3. Create audit trail entry for restructure initiation
-  4. Lock repayment schedule records
-  5. Write new schedule records
-  6. Update old schedule records as superseded
-  7. Create audit trail with full before/after snapshot
-  8. If interest rate changed, require board approval reference
-  9. Change status to `Active` with new schedule
-  10. Release all locks
+Repayment allocation order:
 
-- **Credit Withdrawals:** Must follow same approval process as new loans:
-  1. Verify credit balance exists and is `Available`
-  2. Require two-admin approval
-  3. Create audit trail entry
-  4. Process withdrawal with same controls as disbursement
-  5. Update credit status to `Withdrawn` or reduced
+```text
+penalty -> interest -> principal -> credit
+```
 
-- **Lock Granularity:** Always lock at the loan row level for loan-specific operations. For guarantor operations, lock individual guarantor records. Never lock entire tables.
+Principal application:
 
-## 8. External Triggers
+```text
+principal_applied = min(payment_principal_component, outstanding_principal)
+credit_created = payment_principal_component - principal_applied
+new_outstanding_principal = outstanding_principal - principal_applied
+```
 
-- **Shares Domain:** The loan system reads share balances and contribution history to check eligibility (Rule I1, I9). This is read-only with critical security requirements:
-  - Must call shares domain API with `consistency=strong` flag for primary DB read
-  - Must retrieve full 6-month contribution history for consistency verification
-  - Must verify current share balance for 3x shares limit enforcement
-  - Must verify guarantor share balances for guarantee capacity
+Overpayment credit must be recorded in `CreditBalance`. Do not hide overpayments by clamping balances to zero.
 
-- **Guarantor Monitoring (Continuous):** Background process monitors all active loans:
-  - Check guarantor status changes (member becomes inactive, shares drop below threshold)
-  - If guarantor becomes ineligible, alert for manual review and additional guarantors
-  - If total guaranteed coverage drops below principal, trigger margin call or require additional guarantors
+Payment idempotency:
 
-- **Event Notifications (Redpanda):** Emits messages when loan status changes for other systems:
-  - Events must include `sequence_number` per loan for ordering
-  - Events must include `event_type`, `loan_id`, `previous_status`, `new_status`, `timestamp`
-  - Consumers must acknowledge receipt and processing success
-  - Failed event processing triggers alerts and retry logic
-  - Never rely on events for critical business logic - database is source of truth
-  - Event types: Disbursed, Active, Delinquent, Restructuring, Closed, Written Off, Manual Review
+- external payments use `payment_gateway_transaction_id`
+- internal/manual payments use `reference_id`
+- duplicate attempts must return the original result
+- retryable inserts must use `ON CONFLICT DO NOTHING` or an equivalent idempotent path
 
-- **Temporal Workflows:** Manages complex multi-step processes:
-  - Disbursement process with eligibility verification and guarantor checks
-  - Payment batching within time windows
-  - Long-term monitoring loops (using `ContinueAsNew`) for repayment schedules
-  - Guarantor coverage monitoring and eligibility alerts
-  - Restructuring workflow with approval gates and audit trails
+## 7. Payment Batching
 
-- **Payment Gateway Integration:** Handles external payment processing:
-  - Must use gateway's internal transaction ID for idempotency
-  - Must handle webhook timeouts with retry logic
-  - Must validate webhook signatures to prevent spoofing
-  - Must store raw webhook payload for audit purposes
+Payments for a single loan may be batched within a configured time window to prevent penalty manipulation through many small payments.
 
-## 9. Security Monitoring & Alerting
+Batch processing must:
 
-The system must trigger real-time alerts for suspicious patterns indicating potential attacks or system abuse:
+- lock the loan row
+- include all pending payments in the batch window
+- apply allocation rules to the batch total
+- write individual transaction rows with allocation breakdown
+- update repayment schedule statuses
+- complete idempotently
 
-- **Multiple Failed Disbursements:** Same loan or member has 3+ failed disbursement attempts in 24 hours (indicates eligibility manipulation attempts)
+Open decision: the default batching window is currently 1 hour, but this must be confirmed before implementation.
 
-- **Rapid Share Balance Changes:** Member's share balance changes multiple times within short window around loan approval (indicates timing attacks on 3x shares limit)
+## 8. Restructuring
 
-- **Irregular Contribution Patterns:** Member has gaps or irregular patterns in 6-month contribution history that suggest manipulation (indicates contribution history attacks)
+Restructuring is the only normal path for changing repayment schedules after creation.
 
-- **Unusual Payment Patterns:** Multiple small partial payments from same source within batching window (indicates penalty avoidance attempts)
+Restructuring must:
 
-- **Credit Manipulation:** Rapid overpayment followed by immediate credit withdrawal request (indicates credit system exploitation)
+- lock the loan row
+- move the loan to `Restructuring`
+- block payment processing and delinquency updates
+- supersede old schedule rows
+- create new schedule rows
+- preserve full before/after schedule audit
+- require board approval for interest-rate changes
+- return the loan to `Active` when complete
 
-- **Restructuring Requests:** Multiple restructure requests for same loan within short period (indicates interest rate manipulation attempts)
+Term extensions must not exceed 36 months unless the business rule is changed.
 
-- **Gateway ID Collisions:** Payment gateway sends duplicate transaction IDs (indicates gateway issues or potential spoofing)
+## 9. Delinquency
 
-- **Status Violations:** Any attempt to set `Delinquent` status outside automated process (indicates manual override attempts)
+Delinquency is calculated by a background job.
 
-- **Constraint Violations:** Database constraint failures indicate attempted exploitation (should trigger immediate security review)
+The job must:
 
-- **Audit Trail Gaps:** Missing audit entries for critical changes (indicates system bypass attempts)
+- use `SELECT ... FOR UPDATE SKIP LOCKED`
+- skip `Restructuring` loans
+- skip `ManualReview` loans
+- mark missed schedules
+- move eligible loans to `Delinquent`
+- move caught-up loans back to `Active`
+- write audit entries for status changes
 
-- **Failed Admin Actions:** Multiple failed admin login attempts or unauthorized access attempts (indicates credential attacks)
+Humans can move a loan to `ManualReview`; humans cannot directly set `Delinquent`.
 
-- **Guarantor Manipulation:** Same member appears as guarantor for excessive number of loans or attempts to guarantee beyond capacity (indicates guarantee system exploitation)
+## 10. Write-Off and Closure
 
-- **Repayment Period Violations:** Any attempt to set repayment period > 36 months (indicates business rule bypass attempts)
+A loan closes only when principal, accrued interest and penalties are fully settled.
 
-All security alerts must:
+Write-off is allowed only when:
 
-1. Create incident record in security monitoring system
-2. Notify security team immediately
-3. Freeze affected accounts/loans if attack confirmed
-4. Require manual security review before unfreezing
-5. Create detailed audit trail of security incident and response
+- remaining balance is zero, or
+- the SACCO explicitly accepts the loss through documented approval
 
-Only active members can apply for a loan
+Write-off requires:
+
+- loan row lock
+- two-admin approval
+- incident or board reference
+- audit entry
+
+Payments must be rejected after `Closed` or `WrittenOff`.
+
+## 11. Guarantor Monitoring
+
+For active loans, the system must monitor guarantor coverage.
+
+If a guarantor becomes inactive, withdraws, loses sufficient available shares or exceeds guarantee limits, the loan must be flagged for `ManualReview`.
+
+The monitoring process must not modify share balances directly. It reads from Members and Shares and updates only loan review state and audit records.
+
+## 12. Cross-Domain Integration
+
+Members:
+
+- verify active status at application, approval and disbursement
+- fail fast if `member_service` cannot verify eligibility
+- store member ID and branch ID, not copied profile details
+
+Shares:
+
+- read current eligible shares with strong consistency
+- read 6-month contribution history
+- read guarantor available shares
+- read pledged share commitments
+- never write share balances from the Loans domain
+
+Contribution and CEEP:
+
+- repayment allocation may be initiated by a contribution receipt
+- Loans remains authoritative for loan principal, interest, penalties and credit
+- CEEP must snapshot Loans data, not calculate or mutate it
+
+Events:
+
+- loan status events must include `loan_id`, event type, previous status, new status, timestamp and per-loan sequence number
+- consumers must not use events as the source of truth for critical decisions
+- failed event processing must alert and retry
+
+## 13. Database and Consistency Rules
+
+- All multi-table loan writes use `ExecTx`.
+- Loan-specific money operations lock the loan row with `FOR UPDATE`.
+- Guarantor operations lock the guarantor commitment row.
+- Do not lock whole tables.
+- Use cursor pagination on `(created_at, id)`.
+- Do not hard-delete rows.
+- Financial transactions and audit records are append-only.
+- Critical uniqueness must be enforced in the database.
+
+Required database protections:
+
+- unique disbursement transaction per loan
+- unique external payment transaction ID per payment source
+- unique manual repayment reference per loan
+- valid repayment period: `repayment_period_months > 0 AND repayment_period_months <= 36`
+- no negative transaction amounts unless the transaction type is a controlled reversal or adjustment
+- no double reversal of the same transaction
+- no reversal of a reversal
+
+Do not implement cross-row business rules as `CHECK` constraints. Use transactions, locks, partial unique indexes and service logic instead.
+
+## 14. Failure Modes
+
+### Application and Approval
+
+- Application accepted for inactive, suspended or withdrawn member.
+- Application stores stale copied member identity.
+- Approval uses stale share or member data.
+- Requested loan exceeds collateral rule.
+- Applicant guarantees their own loan.
+- Guarantor is inactive or has insufficient available shares.
+- Same collateral is pledged more than once.
+- Loan is approved without required guarantor approvals.
+- Approved amount differs from disbursed amount without approved amendment.
+
+### Disbursement
+
+- Loan is disbursed more than once.
+- Rejected, cancelled or expired application is later disbursed.
+- Member becomes ineligible between approval and disbursement.
+- Share collateral drops below required amount before disbursement.
+- Workflow crashes after transaction write but before status update.
+
+### Repayment
+
+- Duplicate gateway webhook applies repayment twice.
+- Gateway sends different internal references for the same payment.
+- Manual repayment is retried and applied twice.
+- Payment is allocated to principal before penalties or interest.
+- Loan balance is reduced by total payment instead of principal applied.
+- Overpayment creates negative balance or untracked credit.
+- Interest accrues after full repayment.
+- Repayment is accepted for a closed, written-off or restructuring loan.
+- Concurrent payments produce incorrect balance.
+
+### Schedule and Delinquency
+
+- First installment date is before disbursement.
+- Last installment date does not match repayment period.
+- Monthly principal is below `principal / 36` without approval.
+- Missed installment does not create arrears or penalty.
+- Delinquency is manually set by an admin.
+- Delinquency job modifies a restructuring or manual-review loan.
+- Restructuring silently overwrites old schedule rows.
+
+### Guarantors and Collateral
+
+- Same guarantor share value secures multiple loans beyond available value.
+- Guarantor approval is missing or forged.
+- Guarantor withdraws while securing an active loan.
+- Guarantor becomes inactive and loan is not flagged.
+- Share balance changes around approval/disbursement are not re-checked.
+
+### Audit and Security
+
+- Status, schedule, interest-rate or guarantor changes lack audit entries.
+- Unauthorized user approves disbursement, restructuring, write-off or credit withdrawal.
+- Manual adjustment changes financial state without two-admin approval.
+- Records are updated or deleted instead of reversed, superseded or adjusted.
+- Historical calculations change after rate or rule updates.
+
+## 15. Resolved Inconsistencies
+
+These were fixed while rewriting this spec:
+
+- Split application state from loan state. The previous spec mixed `Pending`, `Rejected` and `Cancelled` with live loan statuses.
+- Renamed the audit entity to `LoanAuditTrail`. The previous spec described audit fields under `CreditBalance`.
+- Kept `CreditBalance` only for overpayments and credits.
+- Removed duplicate invariant numbering.
+- Replaced invalid cross-row `CHECK` constraint examples with enforceable database protections and service-level transactional rules.
+- Made overpayment handling explicit instead of allowing balances to be silently clamped to zero.
+- Made CEEP a consumer of loan data, not a calculator or mutator of loan balances.
+- Clarified that Loans reads Shares and Members but does not write them.
+
+## 16. Open Decisions
+
+These must be settled before implementation:
+
+- Is the default repayment batching window exactly 1 hour?
+- Are zero-guarantor loans ever allowed for small amounts or special products?
+- Does the 1% monthly interest apply to all active loans, or only specific loan products?
+- Can repayment periods ever exceed 36 months after board-approved restructuring?
+- What precise approval role can authorize monthly principal below `principal / 36`?
+- Are overpayment credit withdrawals allowed at all, or should credit only offset future obligations?
