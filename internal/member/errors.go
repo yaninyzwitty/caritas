@@ -5,8 +5,9 @@ import (
 )
 
 var (
-	ErrInvalidStatusTransition     = errors.New("invalid status transition")
-	ErrMemberAlreadyClosed         = errors.New("member already closed")
-	ErrInvalidIdentifier           = errors.New("invalid identifier")
-	ErrBranchTransferNotSupported  = errors.New("branch transfer not supported")
+	ErrInvalidStatusTransition    = errors.New("invalid status transition")
+	ErrMemberAlreadyClosed        = errors.New("member already closed")
+	ErrMemberNotActive            = errors.New("member is not active")
+	ErrInvalidIdentifier          = errors.New("invalid identifier")
+	ErrBranchTransferNotSupported = errors.New("branch transfer not supported")
 )

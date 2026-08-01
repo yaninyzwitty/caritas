@@ -97,7 +97,7 @@ func main() {
 	shareService := share.NewService(shareStore)
 	shareServer := share.NewHandlers(shareService, shareStore)
 	loanStore := loan.NewStore(pool)
-	loanService := loan.NewService(loanStore)
+	loanService := loan.NewService(loanStore, memberService)
 	loanServer := loan.NewHandlers(loanStore, loanService)
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.GRPC.Port))

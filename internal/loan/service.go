@@ -23,18 +23,23 @@ type LoanCursor struct {
 	ID        pgtype.UUID
 }
 
-type Service struct {
-	store *Store
+type memberEligibility interface {
+	RequireActiveMember(ctx context.Context, memberID pgtype.UUID) error
 }
 
-func NewService(store *Store) *Service {
-	return &Service{store: store}
+type Service struct {
+	store             *Store
+	memberEligibility memberEligibility
+}
+
+func NewService(store *Store, memberEligibility memberEligibility) *Service {
+	return &Service{store: store, memberEligibility: memberEligibility}
 }
 
 func (s *Service) ApplyForLoan(ctx context.Context, params loansqlc.CreateLoanParams, guarantorIDs []pgtype.UUID) (loansqlc.CreateLoanRow, error) {
 
 	// increase timeout to prevent defer tx rollback errors, due to context time getting done
-	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	applyLoanCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 	if !positive(params.Principal) {
 		return loansqlc.CreateLoanRow{}, ErrInvalidLoanAmount
@@ -51,29 +56,37 @@ func (s *Service) ApplyForLoan(ctx context.Context, params loansqlc.CreateLoanPa
 	if len(guarantorIDs) > maxGuarantors {
 		return loansqlc.CreateLoanRow{}, ErrTooManyGuarantors
 	}
+	if err := s.requireActiveMember(ctx, params.MemberID, ErrMemberNotActive); err != nil {
+		return loansqlc.CreateLoanRow{}, err
+	}
+
+	seen := make(map[pgtype.UUID]struct{}, len(guarantorIDs))
+	for _, guarantorID := range guarantorIDs {
+		if sameUUID(params.MemberID, guarantorID) {
+			return loansqlc.CreateLoanRow{}, ErrSelfGuarantee
+		}
+		if _, ok := seen[guarantorID]; ok {
+			return loansqlc.CreateLoanRow{}, ErrDuplicateGuarantor
+		}
+		seen[guarantorID] = struct{}{}
+
+		if err := s.requireActiveMember(applyLoanCtx, guarantorID, ErrGuarantorNotActive); err != nil {
+			return loansqlc.CreateLoanRow{}, err
+		}
+	}
 
 	var loan loansqlc.CreateLoanRow
-	err := s.store.ExecTx(ctx, func(q loansqlc.Querier) error {
+	err := s.store.ExecTx(applyLoanCtx, func(q loansqlc.Querier) error {
 		var err error
-		loan, err = q.CreateLoan(ctx, params)
+		loan, err = q.CreateLoan(applyLoanCtx, params)
 		if err != nil {
 			return fmt.Errorf("create loan: %w", err)
 		}
 
-		// TODO-implement proper logic management etc
 		// instead of splitting evenly for the guarantors
 		amounts := splitNumeric(params.Principal, len(guarantorIDs))
-		seen := make(map[pgtype.UUID]struct{}, len(guarantorIDs))
 		for i, guarantorID := range guarantorIDs {
-			if sameUUID(params.MemberID, guarantorID) {
-				return ErrSelfGuarantee
-			}
-			if _, ok := seen[guarantorID]; ok {
-				return ErrDuplicateGuarantor
-			}
-			seen[guarantorID] = struct{}{}
-
-			if _, err := q.CreateLoanGuarantor(ctx, loansqlc.CreateLoanGuarantorParams{
+			if _, err := q.CreateLoanGuarantor(applyLoanCtx, loansqlc.CreateLoanGuarantorParams{
 				LoanID:           loan.ID,
 				GuarantorID:      guarantorID,
 				GuaranteedAmount: amounts[i],
@@ -83,7 +96,7 @@ func (s *Service) ApplyForLoan(ctx context.Context, params loansqlc.CreateLoanPa
 			}
 		}
 
-		if _, err := q.InsertLoanAuditTrail(ctx, loansqlc.InsertLoanAuditTrailParams{
+		if _, err := q.InsertLoanAuditTrail(applyLoanCtx, loansqlc.InsertLoanAuditTrailParams{
 			LoanID:       loan.ID,
 			FieldChanged: "loan.application",
 			NewValue:     string(loansqlc.LoanStatusPending),
@@ -171,6 +184,9 @@ func (s *Service) AddGuarantor(
 	// must be positive amount
 	if !positive(guaranteedAmount) {
 		return loansqlc.LoanGuarantor{}, ErrInvalidGuaranteedAmount
+	}
+	if err := s.requireActiveMember(ctx, guarantorID, ErrGuarantorNotActive); err != nil {
+		return loansqlc.LoanGuarantor{}, err
 	}
 
 	var guarantor loansqlc.LoanGuarantor
@@ -519,7 +535,8 @@ func (s *Service) RecordRepayment(
 		}
 
 		switch current.Status {
-		case loansqlc.LoanStatusClosed, loansqlc.LoanStatusWrittenOff, loansqlc.LoanStatusRestructuring:
+		case loansqlc.LoanStatusDisbursed, loansqlc.LoanStatusActive, loansqlc.LoanStatusDelinquent:
+		default:
 			return ErrPaymentNotAllowed
 		}
 
@@ -790,6 +807,16 @@ func normalizeLimit(limit int32) int32 {
 		return 50
 	}
 	return limit
+}
+
+func (s *Service) requireActiveMember(ctx context.Context, memberID pgtype.UUID, inactiveErr error) error {
+	if s.memberEligibility == nil {
+		return inactiveErr
+	}
+	if err := s.memberEligibility.RequireActiveMember(ctx, memberID); err != nil {
+		return inactiveErr
+	}
+	return nil
 }
 
 func positive(n pgtype.Numeric) bool {

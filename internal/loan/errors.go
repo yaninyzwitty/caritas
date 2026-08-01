@@ -8,6 +8,8 @@ var (
 	ErrInvalidLoanAmount        = errors.New("invalid loan amount")
 	ErrInvalidInterestRate      = errors.New("invalid interest rate")
 	ErrInvalidRepaymentPeriod   = errors.New("invalid repayment period")
+	ErrMemberNotActive          = errors.New("member is not active")
+	ErrGuarantorNotActive       = errors.New("guarantor is not active")
 	ErrInvalidGuaranteedAmount  = errors.New("invalid guaranteed amount")
 	ErrInvalidStatusTransition  = errors.New("invalid loan status transition")
 	ErrInvalidGuarantorStatus   = errors.New("invalid guarantor status")
