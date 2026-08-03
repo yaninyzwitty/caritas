@@ -529,6 +529,59 @@ func (x *CreditBalance) GetLastActivityAt() *timestamppb.Timestamp {
 	return nil
 }
 
+// ProposedGuarantor captures the amount a guarantor commits to this loan.
+type ProposedGuarantor struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	GuarantorId      string                 `protobuf:"bytes,1,opt,name=guarantor_id,json=guarantorId,proto3" json:"guarantor_id,omitempty"`
+	GuaranteedAmount string                 `protobuf:"bytes,2,opt,name=guaranteed_amount,json=guaranteedAmount,proto3" json:"guaranteed_amount,omitempty"` // decimal.Decimal as string
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *ProposedGuarantor) Reset() {
+	*x = ProposedGuarantor{}
+	mi := &file_loan_v1_loan_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ProposedGuarantor) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ProposedGuarantor) ProtoMessage() {}
+
+func (x *ProposedGuarantor) ProtoReflect() protoreflect.Message {
+	mi := &file_loan_v1_loan_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ProposedGuarantor.ProtoReflect.Descriptor instead.
+func (*ProposedGuarantor) Descriptor() ([]byte, []int) {
+	return file_loan_v1_loan_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *ProposedGuarantor) GetGuarantorId() string {
+	if x != nil {
+		return x.GuarantorId
+	}
+	return ""
+}
+
+func (x *ProposedGuarantor) GetGuaranteedAmount() string {
+	if x != nil {
+		return x.GuaranteedAmount
+	}
+	return ""
+}
+
 // ApplyForLoanRequest contains the information needed to apply for a new loan.
 type ApplyForLoanRequest struct {
 	state                 protoimpl.MessageState `protogen:"open.v1"`
@@ -537,15 +590,15 @@ type ApplyForLoanRequest struct {
 	Principal             string                 `protobuf:"bytes,3,opt,name=principal,proto3" json:"principal,omitempty"`                           // decimal.Decimal as string
 	InterestRate          string                 `protobuf:"bytes,4,opt,name=interest_rate,json=interestRate,proto3" json:"interest_rate,omitempty"` // decimal.Decimal as string (percentage rate)
 	RepaymentPeriodMonths int32                  `protobuf:"varint,5,opt,name=repayment_period_months,json=repaymentPeriodMonths,proto3" json:"repayment_period_months,omitempty"`
-	OfficerId             string                 `protobuf:"bytes,6,opt,name=officer_id,json=officerId,proto3" json:"officer_id,omitempty"`          //TODO -remove this handle carefully with authentication
-	GuarantorIds          []string               `protobuf:"bytes,7,rep,name=guarantor_ids,json=guarantorIds,proto3" json:"guarantor_ids,omitempty"` // Initial list of proposed guarantors
+	OfficerId             string                 `protobuf:"bytes,6,opt,name=officer_id,json=officerId,proto3" json:"officer_id,omitempty"` //TODO -remove this handle carefully with authentication
+	Guarantors            []*ProposedGuarantor   `protobuf:"bytes,7,rep,name=guarantors,proto3" json:"guarantors,omitempty"`
 	unknownFields         protoimpl.UnknownFields
 	sizeCache             protoimpl.SizeCache
 }
 
 func (x *ApplyForLoanRequest) Reset() {
 	*x = ApplyForLoanRequest{}
-	mi := &file_loan_v1_loan_proto_msgTypes[3]
+	mi := &file_loan_v1_loan_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -557,7 +610,7 @@ func (x *ApplyForLoanRequest) String() string {
 func (*ApplyForLoanRequest) ProtoMessage() {}
 
 func (x *ApplyForLoanRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_loan_v1_loan_proto_msgTypes[3]
+	mi := &file_loan_v1_loan_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -570,7 +623,7 @@ func (x *ApplyForLoanRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ApplyForLoanRequest.ProtoReflect.Descriptor instead.
 func (*ApplyForLoanRequest) Descriptor() ([]byte, []int) {
-	return file_loan_v1_loan_proto_rawDescGZIP(), []int{3}
+	return file_loan_v1_loan_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *ApplyForLoanRequest) GetMemberId() string {
@@ -615,9 +668,9 @@ func (x *ApplyForLoanRequest) GetOfficerId() string {
 	return ""
 }
 
-func (x *ApplyForLoanRequest) GetGuarantorIds() []string {
+func (x *ApplyForLoanRequest) GetGuarantors() []*ProposedGuarantor {
 	if x != nil {
-		return x.GuarantorIds
+		return x.Guarantors
 	}
 	return nil
 }
@@ -633,7 +686,7 @@ type ApplyForLoanResponse struct {
 
 func (x *ApplyForLoanResponse) Reset() {
 	*x = ApplyForLoanResponse{}
-	mi := &file_loan_v1_loan_proto_msgTypes[4]
+	mi := &file_loan_v1_loan_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -645,7 +698,7 @@ func (x *ApplyForLoanResponse) String() string {
 func (*ApplyForLoanResponse) ProtoMessage() {}
 
 func (x *ApplyForLoanResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_loan_v1_loan_proto_msgTypes[4]
+	mi := &file_loan_v1_loan_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -658,7 +711,7 @@ func (x *ApplyForLoanResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ApplyForLoanResponse.ProtoReflect.Descriptor instead.
 func (*ApplyForLoanResponse) Descriptor() ([]byte, []int) {
-	return file_loan_v1_loan_proto_rawDescGZIP(), []int{4}
+	return file_loan_v1_loan_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *ApplyForLoanResponse) GetLoanId() string {
@@ -687,7 +740,7 @@ type ApproveLoanRequest struct {
 
 func (x *ApproveLoanRequest) Reset() {
 	*x = ApproveLoanRequest{}
-	mi := &file_loan_v1_loan_proto_msgTypes[5]
+	mi := &file_loan_v1_loan_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -699,7 +752,7 @@ func (x *ApproveLoanRequest) String() string {
 func (*ApproveLoanRequest) ProtoMessage() {}
 
 func (x *ApproveLoanRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_loan_v1_loan_proto_msgTypes[5]
+	mi := &file_loan_v1_loan_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -712,7 +765,7 @@ func (x *ApproveLoanRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ApproveLoanRequest.ProtoReflect.Descriptor instead.
 func (*ApproveLoanRequest) Descriptor() ([]byte, []int) {
-	return file_loan_v1_loan_proto_rawDescGZIP(), []int{5}
+	return file_loan_v1_loan_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *ApproveLoanRequest) GetLoanId() string {
@@ -747,7 +800,7 @@ type ApproveLoanResponse struct {
 
 func (x *ApproveLoanResponse) Reset() {
 	*x = ApproveLoanResponse{}
-	mi := &file_loan_v1_loan_proto_msgTypes[6]
+	mi := &file_loan_v1_loan_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -759,7 +812,7 @@ func (x *ApproveLoanResponse) String() string {
 func (*ApproveLoanResponse) ProtoMessage() {}
 
 func (x *ApproveLoanResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_loan_v1_loan_proto_msgTypes[6]
+	mi := &file_loan_v1_loan_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -772,7 +825,7 @@ func (x *ApproveLoanResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ApproveLoanResponse.ProtoReflect.Descriptor instead.
 func (*ApproveLoanResponse) Descriptor() ([]byte, []int) {
-	return file_loan_v1_loan_proto_rawDescGZIP(), []int{6}
+	return file_loan_v1_loan_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *ApproveLoanResponse) GetNewStatus() LoanStatus {
@@ -801,7 +854,7 @@ type RejectLoanRequest struct {
 
 func (x *RejectLoanRequest) Reset() {
 	*x = RejectLoanRequest{}
-	mi := &file_loan_v1_loan_proto_msgTypes[7]
+	mi := &file_loan_v1_loan_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -813,7 +866,7 @@ func (x *RejectLoanRequest) String() string {
 func (*RejectLoanRequest) ProtoMessage() {}
 
 func (x *RejectLoanRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_loan_v1_loan_proto_msgTypes[7]
+	mi := &file_loan_v1_loan_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -826,7 +879,7 @@ func (x *RejectLoanRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RejectLoanRequest.ProtoReflect.Descriptor instead.
 func (*RejectLoanRequest) Descriptor() ([]byte, []int) {
-	return file_loan_v1_loan_proto_rawDescGZIP(), []int{7}
+	return file_loan_v1_loan_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *RejectLoanRequest) GetLoanId() string {
@@ -861,7 +914,7 @@ type RejectLoanResponse struct {
 
 func (x *RejectLoanResponse) Reset() {
 	*x = RejectLoanResponse{}
-	mi := &file_loan_v1_loan_proto_msgTypes[8]
+	mi := &file_loan_v1_loan_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -873,7 +926,7 @@ func (x *RejectLoanResponse) String() string {
 func (*RejectLoanResponse) ProtoMessage() {}
 
 func (x *RejectLoanResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_loan_v1_loan_proto_msgTypes[8]
+	mi := &file_loan_v1_loan_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -886,7 +939,7 @@ func (x *RejectLoanResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RejectLoanResponse.ProtoReflect.Descriptor instead.
 func (*RejectLoanResponse) Descriptor() ([]byte, []int) {
-	return file_loan_v1_loan_proto_rawDescGZIP(), []int{8}
+	return file_loan_v1_loan_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *RejectLoanResponse) GetNewStatus() LoanStatus {
@@ -915,7 +968,7 @@ type DisburseLoanRequest struct {
 
 func (x *DisburseLoanRequest) Reset() {
 	*x = DisburseLoanRequest{}
-	mi := &file_loan_v1_loan_proto_msgTypes[9]
+	mi := &file_loan_v1_loan_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -927,7 +980,7 @@ func (x *DisburseLoanRequest) String() string {
 func (*DisburseLoanRequest) ProtoMessage() {}
 
 func (x *DisburseLoanRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_loan_v1_loan_proto_msgTypes[9]
+	mi := &file_loan_v1_loan_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -940,7 +993,7 @@ func (x *DisburseLoanRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DisburseLoanRequest.ProtoReflect.Descriptor instead.
 func (*DisburseLoanRequest) Descriptor() ([]byte, []int) {
-	return file_loan_v1_loan_proto_rawDescGZIP(), []int{9}
+	return file_loan_v1_loan_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *DisburseLoanRequest) GetLoanId() string {
@@ -976,7 +1029,7 @@ type DisburseLoanResponse struct {
 
 func (x *DisburseLoanResponse) Reset() {
 	*x = DisburseLoanResponse{}
-	mi := &file_loan_v1_loan_proto_msgTypes[10]
+	mi := &file_loan_v1_loan_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -988,7 +1041,7 @@ func (x *DisburseLoanResponse) String() string {
 func (*DisburseLoanResponse) ProtoMessage() {}
 
 func (x *DisburseLoanResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_loan_v1_loan_proto_msgTypes[10]
+	mi := &file_loan_v1_loan_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1001,7 +1054,7 @@ func (x *DisburseLoanResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DisburseLoanResponse.ProtoReflect.Descriptor instead.
 func (*DisburseLoanResponse) Descriptor() ([]byte, []int) {
-	return file_loan_v1_loan_proto_rawDescGZIP(), []int{10}
+	return file_loan_v1_loan_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *DisburseLoanResponse) GetNewStatus() LoanStatus {
@@ -1035,7 +1088,7 @@ type GetLoanRequest struct {
 
 func (x *GetLoanRequest) Reset() {
 	*x = GetLoanRequest{}
-	mi := &file_loan_v1_loan_proto_msgTypes[11]
+	mi := &file_loan_v1_loan_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1047,7 +1100,7 @@ func (x *GetLoanRequest) String() string {
 func (*GetLoanRequest) ProtoMessage() {}
 
 func (x *GetLoanRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_loan_v1_loan_proto_msgTypes[11]
+	mi := &file_loan_v1_loan_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1060,7 +1113,7 @@ func (x *GetLoanRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetLoanRequest.ProtoReflect.Descriptor instead.
 func (*GetLoanRequest) Descriptor() ([]byte, []int) {
-	return file_loan_v1_loan_proto_rawDescGZIP(), []int{11}
+	return file_loan_v1_loan_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *GetLoanRequest) GetLoanId() string {
@@ -1080,7 +1133,7 @@ type GetLoanResponse struct {
 
 func (x *GetLoanResponse) Reset() {
 	*x = GetLoanResponse{}
-	mi := &file_loan_v1_loan_proto_msgTypes[12]
+	mi := &file_loan_v1_loan_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1092,7 +1145,7 @@ func (x *GetLoanResponse) String() string {
 func (*GetLoanResponse) ProtoMessage() {}
 
 func (x *GetLoanResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_loan_v1_loan_proto_msgTypes[12]
+	mi := &file_loan_v1_loan_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1105,7 +1158,7 @@ func (x *GetLoanResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetLoanResponse.ProtoReflect.Descriptor instead.
 func (*GetLoanResponse) Descriptor() ([]byte, []int) {
-	return file_loan_v1_loan_proto_rawDescGZIP(), []int{12}
+	return file_loan_v1_loan_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *GetLoanResponse) GetLoan() *Loan {
@@ -1129,7 +1182,7 @@ type ListLoansRequest struct {
 
 func (x *ListLoansRequest) Reset() {
 	*x = ListLoansRequest{}
-	mi := &file_loan_v1_loan_proto_msgTypes[13]
+	mi := &file_loan_v1_loan_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1141,7 +1194,7 @@ func (x *ListLoansRequest) String() string {
 func (*ListLoansRequest) ProtoMessage() {}
 
 func (x *ListLoansRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_loan_v1_loan_proto_msgTypes[13]
+	mi := &file_loan_v1_loan_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1154,7 +1207,7 @@ func (x *ListLoansRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListLoansRequest.ProtoReflect.Descriptor instead.
 func (*ListLoansRequest) Descriptor() ([]byte, []int) {
-	return file_loan_v1_loan_proto_rawDescGZIP(), []int{13}
+	return file_loan_v1_loan_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *ListLoansRequest) GetPageSize() int32 {
@@ -1203,7 +1256,7 @@ type ListLoansResponse struct {
 
 func (x *ListLoansResponse) Reset() {
 	*x = ListLoansResponse{}
-	mi := &file_loan_v1_loan_proto_msgTypes[14]
+	mi := &file_loan_v1_loan_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1215,7 +1268,7 @@ func (x *ListLoansResponse) String() string {
 func (*ListLoansResponse) ProtoMessage() {}
 
 func (x *ListLoansResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_loan_v1_loan_proto_msgTypes[14]
+	mi := &file_loan_v1_loan_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1228,7 +1281,7 @@ func (x *ListLoansResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListLoansResponse.ProtoReflect.Descriptor instead.
 func (*ListLoansResponse) Descriptor() ([]byte, []int) {
-	return file_loan_v1_loan_proto_rawDescGZIP(), []int{14}
+	return file_loan_v1_loan_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *ListLoansResponse) GetLoans() []*Loan {
@@ -1255,7 +1308,7 @@ type GetLoanStatusRequest struct {
 
 func (x *GetLoanStatusRequest) Reset() {
 	*x = GetLoanStatusRequest{}
-	mi := &file_loan_v1_loan_proto_msgTypes[15]
+	mi := &file_loan_v1_loan_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1267,7 +1320,7 @@ func (x *GetLoanStatusRequest) String() string {
 func (*GetLoanStatusRequest) ProtoMessage() {}
 
 func (x *GetLoanStatusRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_loan_v1_loan_proto_msgTypes[15]
+	mi := &file_loan_v1_loan_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1280,7 +1333,7 @@ func (x *GetLoanStatusRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetLoanStatusRequest.ProtoReflect.Descriptor instead.
 func (*GetLoanStatusRequest) Descriptor() ([]byte, []int) {
-	return file_loan_v1_loan_proto_rawDescGZIP(), []int{15}
+	return file_loan_v1_loan_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *GetLoanStatusRequest) GetLoanId() string {
@@ -1302,7 +1355,7 @@ type GetLoanStatusResponse struct {
 
 func (x *GetLoanStatusResponse) Reset() {
 	*x = GetLoanStatusResponse{}
-	mi := &file_loan_v1_loan_proto_msgTypes[16]
+	mi := &file_loan_v1_loan_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1314,7 +1367,7 @@ func (x *GetLoanStatusResponse) String() string {
 func (*GetLoanStatusResponse) ProtoMessage() {}
 
 func (x *GetLoanStatusResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_loan_v1_loan_proto_msgTypes[16]
+	mi := &file_loan_v1_loan_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1327,7 +1380,7 @@ func (x *GetLoanStatusResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetLoanStatusResponse.ProtoReflect.Descriptor instead.
 func (*GetLoanStatusResponse) Descriptor() ([]byte, []int) {
-	return file_loan_v1_loan_proto_rawDescGZIP(), []int{16}
+	return file_loan_v1_loan_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *GetLoanStatusResponse) GetStatus() LoanStatus {
@@ -1363,7 +1416,7 @@ type AddGuarantorRequest struct {
 
 func (x *AddGuarantorRequest) Reset() {
 	*x = AddGuarantorRequest{}
-	mi := &file_loan_v1_loan_proto_msgTypes[17]
+	mi := &file_loan_v1_loan_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1375,7 +1428,7 @@ func (x *AddGuarantorRequest) String() string {
 func (*AddGuarantorRequest) ProtoMessage() {}
 
 func (x *AddGuarantorRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_loan_v1_loan_proto_msgTypes[17]
+	mi := &file_loan_v1_loan_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1388,7 +1441,7 @@ func (x *AddGuarantorRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddGuarantorRequest.ProtoReflect.Descriptor instead.
 func (*AddGuarantorRequest) Descriptor() ([]byte, []int) {
-	return file_loan_v1_loan_proto_rawDescGZIP(), []int{17}
+	return file_loan_v1_loan_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *AddGuarantorRequest) GetLoanId() string {
@@ -1423,7 +1476,7 @@ type AddGuarantorResponse struct {
 
 func (x *AddGuarantorResponse) Reset() {
 	*x = AddGuarantorResponse{}
-	mi := &file_loan_v1_loan_proto_msgTypes[18]
+	mi := &file_loan_v1_loan_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1435,7 +1488,7 @@ func (x *AddGuarantorResponse) String() string {
 func (*AddGuarantorResponse) ProtoMessage() {}
 
 func (x *AddGuarantorResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_loan_v1_loan_proto_msgTypes[18]
+	mi := &file_loan_v1_loan_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1448,7 +1501,7 @@ func (x *AddGuarantorResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddGuarantorResponse.ProtoReflect.Descriptor instead.
 func (*AddGuarantorResponse) Descriptor() ([]byte, []int) {
-	return file_loan_v1_loan_proto_rawDescGZIP(), []int{18}
+	return file_loan_v1_loan_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *AddGuarantorResponse) GetStatus() GuarantorStatus {
@@ -1476,7 +1529,7 @@ type RemoveGuarantorRequest struct {
 
 func (x *RemoveGuarantorRequest) Reset() {
 	*x = RemoveGuarantorRequest{}
-	mi := &file_loan_v1_loan_proto_msgTypes[19]
+	mi := &file_loan_v1_loan_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1488,7 +1541,7 @@ func (x *RemoveGuarantorRequest) String() string {
 func (*RemoveGuarantorRequest) ProtoMessage() {}
 
 func (x *RemoveGuarantorRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_loan_v1_loan_proto_msgTypes[19]
+	mi := &file_loan_v1_loan_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1501,7 +1554,7 @@ func (x *RemoveGuarantorRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveGuarantorRequest.ProtoReflect.Descriptor instead.
 func (*RemoveGuarantorRequest) Descriptor() ([]byte, []int) {
-	return file_loan_v1_loan_proto_rawDescGZIP(), []int{19}
+	return file_loan_v1_loan_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *RemoveGuarantorRequest) GetLoanId() string {
@@ -1528,7 +1581,7 @@ type RemoveGuarantorResponse struct {
 
 func (x *RemoveGuarantorResponse) Reset() {
 	*x = RemoveGuarantorResponse{}
-	mi := &file_loan_v1_loan_proto_msgTypes[20]
+	mi := &file_loan_v1_loan_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1540,7 +1593,7 @@ func (x *RemoveGuarantorResponse) String() string {
 func (*RemoveGuarantorResponse) ProtoMessage() {}
 
 func (x *RemoveGuarantorResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_loan_v1_loan_proto_msgTypes[20]
+	mi := &file_loan_v1_loan_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1553,7 +1606,7 @@ func (x *RemoveGuarantorResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveGuarantorResponse.ProtoReflect.Descriptor instead.
 func (*RemoveGuarantorResponse) Descriptor() ([]byte, []int) {
-	return file_loan_v1_loan_proto_rawDescGZIP(), []int{20}
+	return file_loan_v1_loan_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *RemoveGuarantorResponse) GetSuccess() bool {
@@ -1575,7 +1628,7 @@ type ApproveGuarantorRequest struct {
 
 func (x *ApproveGuarantorRequest) Reset() {
 	*x = ApproveGuarantorRequest{}
-	mi := &file_loan_v1_loan_proto_msgTypes[21]
+	mi := &file_loan_v1_loan_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1587,7 +1640,7 @@ func (x *ApproveGuarantorRequest) String() string {
 func (*ApproveGuarantorRequest) ProtoMessage() {}
 
 func (x *ApproveGuarantorRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_loan_v1_loan_proto_msgTypes[21]
+	mi := &file_loan_v1_loan_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1600,7 +1653,7 @@ func (x *ApproveGuarantorRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ApproveGuarantorRequest.ProtoReflect.Descriptor instead.
 func (*ApproveGuarantorRequest) Descriptor() ([]byte, []int) {
-	return file_loan_v1_loan_proto_rawDescGZIP(), []int{21}
+	return file_loan_v1_loan_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *ApproveGuarantorRequest) GetLoanId() string {
@@ -1635,7 +1688,7 @@ type ApproveGuarantorResponse struct {
 
 func (x *ApproveGuarantorResponse) Reset() {
 	*x = ApproveGuarantorResponse{}
-	mi := &file_loan_v1_loan_proto_msgTypes[22]
+	mi := &file_loan_v1_loan_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1647,7 +1700,7 @@ func (x *ApproveGuarantorResponse) String() string {
 func (*ApproveGuarantorResponse) ProtoMessage() {}
 
 func (x *ApproveGuarantorResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_loan_v1_loan_proto_msgTypes[22]
+	mi := &file_loan_v1_loan_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1660,7 +1713,7 @@ func (x *ApproveGuarantorResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ApproveGuarantorResponse.ProtoReflect.Descriptor instead.
 func (*ApproveGuarantorResponse) Descriptor() ([]byte, []int) {
-	return file_loan_v1_loan_proto_rawDescGZIP(), []int{22}
+	return file_loan_v1_loan_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *ApproveGuarantorResponse) GetNewStatus() GuarantorStatus {
@@ -1689,7 +1742,7 @@ type ListGuarantorsRequest struct {
 
 func (x *ListGuarantorsRequest) Reset() {
 	*x = ListGuarantorsRequest{}
-	mi := &file_loan_v1_loan_proto_msgTypes[23]
+	mi := &file_loan_v1_loan_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1701,7 +1754,7 @@ func (x *ListGuarantorsRequest) String() string {
 func (*ListGuarantorsRequest) ProtoMessage() {}
 
 func (x *ListGuarantorsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_loan_v1_loan_proto_msgTypes[23]
+	mi := &file_loan_v1_loan_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1714,7 +1767,7 @@ func (x *ListGuarantorsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListGuarantorsRequest.ProtoReflect.Descriptor instead.
 func (*ListGuarantorsRequest) Descriptor() ([]byte, []int) {
-	return file_loan_v1_loan_proto_rawDescGZIP(), []int{23}
+	return file_loan_v1_loan_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *ListGuarantorsRequest) GetLoanId() string {
@@ -1749,7 +1802,7 @@ type ListGuarantorsResponse struct {
 
 func (x *ListGuarantorsResponse) Reset() {
 	*x = ListGuarantorsResponse{}
-	mi := &file_loan_v1_loan_proto_msgTypes[24]
+	mi := &file_loan_v1_loan_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1761,7 +1814,7 @@ func (x *ListGuarantorsResponse) String() string {
 func (*ListGuarantorsResponse) ProtoMessage() {}
 
 func (x *ListGuarantorsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_loan_v1_loan_proto_msgTypes[24]
+	mi := &file_loan_v1_loan_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1774,7 +1827,7 @@ func (x *ListGuarantorsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListGuarantorsResponse.ProtoReflect.Descriptor instead.
 func (*ListGuarantorsResponse) Descriptor() ([]byte, []int) {
-	return file_loan_v1_loan_proto_rawDescGZIP(), []int{24}
+	return file_loan_v1_loan_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *ListGuarantorsResponse) GetGuarantors() []*LoanGuarantor {
@@ -1833,7 +1886,10 @@ const file_loan_v1_loan_proto_rawDesc = "" +
 	"\x06status\x18\x06 \x01(\x0e2\x15.loan.v1.CreditStatusR\x06status\x129\n" +
 	"\n" +
 	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12D\n" +
-	"\x10last_activity_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\x0elastActivityAt\"\x8e\x02\n" +
+	"\x10last_activity_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\x0elastActivityAt\"c\n" +
+	"\x11ProposedGuarantor\x12!\n" +
+	"\fguarantor_id\x18\x01 \x01(\tR\vguarantorId\x12+\n" +
+	"\x11guaranteed_amount\x18\x02 \x01(\tR\x10guaranteedAmount\"\xa5\x02\n" +
 	"\x13ApplyForLoanRequest\x12\x1b\n" +
 	"\tmember_id\x18\x01 \x01(\tR\bmemberId\x12\x1b\n" +
 	"\tbranch_id\x18\x02 \x01(\tR\bbranchId\x12\x1c\n" +
@@ -1841,8 +1897,10 @@ const file_loan_v1_loan_proto_rawDesc = "" +
 	"\rinterest_rate\x18\x04 \x01(\tR\finterestRate\x126\n" +
 	"\x17repayment_period_months\x18\x05 \x01(\x05R\x15repaymentPeriodMonths\x12\x1d\n" +
 	"\n" +
-	"officer_id\x18\x06 \x01(\tR\tofficerId\x12#\n" +
-	"\rguarantor_ids\x18\a \x03(\tR\fguarantorIds\"\\\n" +
+	"officer_id\x18\x06 \x01(\tR\tofficerId\x12:\n" +
+	"\n" +
+	"guarantors\x18\a \x03(\v2\x1a.loan.v1.ProposedGuarantorR\n" +
+	"guarantors\"\\\n" +
 	"\x14ApplyForLoanResponse\x12\x17\n" +
 	"\aloan_id\x18\x01 \x01(\tR\x06loanId\x12+\n" +
 	"\x06status\x18\x02 \x01(\x0e2\x13.loan.v1.LoanStatusR\x06status\"d\n" +
@@ -1979,7 +2037,7 @@ func file_loan_v1_loan_proto_rawDescGZIP() []byte {
 }
 
 var file_loan_v1_loan_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_loan_v1_loan_proto_msgTypes = make([]protoimpl.MessageInfo, 25)
+var file_loan_v1_loan_proto_msgTypes = make([]protoimpl.MessageInfo, 26)
 var file_loan_v1_loan_proto_goTypes = []any{
 	(LoanStatus)(0),                  // 0: loan.v1.LoanStatus
 	(GuarantorStatus)(0),             // 1: loan.v1.GuarantorStatus
@@ -1987,85 +2045,87 @@ var file_loan_v1_loan_proto_goTypes = []any{
 	(*Loan)(nil),                     // 3: loan.v1.Loan
 	(*LoanGuarantor)(nil),            // 4: loan.v1.LoanGuarantor
 	(*CreditBalance)(nil),            // 5: loan.v1.CreditBalance
-	(*ApplyForLoanRequest)(nil),      // 6: loan.v1.ApplyForLoanRequest
-	(*ApplyForLoanResponse)(nil),     // 7: loan.v1.ApplyForLoanResponse
-	(*ApproveLoanRequest)(nil),       // 8: loan.v1.ApproveLoanRequest
-	(*ApproveLoanResponse)(nil),      // 9: loan.v1.ApproveLoanResponse
-	(*RejectLoanRequest)(nil),        // 10: loan.v1.RejectLoanRequest
-	(*RejectLoanResponse)(nil),       // 11: loan.v1.RejectLoanResponse
-	(*DisburseLoanRequest)(nil),      // 12: loan.v1.DisburseLoanRequest
-	(*DisburseLoanResponse)(nil),     // 13: loan.v1.DisburseLoanResponse
-	(*GetLoanRequest)(nil),           // 14: loan.v1.GetLoanRequest
-	(*GetLoanResponse)(nil),          // 15: loan.v1.GetLoanResponse
-	(*ListLoansRequest)(nil),         // 16: loan.v1.ListLoansRequest
-	(*ListLoansResponse)(nil),        // 17: loan.v1.ListLoansResponse
-	(*GetLoanStatusRequest)(nil),     // 18: loan.v1.GetLoanStatusRequest
-	(*GetLoanStatusResponse)(nil),    // 19: loan.v1.GetLoanStatusResponse
-	(*AddGuarantorRequest)(nil),      // 20: loan.v1.AddGuarantorRequest
-	(*AddGuarantorResponse)(nil),     // 21: loan.v1.AddGuarantorResponse
-	(*RemoveGuarantorRequest)(nil),   // 22: loan.v1.RemoveGuarantorRequest
-	(*RemoveGuarantorResponse)(nil),  // 23: loan.v1.RemoveGuarantorResponse
-	(*ApproveGuarantorRequest)(nil),  // 24: loan.v1.ApproveGuarantorRequest
-	(*ApproveGuarantorResponse)(nil), // 25: loan.v1.ApproveGuarantorResponse
-	(*ListGuarantorsRequest)(nil),    // 26: loan.v1.ListGuarantorsRequest
-	(*ListGuarantorsResponse)(nil),   // 27: loan.v1.ListGuarantorsResponse
-	(*timestamppb.Timestamp)(nil),    // 28: google.protobuf.Timestamp
+	(*ProposedGuarantor)(nil),        // 6: loan.v1.ProposedGuarantor
+	(*ApplyForLoanRequest)(nil),      // 7: loan.v1.ApplyForLoanRequest
+	(*ApplyForLoanResponse)(nil),     // 8: loan.v1.ApplyForLoanResponse
+	(*ApproveLoanRequest)(nil),       // 9: loan.v1.ApproveLoanRequest
+	(*ApproveLoanResponse)(nil),      // 10: loan.v1.ApproveLoanResponse
+	(*RejectLoanRequest)(nil),        // 11: loan.v1.RejectLoanRequest
+	(*RejectLoanResponse)(nil),       // 12: loan.v1.RejectLoanResponse
+	(*DisburseLoanRequest)(nil),      // 13: loan.v1.DisburseLoanRequest
+	(*DisburseLoanResponse)(nil),     // 14: loan.v1.DisburseLoanResponse
+	(*GetLoanRequest)(nil),           // 15: loan.v1.GetLoanRequest
+	(*GetLoanResponse)(nil),          // 16: loan.v1.GetLoanResponse
+	(*ListLoansRequest)(nil),         // 17: loan.v1.ListLoansRequest
+	(*ListLoansResponse)(nil),        // 18: loan.v1.ListLoansResponse
+	(*GetLoanStatusRequest)(nil),     // 19: loan.v1.GetLoanStatusRequest
+	(*GetLoanStatusResponse)(nil),    // 20: loan.v1.GetLoanStatusResponse
+	(*AddGuarantorRequest)(nil),      // 21: loan.v1.AddGuarantorRequest
+	(*AddGuarantorResponse)(nil),     // 22: loan.v1.AddGuarantorResponse
+	(*RemoveGuarantorRequest)(nil),   // 23: loan.v1.RemoveGuarantorRequest
+	(*RemoveGuarantorResponse)(nil),  // 24: loan.v1.RemoveGuarantorResponse
+	(*ApproveGuarantorRequest)(nil),  // 25: loan.v1.ApproveGuarantorRequest
+	(*ApproveGuarantorResponse)(nil), // 26: loan.v1.ApproveGuarantorResponse
+	(*ListGuarantorsRequest)(nil),    // 27: loan.v1.ListGuarantorsRequest
+	(*ListGuarantorsResponse)(nil),   // 28: loan.v1.ListGuarantorsResponse
+	(*timestamppb.Timestamp)(nil),    // 29: google.protobuf.Timestamp
 }
 var file_loan_v1_loan_proto_depIdxs = []int32{
 	0,  // 0: loan.v1.Loan.status:type_name -> loan.v1.LoanStatus
-	28, // 1: loan.v1.Loan.disbursed_at:type_name -> google.protobuf.Timestamp
-	28, // 2: loan.v1.Loan.created_at:type_name -> google.protobuf.Timestamp
-	28, // 3: loan.v1.Loan.updated_at:type_name -> google.protobuf.Timestamp
+	29, // 1: loan.v1.Loan.disbursed_at:type_name -> google.protobuf.Timestamp
+	29, // 2: loan.v1.Loan.created_at:type_name -> google.protobuf.Timestamp
+	29, // 3: loan.v1.Loan.updated_at:type_name -> google.protobuf.Timestamp
 	1,  // 4: loan.v1.LoanGuarantor.status:type_name -> loan.v1.GuarantorStatus
-	28, // 5: loan.v1.LoanGuarantor.approved_at:type_name -> google.protobuf.Timestamp
-	28, // 6: loan.v1.LoanGuarantor.created_at:type_name -> google.protobuf.Timestamp
+	29, // 5: loan.v1.LoanGuarantor.approved_at:type_name -> google.protobuf.Timestamp
+	29, // 6: loan.v1.LoanGuarantor.created_at:type_name -> google.protobuf.Timestamp
 	2,  // 7: loan.v1.CreditBalance.status:type_name -> loan.v1.CreditStatus
-	28, // 8: loan.v1.CreditBalance.created_at:type_name -> google.protobuf.Timestamp
-	28, // 9: loan.v1.CreditBalance.last_activity_at:type_name -> google.protobuf.Timestamp
-	0,  // 10: loan.v1.ApplyForLoanResponse.status:type_name -> loan.v1.LoanStatus
-	0,  // 11: loan.v1.ApproveLoanResponse.new_status:type_name -> loan.v1.LoanStatus
-	28, // 12: loan.v1.ApproveLoanResponse.approved_at:type_name -> google.protobuf.Timestamp
-	0,  // 13: loan.v1.RejectLoanResponse.new_status:type_name -> loan.v1.LoanStatus
-	28, // 14: loan.v1.RejectLoanResponse.rejected_at:type_name -> google.protobuf.Timestamp
-	0,  // 15: loan.v1.DisburseLoanResponse.new_status:type_name -> loan.v1.LoanStatus
-	28, // 16: loan.v1.DisburseLoanResponse.disbursed_at:type_name -> google.protobuf.Timestamp
-	3,  // 17: loan.v1.GetLoanResponse.loan:type_name -> loan.v1.Loan
-	0,  // 18: loan.v1.ListLoansRequest.status_filter:type_name -> loan.v1.LoanStatus
-	3,  // 19: loan.v1.ListLoansResponse.loans:type_name -> loan.v1.Loan
-	0,  // 20: loan.v1.GetLoanStatusResponse.status:type_name -> loan.v1.LoanStatus
-	28, // 21: loan.v1.GetLoanStatusResponse.last_updated:type_name -> google.protobuf.Timestamp
-	1,  // 22: loan.v1.AddGuarantorResponse.status:type_name -> loan.v1.GuarantorStatus
-	28, // 23: loan.v1.AddGuarantorResponse.created_at:type_name -> google.protobuf.Timestamp
-	1,  // 24: loan.v1.ApproveGuarantorResponse.new_status:type_name -> loan.v1.GuarantorStatus
-	28, // 25: loan.v1.ApproveGuarantorResponse.approved_at:type_name -> google.protobuf.Timestamp
-	4,  // 26: loan.v1.ListGuarantorsResponse.guarantors:type_name -> loan.v1.LoanGuarantor
-	6,  // 27: loan.v1.LoanService.ApplyForLoan:input_type -> loan.v1.ApplyForLoanRequest
-	8,  // 28: loan.v1.LoanService.ApproveLoan:input_type -> loan.v1.ApproveLoanRequest
-	10, // 29: loan.v1.LoanService.RejectLoan:input_type -> loan.v1.RejectLoanRequest
-	12, // 30: loan.v1.LoanService.DisburseLoan:input_type -> loan.v1.DisburseLoanRequest
-	14, // 31: loan.v1.LoanService.GetLoan:input_type -> loan.v1.GetLoanRequest
-	16, // 32: loan.v1.LoanService.ListLoans:input_type -> loan.v1.ListLoansRequest
-	18, // 33: loan.v1.LoanService.GetLoanStatus:input_type -> loan.v1.GetLoanStatusRequest
-	20, // 34: loan.v1.LoanService.AddGuarantor:input_type -> loan.v1.AddGuarantorRequest
-	22, // 35: loan.v1.LoanService.RemoveGuarantor:input_type -> loan.v1.RemoveGuarantorRequest
-	24, // 36: loan.v1.LoanService.ApproveGuarantor:input_type -> loan.v1.ApproveGuarantorRequest
-	26, // 37: loan.v1.LoanService.ListGuarantors:input_type -> loan.v1.ListGuarantorsRequest
-	7,  // 38: loan.v1.LoanService.ApplyForLoan:output_type -> loan.v1.ApplyForLoanResponse
-	9,  // 39: loan.v1.LoanService.ApproveLoan:output_type -> loan.v1.ApproveLoanResponse
-	11, // 40: loan.v1.LoanService.RejectLoan:output_type -> loan.v1.RejectLoanResponse
-	13, // 41: loan.v1.LoanService.DisburseLoan:output_type -> loan.v1.DisburseLoanResponse
-	15, // 42: loan.v1.LoanService.GetLoan:output_type -> loan.v1.GetLoanResponse
-	17, // 43: loan.v1.LoanService.ListLoans:output_type -> loan.v1.ListLoansResponse
-	19, // 44: loan.v1.LoanService.GetLoanStatus:output_type -> loan.v1.GetLoanStatusResponse
-	21, // 45: loan.v1.LoanService.AddGuarantor:output_type -> loan.v1.AddGuarantorResponse
-	23, // 46: loan.v1.LoanService.RemoveGuarantor:output_type -> loan.v1.RemoveGuarantorResponse
-	25, // 47: loan.v1.LoanService.ApproveGuarantor:output_type -> loan.v1.ApproveGuarantorResponse
-	27, // 48: loan.v1.LoanService.ListGuarantors:output_type -> loan.v1.ListGuarantorsResponse
-	38, // [38:49] is the sub-list for method output_type
-	27, // [27:38] is the sub-list for method input_type
-	27, // [27:27] is the sub-list for extension type_name
-	27, // [27:27] is the sub-list for extension extendee
-	0,  // [0:27] is the sub-list for field type_name
+	29, // 8: loan.v1.CreditBalance.created_at:type_name -> google.protobuf.Timestamp
+	29, // 9: loan.v1.CreditBalance.last_activity_at:type_name -> google.protobuf.Timestamp
+	6,  // 10: loan.v1.ApplyForLoanRequest.guarantors:type_name -> loan.v1.ProposedGuarantor
+	0,  // 11: loan.v1.ApplyForLoanResponse.status:type_name -> loan.v1.LoanStatus
+	0,  // 12: loan.v1.ApproveLoanResponse.new_status:type_name -> loan.v1.LoanStatus
+	29, // 13: loan.v1.ApproveLoanResponse.approved_at:type_name -> google.protobuf.Timestamp
+	0,  // 14: loan.v1.RejectLoanResponse.new_status:type_name -> loan.v1.LoanStatus
+	29, // 15: loan.v1.RejectLoanResponse.rejected_at:type_name -> google.protobuf.Timestamp
+	0,  // 16: loan.v1.DisburseLoanResponse.new_status:type_name -> loan.v1.LoanStatus
+	29, // 17: loan.v1.DisburseLoanResponse.disbursed_at:type_name -> google.protobuf.Timestamp
+	3,  // 18: loan.v1.GetLoanResponse.loan:type_name -> loan.v1.Loan
+	0,  // 19: loan.v1.ListLoansRequest.status_filter:type_name -> loan.v1.LoanStatus
+	3,  // 20: loan.v1.ListLoansResponse.loans:type_name -> loan.v1.Loan
+	0,  // 21: loan.v1.GetLoanStatusResponse.status:type_name -> loan.v1.LoanStatus
+	29, // 22: loan.v1.GetLoanStatusResponse.last_updated:type_name -> google.protobuf.Timestamp
+	1,  // 23: loan.v1.AddGuarantorResponse.status:type_name -> loan.v1.GuarantorStatus
+	29, // 24: loan.v1.AddGuarantorResponse.created_at:type_name -> google.protobuf.Timestamp
+	1,  // 25: loan.v1.ApproveGuarantorResponse.new_status:type_name -> loan.v1.GuarantorStatus
+	29, // 26: loan.v1.ApproveGuarantorResponse.approved_at:type_name -> google.protobuf.Timestamp
+	4,  // 27: loan.v1.ListGuarantorsResponse.guarantors:type_name -> loan.v1.LoanGuarantor
+	7,  // 28: loan.v1.LoanService.ApplyForLoan:input_type -> loan.v1.ApplyForLoanRequest
+	9,  // 29: loan.v1.LoanService.ApproveLoan:input_type -> loan.v1.ApproveLoanRequest
+	11, // 30: loan.v1.LoanService.RejectLoan:input_type -> loan.v1.RejectLoanRequest
+	13, // 31: loan.v1.LoanService.DisburseLoan:input_type -> loan.v1.DisburseLoanRequest
+	15, // 32: loan.v1.LoanService.GetLoan:input_type -> loan.v1.GetLoanRequest
+	17, // 33: loan.v1.LoanService.ListLoans:input_type -> loan.v1.ListLoansRequest
+	19, // 34: loan.v1.LoanService.GetLoanStatus:input_type -> loan.v1.GetLoanStatusRequest
+	21, // 35: loan.v1.LoanService.AddGuarantor:input_type -> loan.v1.AddGuarantorRequest
+	23, // 36: loan.v1.LoanService.RemoveGuarantor:input_type -> loan.v1.RemoveGuarantorRequest
+	25, // 37: loan.v1.LoanService.ApproveGuarantor:input_type -> loan.v1.ApproveGuarantorRequest
+	27, // 38: loan.v1.LoanService.ListGuarantors:input_type -> loan.v1.ListGuarantorsRequest
+	8,  // 39: loan.v1.LoanService.ApplyForLoan:output_type -> loan.v1.ApplyForLoanResponse
+	10, // 40: loan.v1.LoanService.ApproveLoan:output_type -> loan.v1.ApproveLoanResponse
+	12, // 41: loan.v1.LoanService.RejectLoan:output_type -> loan.v1.RejectLoanResponse
+	14, // 42: loan.v1.LoanService.DisburseLoan:output_type -> loan.v1.DisburseLoanResponse
+	16, // 43: loan.v1.LoanService.GetLoan:output_type -> loan.v1.GetLoanResponse
+	18, // 44: loan.v1.LoanService.ListLoans:output_type -> loan.v1.ListLoansResponse
+	20, // 45: loan.v1.LoanService.GetLoanStatus:output_type -> loan.v1.GetLoanStatusResponse
+	22, // 46: loan.v1.LoanService.AddGuarantor:output_type -> loan.v1.AddGuarantorResponse
+	24, // 47: loan.v1.LoanService.RemoveGuarantor:output_type -> loan.v1.RemoveGuarantorResponse
+	26, // 48: loan.v1.LoanService.ApproveGuarantor:output_type -> loan.v1.ApproveGuarantorResponse
+	28, // 49: loan.v1.LoanService.ListGuarantors:output_type -> loan.v1.ListGuarantorsResponse
+	39, // [39:50] is the sub-list for method output_type
+	28, // [28:39] is the sub-list for method input_type
+	28, // [28:28] is the sub-list for extension type_name
+	28, // [28:28] is the sub-list for extension extendee
+	0,  // [0:28] is the sub-list for field type_name
 }
 
 func init() { file_loan_v1_loan_proto_init() }
@@ -2079,7 +2139,7 @@ func file_loan_v1_loan_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_loan_v1_loan_proto_rawDesc), len(file_loan_v1_loan_proto_rawDesc)),
 			NumEnums:      3,
-			NumMessages:   25,
+			NumMessages:   26,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

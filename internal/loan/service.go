@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	loansqlc "github.com/yaninyzwitty/caritas-backend/internal/loan/repository/sqlc"
+	"github.com/yaninyzwitty/caritas-backend/internal/member"
 )
 
 const maxGuarantors = 20
@@ -23,20 +24,21 @@ type LoanCursor struct {
 	ID        pgtype.UUID
 }
 
-type memberEligibility interface {
-	RequireActiveMember(ctx context.Context, memberID pgtype.UUID) error
+type ProposedGuarantor struct {
+	GuarantorID      pgtype.UUID
+	GuaranteedAmount pgtype.Numeric
 }
 
 type Service struct {
-	store             *Store
-	memberEligibility memberEligibility
+	store         *Store
+	memberService *member.Service
 }
 
-func NewService(store *Store, memberEligibility memberEligibility) *Service {
-	return &Service{store: store, memberEligibility: memberEligibility}
+func NewService(store *Store, memberService *member.Service) *Service {
+	return &Service{store: store, memberService: memberService}
 }
 
-func (s *Service) ApplyForLoan(ctx context.Context, params loansqlc.CreateLoanParams, guarantorIDs []pgtype.UUID) (loansqlc.CreateLoanRow, error) {
+func (s *Service) ApplyForLoan(ctx context.Context, params loansqlc.CreateLoanParams, guarantors []ProposedGuarantor) (loansqlc.CreateLoanRow, error) {
 
 	// increase timeout to prevent defer tx rollback errors, due to context time getting done
 	applyLoanCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
@@ -50,29 +52,37 @@ func (s *Service) ApplyForLoan(ctx context.Context, params loansqlc.CreateLoanPa
 	if params.RepaymentPeriodMonths < 1 || params.RepaymentPeriodMonths > 36 {
 		return loansqlc.CreateLoanRow{}, ErrInvalidRepaymentPeriod
 	}
-	if len(guarantorIDs) < 1 {
+	if len(guarantors) < 1 {
 		return loansqlc.CreateLoanRow{}, ErrInsufficientGuarantors
 	}
-	if len(guarantorIDs) > maxGuarantors {
+	if len(guarantors) > maxGuarantors {
 		return loansqlc.CreateLoanRow{}, ErrTooManyGuarantors
 	}
-	if err := s.requireActiveMember(ctx, params.MemberID, ErrMemberNotActive); err != nil {
+	if err := s.requireActiveMember(applyLoanCtx, params.MemberID, ErrMemberNotActive); err != nil {
 		return loansqlc.CreateLoanRow{}, err
 	}
 
-	seen := make(map[pgtype.UUID]struct{}, len(guarantorIDs))
-	for _, guarantorID := range guarantorIDs {
-		if sameUUID(params.MemberID, guarantorID) {
+	totalGuarantee := new(big.Int)
+	seen := make(map[pgtype.UUID]struct{}, len(guarantors))
+	for _, guarantor := range guarantors {
+		if !positive(guarantor.GuaranteedAmount) {
+			return loansqlc.CreateLoanRow{}, ErrInvalidGuaranteedAmount
+		}
+		if sameUUID(params.MemberID, guarantor.GuarantorID) {
 			return loansqlc.CreateLoanRow{}, ErrSelfGuarantee
 		}
-		if _, ok := seen[guarantorID]; ok {
+		if _, ok := seen[guarantor.GuarantorID]; ok {
 			return loansqlc.CreateLoanRow{}, ErrDuplicateGuarantor
 		}
-		seen[guarantorID] = struct{}{}
+		seen[guarantor.GuarantorID] = struct{}{}
 
-		if err := s.requireActiveMember(applyLoanCtx, guarantorID, ErrGuarantorNotActive); err != nil {
+		if err := s.requireActiveMember(applyLoanCtx, guarantor.GuarantorID, ErrGuarantorNotActive); err != nil {
 			return loansqlc.CreateLoanRow{}, err
 		}
+		totalGuarantee.Add(totalGuarantee, numericToScale(guarantor.GuaranteedAmount, -4))
+	}
+	if totalGuarantee.Cmp(numericToScale(params.Principal, -4)) < 0 {
+		return loansqlc.CreateLoanRow{}, ErrInsufficientGuarantee
 	}
 
 	var loan loansqlc.CreateLoanRow
@@ -83,13 +93,11 @@ func (s *Service) ApplyForLoan(ctx context.Context, params loansqlc.CreateLoanPa
 			return fmt.Errorf("create loan: %w", err)
 		}
 
-		// instead of splitting evenly for the guarantors
-		amounts := splitNumeric(params.Principal, len(guarantorIDs))
-		for i, guarantorID := range guarantorIDs {
+		for _, guarantor := range guarantors {
 			if _, err := q.CreateLoanGuarantor(applyLoanCtx, loansqlc.CreateLoanGuarantorParams{
 				LoanID:           loan.ID,
-				GuarantorID:      guarantorID,
-				GuaranteedAmount: amounts[i],
+				GuarantorID:      guarantor.GuarantorID,
+				GuaranteedAmount: guarantor.GuaranteedAmount,
 				Status:           loansqlc.GuarantorStatusPending,
 			}); err != nil {
 				return fmt.Errorf("create guarantor: %w", err)
@@ -809,11 +817,13 @@ func normalizeLimit(limit int32) int32 {
 	return limit
 }
 
+// requireActiveMember keeps member-service errors behind loan-domain errors so
+// callers know whether the applicant or guarantor failed the eligibility gate.
 func (s *Service) requireActiveMember(ctx context.Context, memberID pgtype.UUID, inactiveErr error) error {
-	if s.memberEligibility == nil {
+	if s.memberService == nil {
 		return inactiveErr
 	}
-	if err := s.memberEligibility.RequireActiveMember(ctx, memberID); err != nil {
+	if err := s.memberService.RequireActiveMember(ctx, memberID); err != nil {
 		return inactiveErr
 	}
 	return nil
@@ -882,23 +892,6 @@ func decimalStringFromScale(n *big.Int, scale int32) string {
 		return "-" + whole + "." + frac
 	}
 	return whole + "." + frac
-}
-
-func splitNumeric(n pgtype.Numeric, count int) []pgtype.Numeric {
-	total := numericToScale(n, -4)
-	divisor := big.NewInt(int64(count))
-	share, remainder := new(big.Int).QuoRem(total, divisor, new(big.Int))
-
-	amounts := make([]pgtype.Numeric, count)
-	for i := range amounts {
-		amount := new(big.Int).Set(share)
-		if remainder.Sign() > 0 {
-			amount.Add(amount, big.NewInt(1))
-			remainder.Sub(remainder, big.NewInt(1))
-		}
-		amounts[i] = pgtype.Numeric{Int: amount, Exp: -4, Valid: true}
-	}
-	return amounts
 }
 
 func pow10(exp int32) *big.Int {

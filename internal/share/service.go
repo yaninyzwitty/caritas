@@ -1,7 +1,5 @@
 package share
 
-// TODO-APPLY THE GOOSE MIGRATIONS
-
 import (
 	"context"
 	"errors"
