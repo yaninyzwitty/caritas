@@ -89,8 +89,8 @@ func (h *Handlers) ApplyForLoan(ctx context.Context, req *loanv1.ApplyForLoanReq
 		return nil, status.Error(codes.InvalidArgument, "interest rate must be a valid numeric value")
 	}
 
-	if len(req.GetGuarantorIds()) <= 0 || len(req.GetGuarantorIds()) > 20 {
-		return nil, status.Error(codes.InvalidArgument, "guarantor_ids must contain between 1 and 20 guarantors")
+	if len(req.GetGuarantors()) <= 0 || len(req.GetGuarantors()) > 20 {
+		return nil, status.Error(codes.InvalidArgument, "guarantors must contain between 1 and 20 guarantors")
 	}
 
 	memberID, err := stringToUUID(req.GetMemberId())
@@ -110,13 +110,20 @@ func (h *Handlers) ApplyForLoan(ctx context.Context, req *loanv1.ApplyForLoanReq
 		return nil, status.Error(codes.InvalidArgument, "invalid officer_id")
 	}
 
-	guarantorIDs := make([]pgtype.UUID, 0, len(req.GetGuarantorIds()))
-	for _, guarantorID := range req.GetGuarantorIds() {
-		id, err := stringToUUID(guarantorID)
+	guarantors := make([]ProposedGuarantor, 0, len(req.GetGuarantors()))
+	for _, guarantor := range req.GetGuarantors() {
+		id, err := stringToUUID(guarantor.GetGuarantorId())
 		if err != nil {
 			return nil, status.Error(codes.InvalidArgument, "invalid guarantor_id")
 		}
-		guarantorIDs = append(guarantorIDs, id)
+		guaranteedAmount, err := parseNumeric(guarantor.GetGuaranteedAmount())
+		if err != nil {
+			return nil, status.Error(codes.InvalidArgument, "guaranteed_amount must be a valid numeric value")
+		}
+		guarantors = append(guarantors, ProposedGuarantor{
+			GuarantorID:      id,
+			GuaranteedAmount: guaranteedAmount,
+		})
 	}
 
 	loan, err := h.service.ApplyForLoan(ctx, loansqlc.CreateLoanParams{
@@ -127,7 +134,7 @@ func (h *Handlers) ApplyForLoan(ctx context.Context, req *loanv1.ApplyForLoanReq
 		RepaymentPeriodMonths: req.GetRepaymentPeriodMonths(),
 		// updated by should only be handled by the admin
 		UpdatedBy: loanOfficerID,
-	}, guarantorIDs)
+	}, guarantors)
 
 	if err != nil {
 		return nil, mapServiceError(err)

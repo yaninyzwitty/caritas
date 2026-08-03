@@ -111,6 +111,12 @@ message CreditBalance {
   google.protobuf.Timestamp last_activity_at = 8;
 }
 
+// ProposedGuarantor captures the amount a guarantor commits to this loan.
+message ProposedGuarantor {
+  string guarantor_id      = 1;
+  string guaranteed_amount = 2;  // decimal.Decimal as string
+}
+
 // ApplyForLoanRequest contains the information needed to apply for a new loan.
 message ApplyForLoanRequest {
   string  member_id               = 1;
@@ -119,7 +125,7 @@ message ApplyForLoanRequest {
   string  interest_rate           = 4;  // decimal.Decimal as string (percentage rate)
   int32   repayment_period_months = 5;
   string officer_id  = 6; //TODO -remove this handle carefully with authentication
-  repeated string guarantor_ids   = 7;  // Initial list of proposed guarantors
+  repeated ProposedGuarantor guarantors = 7;
 }
 
 // ApplyForLoanResponse returns the newly created loan application's identifiers.

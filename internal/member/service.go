@@ -11,10 +11,19 @@ import (
 
 const DefaultBranchID = 1
 
+// centralize the status transition rules here so they can be easily referenced and updated in one place.
 var statusTransitions = map[string]map[string]bool{
-	"pending":   {"active": true, "rejected": true},
-	"active":    {"suspended": true, "closed": true},
-	"suspended": {"active": true},
+	"pending": {
+		"active":   true,
+		"rejected": true,
+	},
+	"active": {
+		"suspended": true,
+		"closed":    true,
+	},
+	"suspended": {
+		"active": true,
+	},
 }
 
 type Service struct {
@@ -65,6 +74,8 @@ func (s *Service) GetMember(ctx context.Context, memberID pgtype.UUID) (sqlc.Get
 	return s.store.GetMemberByID(ctx, memberID)
 }
 
+// RequireActiveMember centralizes the active-member rule so other domains do
+// not read or interpret member rows directly.
 func (s *Service) RequireActiveMember(ctx context.Context, memberID pgtype.UUID) error {
 	member, err := s.GetMember(ctx, memberID)
 	if err != nil {
@@ -120,7 +131,12 @@ func (s *Service) UpdateMemberStatus(ctx context.Context, memberID pgtype.UUID, 
 			return fmt.Errorf("get current member: %w", err)
 		}
 
-		if !statusTransitions[current.Status][newStatus] {
+		allowedTransitions, ok := statusTransitions[current.Status]
+		if !ok {
+			return fmt.Errorf("%w: no transitions defined for current status %s", ErrInvalidStatusTransition, current.Status)
+		}
+
+		if !allowedTransitions[newStatus] {
 			return fmt.Errorf("%w: cannot transition from %s to %s", ErrInvalidStatusTransition, current.Status, newStatus)
 		}
 
