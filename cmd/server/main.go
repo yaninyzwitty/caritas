@@ -14,9 +14,11 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/yaninyzwitty/caritas-backend/config"
+	authv1 "github.com/yaninyzwitty/caritas-backend/gen/auth/v1"
 	loanv1 "github.com/yaninyzwitty/caritas-backend/gen/loan/v1"
 	memberv1 "github.com/yaninyzwitty/caritas-backend/gen/member/v1"
 	sharev1 "github.com/yaninyzwitty/caritas-backend/gen/share/v1"
+	"github.com/yaninyzwitty/caritas-backend/internal/auth"
 	"github.com/yaninyzwitty/caritas-backend/internal/loan"
 	"github.com/yaninyzwitty/caritas-backend/internal/member"
 	"github.com/yaninyzwitty/caritas-backend/internal/share"
@@ -37,6 +39,10 @@ func main() {
 	dbURL, err := config.GetDatabaseURL()
 	if err != nil {
 		log.Fatalf("Failed to get database URL: %v", err)
+	}
+	authTokenSecret, err := config.GetAuthTokenSecret()
+	if err != nil {
+		log.Fatalf("Failed to get auth token secret: %v", err)
 	}
 
 	poolConfig, err := pgxpool.ParseConfig(dbURL)
@@ -99,13 +105,20 @@ func main() {
 	loanStore := loan.NewStore(pool)
 	loanService := loan.NewService(loanStore, memberService)
 	loanServer := loan.NewHandlers(loanStore, loanService)
+	authStore := auth.NewStore(pool)
+	authServer := auth.NewHandlers(authStore, authTokenSecret)
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.GRPC.Port))
 	if err != nil {
 		log.Fatalf("Failed to listen: %v", err)
 	}
 
-	s := grpc.NewServer()
+	s := grpc.NewServer(
+		grpc.UnaryInterceptor(
+			auth.UnaryInterceptor(authStore, authTokenSecret),
+		),
+	)
+	authv1.RegisterAuthServiceServer(s, authServer)
 	memberv1.RegisterMemberServiceServer(s, server)
 	sharev1.RegisterShareServiceServer(s, shareServer)
 	loanv1.RegisterLoanServiceServer(s, loanServer)
