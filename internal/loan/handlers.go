@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	loanv1 "github.com/yaninyzwitty/caritas-backend/gen/loan/v1"
+	"github.com/yaninyzwitty/caritas-backend/internal/auth"
 	loansqlc "github.com/yaninyzwitty/caritas-backend/internal/loan/repository/sqlc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -105,9 +106,9 @@ func (h *Handlers) ApplyForLoan(ctx context.Context, req *loanv1.ApplyForLoanReq
 		return nil, status.Error(codes.InvalidArgument, "principal must be a valid numeric value")
 	}
 
-	loanOfficerID, err := stringToUUID(req.GetOfficerId())
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid officer_id")
+	actor, ok := auth.PrincipalFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "authenticated admin is required")
 	}
 
 	guarantors := make([]ProposedGuarantor, 0, len(req.GetGuarantors()))
@@ -132,8 +133,7 @@ func (h *Handlers) ApplyForLoan(ctx context.Context, req *loanv1.ApplyForLoanReq
 		Principal:             principalAmount,
 		InterestRate:          interestAmountInPercentage,
 		RepaymentPeriodMonths: req.GetRepaymentPeriodMonths(),
-		// updated by should only be handled by the admin
-		UpdatedBy: loanOfficerID,
+		UpdatedBy:             actor.ID,
 	}, guarantors)
 
 	if err != nil {
@@ -155,25 +155,19 @@ func (h *Handlers) ApproveLoan(ctx context.Context, req *loanv1.ApproveLoanReque
 	if req.GetReason() == "" {
 		return nil, status.Error(codes.InvalidArgument, "reason for the loan approval is required")
 	}
-	//
-
-	if req.GetOfficerId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "loan officer id is required")
-	}
-
 	loanID, err := stringToUUID(req.GetLoanId())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "loan id is required")
 	}
 
-	loanOfficerID, err := stringToUUID(req.GetOfficerId())
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid officer_id")
+	actor, ok := auth.PrincipalFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "authenticated admin is required")
 	}
 
 	reason := req.GetReason()
 
-	loanApproval, err := h.service.ApproveLoan(ctx, loanID, loanOfficerID, reason)
+	loanApproval, err := h.service.ApproveLoan(ctx, loanID, actor.ID, reason)
 	if err != nil {
 		return nil, mapServiceError(err)
 	}
@@ -194,17 +188,17 @@ func (h *Handlers) RejectLoan(ctx context.Context, req *loanv1.RejectLoanRequest
 		return nil, status.Error(codes.InvalidArgument, "exact reason is required")
 	}
 
-	loanOfficerID, err := stringToUUID(req.GetLoanOfficer())
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid loan_officer")
-	}
-
 	loanID, err := stringToUUID(req.GetLoanId())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "loan id is required")
 	}
 
-	loanRejection, err := h.service.RejectLoan(ctx, loanID, loanOfficerID, req.Reason)
+	actor, ok := auth.PrincipalFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "authenticated admin is required")
+	}
+
+	loanRejection, err := h.service.RejectLoan(ctx, loanID, actor.ID, req.Reason)
 	if err != nil {
 		return nil, mapServiceError(err)
 	}
@@ -229,13 +223,12 @@ func (h *Handlers) DisburseLoan(ctx context.Context, req *loanv1.DisburseLoanReq
 		return nil, status.Error(codes.InvalidArgument, "invalid loan_id")
 	}
 
-	// TODO--implement real and great authentication and supply automatically
-	disbursedByID, err := stringToUUID(req.GetLoanOfficer())
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid loan_officer")
+	actor, ok := auth.PrincipalFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "authenticated admin is required")
 	}
 
-	transaction, loanDisbursed, err := h.service.DisburseLoan(ctx, loanID, disbursedByID, req.GetReason())
+	transaction, loanDisbursed, err := h.service.DisburseLoan(ctx, loanID, actor.ID, req.GetReason())
 
 	// TODO-look to handle errors for different conditions ie based on status, fail preconditon, no rows etc
 	if err != nil {
@@ -459,10 +452,6 @@ func (h *Handlers) RemoveGuarantor(ctx context.Context, req *loanv1.RemoveGuaran
 	return &loanv1.RemoveGuarantorResponse{Success: true}, nil
 }
 func (h *Handlers) ApproveGuarantor(ctx context.Context, req *loanv1.ApproveGuarantorRequest) (*loanv1.ApproveGuarantorResponse, error) {
-	if req.GetApprovedBy() == "" {
-		return nil, status.Error(codes.InvalidArgument, "loan officer id who approved the guarantor is required")
-	}
-
 	if req.GetGuarantorId() == "" {
 		return nil, status.Error(codes.InvalidArgument, "guarantor id is required")
 	}
@@ -479,12 +468,12 @@ func (h *Handlers) ApproveGuarantor(ctx context.Context, req *loanv1.ApproveGuar
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid guarantor_id")
 	}
-	loanOfficerID, err := stringToUUID(req.GetApprovedBy())
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid approved_by")
+	actor, ok := auth.PrincipalFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "authenticated admin is required")
 	}
 
-	guarantorApproval, err := h.service.ApproveGuarantor(ctx, loanID, guarantorID, loanOfficerID)
+	guarantorApproval, err := h.service.ApproveGuarantor(ctx, loanID, guarantorID, actor.ID)
 	if err != nil {
 		return nil, mapServiceError(err)
 	}
@@ -580,10 +569,6 @@ func (h *Handlers) RecordRepayment(ctx context.Context, req *loanv1.RecordRepaym
 	if req.GetPaymentGatewayTransactionId() == "" {
 		return nil, status.Error(codes.InvalidArgument, "payment gateway transaction id is required")
 	}
-	if req.GetCreatedBy() == "" {
-		return nil, status.Error(codes.InvalidArgument, "created by is required")
-	}
-
 	loanID, err := stringToUUID(req.GetLoanId())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid loan_id")
@@ -592,12 +577,12 @@ func (h *Handlers) RecordRepayment(ctx context.Context, req *loanv1.RecordRepaym
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid amount")
 	}
-	createdBy, err := stringToUUID(req.GetCreatedBy())
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid created_by")
+	actor, ok := auth.PrincipalFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "authenticated admin is required")
 	}
 
-	tx, err := h.service.RecordRepayment(ctx, loanID, amount, req.GetPaymentGatewayTransactionId(), createdBy)
+	tx, err := h.service.RecordRepayment(ctx, loanID, amount, req.GetPaymentGatewayTransactionId(), actor.ID)
 	if err != nil {
 		return nil, mapServiceError(err)
 	}

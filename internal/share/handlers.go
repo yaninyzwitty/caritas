@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	memberv1 "github.com/yaninyzwitty/caritas-backend/gen/member/v1"
 	sharev1 "github.com/yaninyzwitty/caritas-backend/gen/share/v1"
+	"github.com/yaninyzwitty/caritas-backend/internal/auth"
 	sharesqlc "github.com/yaninyzwitty/caritas-backend/internal/share/repository/sqlc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -218,11 +219,11 @@ func (h *Handlers) PurchaseShares(ctx context.Context, req *sharev1.PurchaseShar
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid reference_id: %v", err)
 	}
-	originatorID, err := stringToUUID(req.GetOriginatorId())
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid originator_id: %v", err)
+	actor, ok := auth.PrincipalFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "authenticated admin is required")
 	}
-	tx, err := h.service.PurchaseShares(ctx, accountID, moneyToNumeric(req.GetAmount()), referenceID, originatorID, req.GetReason())
+	tx, err := h.service.PurchaseShares(ctx, accountID, moneyToNumeric(req.GetAmount()), referenceID, actor.ID, req.GetReason())
 	if err != nil {
 		return nil, mapServiceError(err)
 	}
@@ -247,11 +248,11 @@ func (h *Handlers) WithdrawShares(ctx context.Context, req *sharev1.WithdrawShar
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid reference_id: %v", err)
 	}
-	originatorID, err := stringToUUID(req.GetOriginatorId())
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid originator_id: %v", err)
+	actor, ok := auth.PrincipalFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "authenticated admin is required")
 	}
-	tx, err := h.service.WithdrawShares(ctx, accountID, moneyToNumeric(req.GetAmount()), referenceID, originatorID, req.GetReason())
+	tx, err := h.service.WithdrawShares(ctx, accountID, moneyToNumeric(req.GetAmount()), referenceID, actor.ID, req.GetReason())
 	if err != nil {
 		return nil, mapServiceError(err)
 	}
@@ -380,11 +381,11 @@ func (h *Handlers) CreateAdjustment(ctx context.Context, req *sharev1.CreateAdju
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid reference_id: %v", err)
 	}
-	originatorID, err := stringToUUID(req.GetOriginatorId())
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid originator_id: %v", err)
+	actor, ok := auth.PrincipalFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "authenticated admin is required")
 	}
-	tx, err := h.service.CreateAdjustment(ctx, accountID, moneyToNumeric(req.GetAmount()), referenceID, originatorID, req.GetReason())
+	tx, err := h.service.CreateAdjustment(ctx, accountID, moneyToNumeric(req.GetAmount()), referenceID, actor.ID, req.GetReason())
 	if err != nil {
 		return nil, mapServiceError(err)
 	}
@@ -405,9 +406,9 @@ func (h *Handlers) ApproveShareAdjustment(ctx context.Context, req *sharev1.Appr
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid transaction_id")
 	}
-	approverID, err := stringToUUID(req.GetApproverId())
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid approver_id")
+	actor, ok := auth.PrincipalFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "authenticated admin is required")
 	}
 	var auditReportID pgtype.UUID
 	if req.GetAuditReportId() != "" {
@@ -416,7 +417,7 @@ func (h *Handlers) ApproveShareAdjustment(ctx context.Context, req *sharev1.Appr
 			return nil, status.Error(codes.InvalidArgument, "invalid audit_report_id")
 		}
 	}
-	adjustment, err := h.service.ApproveShareAdjustment(ctx, transactionID, approverID, req.GetReason(), auditReportID)
+	adjustment, err := h.service.ApproveShareAdjustment(ctx, transactionID, actor.ID, req.GetReason(), auditReportID)
 	if err != nil {
 		return nil, mapServiceError(err)
 	}

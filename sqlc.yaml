@@ -36,3 +36,15 @@ sql:
         emit_json_tags: true
         json_tags_case_style: "camel"
         omit_unused_structs: true
+  - engine: "postgresql"
+    queries: "internal/auth/"
+    schema: "migrations/"
+    gen:
+      go:
+        package: "authsqlc"
+        out: "internal/auth/repository/sqlc"
+        sql_package: "pgx/v5"
+        emit_interface: false
+        emit_json_tags: true
+        json_tags_case_style: "camel"
+        omit_unused_structs: true
