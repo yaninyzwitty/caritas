@@ -48,3 +48,15 @@ sql:
         emit_json_tags: true
         json_tags_case_style: "camel"
         omit_unused_structs: true
+  - engine: "postgresql"
+    queries: "internal/contribution/"
+    schema: "migrations/"
+    gen:
+      go:
+        package: "contributionsqlc"
+        out: "internal/contribution/repository/sqlc"
+        sql_package: "pgx/v5"
+        emit_interface: true
+        emit_json_tags: true
+        json_tags_case_style: "camel"
+        omit_unused_structs: true
