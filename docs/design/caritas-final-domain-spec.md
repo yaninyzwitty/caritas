@@ -352,7 +352,7 @@ There may be at most one finalized dividend allocation per member and financial 
 - Dates are assigned to the wrong contribution period or financial year.
 - Reports disagree with authoritative transactions.
 
-## 10. Open Decisions
+<!-- ## 10. Open Decisions
 
 These must be settled before implementation:
 
@@ -360,4 +360,10 @@ These must be settled before implementation:
 - Exact monthly assessment date for COM and LGOM.
 - Whether withdrawal month fees apply when withdrawal happens before or after the assessment date.
 - Whether monthly loan principal below `principal / 36` is ever allowed, and who can approve the exception.
-- Whether dividend eligibility uses average month-end balance, average daily balance or year-end balance. This spec currently uses average finalized month-end eligible balance.
+- Whether dividend eligibility uses average month-end balance, average daily balance or year-end balance. This spec currently uses average finalized month-end eligible balance. -->
+
+CEEP snapshots MUST be generated for every active member even if they have no contributions.
+COM fees and LGOM fees must be deducted on every monthly contribution (assesed on the first calender day of the month)
+For withdrawal fees, fees already assessed remain payable; no future fees after the effective withdrawal date
+For principal below principal / 36, Prohibit during normal repayment; permit only through an approved restructuring
+For the dividend balance, Use the average finalized month-end eligible balance
