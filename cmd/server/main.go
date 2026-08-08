@@ -7,6 +7,7 @@ import (
 	"log"
 	"log/slog"
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -19,6 +20,7 @@ import (
 	memberv1 "github.com/yaninyzwitty/caritas-backend/gen/member/v1"
 	sharev1 "github.com/yaninyzwitty/caritas-backend/gen/share/v1"
 	"github.com/yaninyzwitty/caritas-backend/internal/auth"
+	"github.com/yaninyzwitty/caritas-backend/internal/contribution"
 	"github.com/yaninyzwitty/caritas-backend/internal/loan"
 	"github.com/yaninyzwitty/caritas-backend/internal/member"
 	"github.com/yaninyzwitty/caritas-backend/internal/share"
@@ -105,6 +107,9 @@ func main() {
 	loanStore := loan.NewStore(pool)
 	loanService := loan.NewService(loanStore, memberService)
 	loanServer := loan.NewHandlers(loanStore, loanService)
+	contributionStore := contribution.NewStore(pool)
+	contributionService := contribution.NewService(contributionStore, shareService, loanService)
+	darajaHandlers := contribution.NewDarajaHandlers(contributionService)
 	authStore := auth.NewStore(pool)
 	authServer := auth.NewHandlers(authStore, authTokenSecret)
 
@@ -125,10 +130,25 @@ func main() {
 	loanv1.RegisterRepaymentServiceServer(s, loanServer)
 	loanv1.RegisterCreditServiceServer(s, loanServer)
 
+	mux := http.NewServeMux()
+	darajaHandlers.RegisterDarajaRoutes(mux)
+	httpServer := &http.Server{
+		Addr:              fmt.Sprintf(":%d", cfg.HTTP.Port),
+		Handler:           mux,
+		ReadHeaderTimeout: 10 * time.Second,
+	}
+
 	go func() {
 		log.Printf("Starting gRPC server on port %d", cfg.GRPC.Port)
 		if err := s.Serve(lis); err != nil {
 			log.Fatalf("Failed to serve: %v", err)
+		}
+	}()
+
+	go func() {
+		log.Printf("Starting HTTP server on port %d", cfg.HTTP.Port)
+		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Failed to serve HTTP: %v", err)
 		}
 	}()
 
@@ -144,6 +164,9 @@ func main() {
 	shutdownDone := make(chan struct{})
 	go func() {
 		s.GracefulStop()
+		if err := httpServer.Shutdown(shutdownCtx); err != nil {
+			slog.Error("HTTP server shutdown", "error", err)
+		}
 		close(shutdownDone)
 	}()
 

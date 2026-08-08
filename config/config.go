@@ -9,10 +9,17 @@ import (
 )
 
 type Config struct {
+	HTTP     HTTPConfig     `yaml:"http"`
 	GRPC     GRPCConfig     `yaml:"grpc"`
 	Temporal TemporalConfig `yaml:"temporal"`
 	Database DatabaseConfig `yaml:"database"`
 	Log      LogConfig      `yaml:"log"`
+}
+
+// HTTPConfig exists for public webhook ingress. Without it, Daraja would have
+// to share the gRPC listener even though callbacks are plain HTTP.
+type HTTPConfig struct {
+	Port int `yaml:"port"`
 }
 
 type GRPCConfig struct {

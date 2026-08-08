@@ -15,25 +15,25 @@ INSERT INTO contribution_receipts (
     $1, $2, $3, $4, $5, $6, $7, $8, 'pending', $9, $10
 )
 ON CONFLICT DO NOTHING
-RETURNING id, source_channel, external_transaction_id, checkout_request_id, member_id, branch_id, contribution_period, received_amount, allocation_plan, status, failure_reason, received_by, received_at, is_deleted, created_at, updated_at;
+RETURNING *;
 
 -- name: GetContributionReceiptByID :one
-SELECT id, source_channel, external_transaction_id, checkout_request_id, member_id, branch_id, contribution_period, received_amount, allocation_plan, status, failure_reason, received_by, received_at, is_deleted, created_at, updated_at
+SELECT *
 FROM contribution_receipts
 WHERE id = $1 AND is_deleted = FALSE;
 
 -- name: GetContributionReceiptByExternalTransactionID :one
-SELECT id, source_channel, external_transaction_id, checkout_request_id, member_id, branch_id, contribution_period, received_amount, allocation_plan, status, failure_reason, received_by, received_at, is_deleted, created_at, updated_at
+SELECT *
 FROM contribution_receipts
 WHERE external_transaction_id = $1 AND is_deleted = FALSE;
 
 -- name: GetContributionReceiptByCheckoutRequestID :one
-SELECT id, source_channel, external_transaction_id, checkout_request_id, member_id, branch_id, contribution_period, received_amount, allocation_plan, status, failure_reason, received_by, received_at, is_deleted, created_at, updated_at
+SELECT *
 FROM contribution_receipts
 WHERE checkout_request_id = $1 AND is_deleted = FALSE;
 
 -- name: LockContributionReceiptByID :one
-SELECT id, source_channel, external_transaction_id, checkout_request_id, member_id, branch_id, contribution_period, received_amount, allocation_plan, status, failure_reason, received_by, received_at, is_deleted, created_at, updated_at
+SELECT *
 FROM contribution_receipts
 WHERE id = $1 AND is_deleted = FALSE
 FOR UPDATE;
@@ -44,10 +44,10 @@ SET status = $2,
     failure_reason = $3,
     updated_at = NOW()
 WHERE id = $1 AND is_deleted = FALSE
-RETURNING id, source_channel, external_transaction_id, checkout_request_id, member_id, branch_id, contribution_period, received_amount, allocation_plan, status, failure_reason, received_by, received_at, is_deleted, created_at, updated_at;
+RETURNING *;
 
 -- name: ListContributionReceiptsByMember :many
-SELECT id, source_channel, external_transaction_id, checkout_request_id, member_id, branch_id, contribution_period, received_amount, allocation_plan, status, failure_reason, received_by, received_at, is_deleted, created_at, updated_at
+SELECT *
 FROM contribution_receipts
 WHERE member_id = $1
   AND is_deleted = FALSE

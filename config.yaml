@@ -1,3 +1,6 @@
+http:
+  port: 8080
+
 grpc:
   port: 50051
   timeout: 30s
