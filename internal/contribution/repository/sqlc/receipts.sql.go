@@ -12,7 +12,7 @@ import (
 )
 
 const getContributionReceiptByCheckoutRequestID = `-- name: GetContributionReceiptByCheckoutRequestID :one
-SELECT id, source_channel, external_transaction_id, checkout_request_id, member_id, branch_id, contribution_period, received_amount, allocation_plan, status, failure_reason, received_by, received_at, is_deleted, created_at, updated_at
+SELECT id, source_channel, external_transaction_id, checkout_request_id, member_id, branch_id, contribution_period, received_amount, allocation_plan, status, failure_reason, received_by, received_at, is_deleted, created_at, updated_at, deleted_at, deleted_by, deletion_reason
 FROM contribution_receipts
 WHERE checkout_request_id = $1 AND is_deleted = FALSE
 `
@@ -37,12 +37,15 @@ func (q *Queries) GetContributionReceiptByCheckoutRequestID(ctx context.Context,
 		&i.IsDeleted,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.DeletedBy,
+		&i.DeletionReason,
 	)
 	return i, err
 }
 
 const getContributionReceiptByExternalTransactionID = `-- name: GetContributionReceiptByExternalTransactionID :one
-SELECT id, source_channel, external_transaction_id, checkout_request_id, member_id, branch_id, contribution_period, received_amount, allocation_plan, status, failure_reason, received_by, received_at, is_deleted, created_at, updated_at
+SELECT id, source_channel, external_transaction_id, checkout_request_id, member_id, branch_id, contribution_period, received_amount, allocation_plan, status, failure_reason, received_by, received_at, is_deleted, created_at, updated_at, deleted_at, deleted_by, deletion_reason
 FROM contribution_receipts
 WHERE external_transaction_id = $1 AND is_deleted = FALSE
 `
@@ -67,12 +70,15 @@ func (q *Queries) GetContributionReceiptByExternalTransactionID(ctx context.Cont
 		&i.IsDeleted,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.DeletedBy,
+		&i.DeletionReason,
 	)
 	return i, err
 }
 
 const getContributionReceiptByID = `-- name: GetContributionReceiptByID :one
-SELECT id, source_channel, external_transaction_id, checkout_request_id, member_id, branch_id, contribution_period, received_amount, allocation_plan, status, failure_reason, received_by, received_at, is_deleted, created_at, updated_at
+SELECT id, source_channel, external_transaction_id, checkout_request_id, member_id, branch_id, contribution_period, received_amount, allocation_plan, status, failure_reason, received_by, received_at, is_deleted, created_at, updated_at, deleted_at, deleted_by, deletion_reason
 FROM contribution_receipts
 WHERE id = $1 AND is_deleted = FALSE
 `
@@ -97,6 +103,9 @@ func (q *Queries) GetContributionReceiptByID(ctx context.Context, id pgtype.UUID
 		&i.IsDeleted,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.DeletedBy,
+		&i.DeletionReason,
 	)
 	return i, err
 }
@@ -118,7 +127,7 @@ INSERT INTO contribution_receipts (
     $1, $2, $3, $4, $5, $6, $7, $8, 'pending', $9, $10
 )
 ON CONFLICT DO NOTHING
-RETURNING id, source_channel, external_transaction_id, checkout_request_id, member_id, branch_id, contribution_period, received_amount, allocation_plan, status, failure_reason, received_by, received_at, is_deleted, created_at, updated_at
+RETURNING id, source_channel, external_transaction_id, checkout_request_id, member_id, branch_id, contribution_period, received_amount, allocation_plan, status, failure_reason, received_by, received_at, is_deleted, created_at, updated_at, deleted_at, deleted_by, deletion_reason
 `
 
 type InsertContributionReceiptParams struct {
@@ -165,12 +174,15 @@ func (q *Queries) InsertContributionReceipt(ctx context.Context, arg InsertContr
 		&i.IsDeleted,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.DeletedBy,
+		&i.DeletionReason,
 	)
 	return i, err
 }
 
 const listContributionReceiptsByMember = `-- name: ListContributionReceiptsByMember :many
-SELECT id, source_channel, external_transaction_id, checkout_request_id, member_id, branch_id, contribution_period, received_amount, allocation_plan, status, failure_reason, received_by, received_at, is_deleted, created_at, updated_at
+SELECT id, source_channel, external_transaction_id, checkout_request_id, member_id, branch_id, contribution_period, received_amount, allocation_plan, status, failure_reason, received_by, received_at, is_deleted, created_at, updated_at, deleted_at, deleted_by, deletion_reason
 FROM contribution_receipts
 WHERE member_id = $1
   AND is_deleted = FALSE
@@ -221,6 +233,9 @@ func (q *Queries) ListContributionReceiptsByMember(ctx context.Context, arg List
 			&i.IsDeleted,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.DeletedAt,
+			&i.DeletedBy,
+			&i.DeletionReason,
 		); err != nil {
 			return nil, err
 		}
@@ -233,7 +248,7 @@ func (q *Queries) ListContributionReceiptsByMember(ctx context.Context, arg List
 }
 
 const lockContributionReceiptByID = `-- name: LockContributionReceiptByID :one
-SELECT id, source_channel, external_transaction_id, checkout_request_id, member_id, branch_id, contribution_period, received_amount, allocation_plan, status, failure_reason, received_by, received_at, is_deleted, created_at, updated_at
+SELECT id, source_channel, external_transaction_id, checkout_request_id, member_id, branch_id, contribution_period, received_amount, allocation_plan, status, failure_reason, received_by, received_at, is_deleted, created_at, updated_at, deleted_at, deleted_by, deletion_reason
 FROM contribution_receipts
 WHERE id = $1 AND is_deleted = FALSE
 FOR UPDATE
@@ -259,6 +274,9 @@ func (q *Queries) LockContributionReceiptByID(ctx context.Context, id pgtype.UUI
 		&i.IsDeleted,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.DeletedBy,
+		&i.DeletionReason,
 	)
 	return i, err
 }
@@ -269,7 +287,7 @@ SET status = $2,
     failure_reason = $3,
     updated_at = NOW()
 WHERE id = $1 AND is_deleted = FALSE
-RETURNING id, source_channel, external_transaction_id, checkout_request_id, member_id, branch_id, contribution_period, received_amount, allocation_plan, status, failure_reason, received_by, received_at, is_deleted, created_at, updated_at
+RETURNING id, source_channel, external_transaction_id, checkout_request_id, member_id, branch_id, contribution_period, received_amount, allocation_plan, status, failure_reason, received_by, received_at, is_deleted, created_at, updated_at, deleted_at, deleted_by, deletion_reason
 `
 
 type UpdateContributionReceiptStatusParams struct {
@@ -298,6 +316,9 @@ func (q *Queries) UpdateContributionReceiptStatus(ctx context.Context, arg Updat
 		&i.IsDeleted,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.DeletedBy,
+		&i.DeletionReason,
 	)
 	return i, err
 }

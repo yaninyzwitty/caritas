@@ -367,3 +367,5 @@ COM fees and LGOM fees must be deducted on every monthly contribution (assesed o
 For withdrawal fees, fees already assessed remain payable; no future fees after the effective withdrawal date
 For principal below principal / 36, Prohibit during normal repayment; permit only through an approved restructuring
 For the dividend balance, Use the average finalized month-end eligible balance
+Existing receipt does not automatically mean successful receipt.
+Existing allocation does not automatically mean complete allocation plan.

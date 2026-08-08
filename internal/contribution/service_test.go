@@ -72,6 +72,56 @@ func TestValidateReceiptRequiresTargetForLedgerAllocation(t *testing.T) {
 	}
 }
 
+func TestProcessAllocationCompletesContributionOwnedFeeLocally(t *testing.T) {
+	receipt := contributionsqlc.ContributionReceipt{
+		ID:                    testUUID("00000000-0000-0000-0000-000000000201"),
+		ExternalTransactionID: pgtype.Text{String: "mpesa-receipt-2", Valid: true},
+	}
+	allocation := contributionsqlc.ContributionAllocation{
+		ID:   testUUID("00000000-0000-0000-0000-000000000202"),
+		Type: contributionsqlc.ContributionAllocationTypeCom,
+	}
+	service := NewService(nil, nil, nil)
+
+	referenceID, externalReference, err := service.processAllocation(
+		t.Context(),
+		receipt,
+		allocation,
+		testUUID("00000000-0000-0000-0000-000000000203"),
+	)
+	if err != nil {
+		t.Fatalf("process allocation: %v", err)
+	}
+	if referenceID != allocation.ID {
+		t.Fatalf("reference id = %v, want allocation id %v", referenceID, allocation.ID)
+	}
+	if externalReference.String != "mpesa-receipt-2" || !externalReference.Valid {
+		t.Fatalf("external reference = %+v", externalReference)
+	}
+}
+
+func TestProcessAllocationRejectsUnsupportedLoanBreakdown(t *testing.T) {
+	receipt := contributionsqlc.ContributionReceipt{
+		ID:                    testUUID("00000000-0000-0000-0000-000000000301"),
+		ExternalTransactionID: pgtype.Text{String: "mpesa-receipt-3", Valid: true},
+	}
+	allocation := contributionsqlc.ContributionAllocation{
+		ID:   testUUID("00000000-0000-0000-0000-000000000302"),
+		Type: contributionsqlc.ContributionAllocationTypeLoanInterest,
+	}
+	service := NewService(nil, nil, nil)
+
+	_, _, err := service.processAllocation(
+		t.Context(),
+		receipt,
+		allocation,
+		testUUID("00000000-0000-0000-0000-000000000303"),
+	)
+	if !errors.Is(err, ErrAllocationNotSupported) {
+		t.Fatalf("error = %v, want %v", err, ErrAllocationNotSupported)
+	}
+}
+
 func validReceiptParams(t *testing.T, amount string) contributionsqlc.InsertContributionReceiptParams {
 	t.Helper()
 	return contributionsqlc.InsertContributionReceiptParams{

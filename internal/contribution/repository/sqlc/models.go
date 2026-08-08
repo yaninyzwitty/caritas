@@ -102,6 +102,49 @@ func (ns NullContributionAllocationType) Value() (driver.Value, error) {
 	return string(ns.ContributionAllocationType), nil
 }
 
+type ContributionPaymentRequestStatus string
+
+const (
+	ContributionPaymentRequestStatusPending   ContributionPaymentRequestStatus = "pending"
+	ContributionPaymentRequestStatusCompleted ContributionPaymentRequestStatus = "completed"
+	ContributionPaymentRequestStatusFailed    ContributionPaymentRequestStatus = "failed"
+)
+
+func (e *ContributionPaymentRequestStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ContributionPaymentRequestStatus(s)
+	case string:
+		*e = ContributionPaymentRequestStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ContributionPaymentRequestStatus: %T", src)
+	}
+	return nil
+}
+
+type NullContributionPaymentRequestStatus struct {
+	ContributionPaymentRequestStatus ContributionPaymentRequestStatus `json:"contributionPaymentRequestStatus"`
+	Valid                            bool                             `json:"valid"` // Valid is true if ContributionPaymentRequestStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullContributionPaymentRequestStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.ContributionPaymentRequestStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ContributionPaymentRequestStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullContributionPaymentRequestStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ContributionPaymentRequestStatus), nil
+}
+
 type ContributionReceiptStatus string
 
 const (
@@ -205,6 +248,22 @@ type ContributionAllocation struct {
 	UpdatedAt                pgtype.Timestamptz           `json:"updatedAt"`
 }
 
+type ContributionPaymentRequest struct {
+	ID                 pgtype.UUID                      `json:"id"`
+	CheckoutRequestID  string                           `json:"checkoutRequestId"`
+	MemberID           pgtype.UUID                      `json:"memberId"`
+	BranchID           int64                            `json:"branchId"`
+	ContributionPeriod pgtype.Date                      `json:"contributionPeriod"`
+	ExpectedAmount     pgtype.Numeric                   `json:"expectedAmount"`
+	AllocationPlan     []byte                           `json:"allocationPlan"`
+	Status             ContributionPaymentRequestStatus `json:"status"`
+	ReceiptID          pgtype.UUID                      `json:"receiptId"`
+	FailureReason      pgtype.Text                      `json:"failureReason"`
+	RequestedBy        pgtype.UUID                      `json:"requestedBy"`
+	CreatedAt          pgtype.Timestamptz               `json:"createdAt"`
+	UpdatedAt          pgtype.Timestamptz               `json:"updatedAt"`
+}
+
 type ContributionReceipt struct {
 	ID                    pgtype.UUID               `json:"id"`
 	SourceChannel         ContributionSourceChannel `json:"sourceChannel"`
@@ -222,4 +281,7 @@ type ContributionReceipt struct {
 	IsDeleted             bool                      `json:"isDeleted"`
 	CreatedAt             pgtype.Timestamptz        `json:"createdAt"`
 	UpdatedAt             pgtype.Timestamptz        `json:"updatedAt"`
+	DeletedAt             pgtype.Timestamptz        `json:"deletedAt"`
+	DeletedBy             pgtype.UUID               `json:"deletedBy"`
+	DeletionReason        pgtype.Text               `json:"deletionReason"`
 }
