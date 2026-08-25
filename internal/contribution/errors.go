@@ -16,6 +16,8 @@ var (
 	ErrAllocationNotSupported   = errors.New("contribution allocation is not supported")
 	ErrOwningServiceMissing     = errors.New("owning service is not configured")
 	ErrPaymentRequestNotFound   = errors.New("contribution payment request not found")
+	ErrPaymentRequestInProgress = errors.New("contribution payment request is already being initiated")
 	ErrPaymentAmountMismatch    = errors.New("contribution payment amount does not match request")
 	ErrInconsistentReceipt      = errors.New("inconsistent contribution receipt")
+	ErrDarajaClientMissing      = errors.New("daraja client is not configured")
 )

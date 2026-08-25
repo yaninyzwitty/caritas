@@ -436,6 +436,13 @@ func validateReceipt(params contributionsqlc.InsertContributionReceiptParams, al
 	if !positive(params.ReceivedAmount) {
 		return ErrInvalidReceiptAmount
 	}
+	switch params.SourceChannel {
+	case contributionsqlc.ContributionSourceChannelDarajaStk,
+		contributionsqlc.ContributionSourceChannelCash,
+		contributionsqlc.ContributionSourceChannelManual:
+	default:
+		return ErrInvalidPayment
+	}
 	if !json.Valid(params.AllocationPlan) {
 		return ErrInvalidAllocationPlan
 	}

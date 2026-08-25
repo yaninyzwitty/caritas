@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+package contribution.v1;
+
+import "google/protobuf/timestamp.proto";
+import "member/v1/member.proto";
+
+service ContributionService {
+  rpc InitiateDarajaSTKContribution(InitiateDarajaSTKContributionRequest) returns (InitiateDarajaSTKContributionResponse);
+}
+
+enum ContributionPaymentRequestStatus {
+  CONTRIBUTION_PAYMENT_REQUEST_STATUS_UNSPECIFIED = 0;
+  CONTRIBUTION_PAYMENT_REQUEST_STATUS_PENDING = 1;
+  CONTRIBUTION_PAYMENT_REQUEST_STATUS_COMPLETED = 2;
+  CONTRIBUTION_PAYMENT_REQUEST_STATUS_FAILED = 3;
+}
+
+enum ContributionAllocationType {
+  CONTRIBUTION_ALLOCATION_TYPE_UNSPECIFIED = 0;
+  CONTRIBUTION_ALLOCATION_TYPE_COM = 1;
+  CONTRIBUTION_ALLOCATION_TYPE_LGOM = 2;
+  CONTRIBUTION_ALLOCATION_TYPE_SHARE_PURCHASE = 3;
+  CONTRIBUTION_ALLOCATION_TYPE_LOAN_PRINCIPAL = 4;
+  CONTRIBUTION_ALLOCATION_TYPE_LOAN_INTEREST = 5;
+  CONTRIBUTION_ALLOCATION_TYPE_PENALTY = 6;
+  CONTRIBUTION_ALLOCATION_TYPE_OTHER_CHARGE = 7;
+  CONTRIBUTION_ALLOCATION_TYPE_OVERPAYMENT_CREDIT = 8;
+}
+
+message ContributionAllocationInput {
+  ContributionAllocationType type = 1;
+  string target_id = 2;
+  member.v1.Money amount = 3;
+}
+
+message InitiateDarajaSTKContributionRequest {
+  string idempotency_key = 1;
+  string member_id = 2;
+  int64 branch_id = 3;
+  string phone_number = 4;
+  member.v1.Money amount = 5;
+  string contribution_period = 6;
+  repeated ContributionAllocationInput allocations = 7;
+}
+
+message InitiateDarajaSTKContributionResponse {
+  string payment_request_id = 1;
+  string checkout_request_id = 2;
+  ContributionPaymentRequestStatus status = 3;
+  google.protobuf.Timestamp created_at = 4;
+}

@@ -1,5 +1,5 @@
 -- +goose Up
-CREATE TYPE contribution_source_channel AS ENUM ('daraja_stk', 'daraja_paybill', 'cash', 'manual');
+CREATE TYPE contribution_source_channel AS ENUM ('daraja_stk', 'cash', 'manual');
 CREATE TYPE contribution_receipt_status AS ENUM ('pending', 'processing', 'completed', 'failed', 'manual_review');
 CREATE TYPE contribution_allocation_type AS ENUM ('com', 'lgom', 'share_purchase', 'loan_principal', 'loan_interest', 'penalty', 'other_charge', 'overpayment_credit');
 CREATE TYPE contribution_allocation_status AS ENUM ('pending', 'completed', 'failed');

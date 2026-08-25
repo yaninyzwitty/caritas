@@ -54,6 +54,49 @@ func (ns NullShareAccountStatus) Value() (driver.Value, error) {
 	return string(ns.ShareAccountStatus), nil
 }
 
+type ShareAdjustmentStatus string
+
+const (
+	ShareAdjustmentStatusPending  ShareAdjustmentStatus = "pending"
+	ShareAdjustmentStatusApproved ShareAdjustmentStatus = "approved"
+	ShareAdjustmentStatusRejected ShareAdjustmentStatus = "rejected"
+)
+
+func (e *ShareAdjustmentStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ShareAdjustmentStatus(s)
+	case string:
+		*e = ShareAdjustmentStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ShareAdjustmentStatus: %T", src)
+	}
+	return nil
+}
+
+type NullShareAdjustmentStatus struct {
+	ShareAdjustmentStatus ShareAdjustmentStatus `json:"shareAdjustmentStatus"`
+	Valid                 bool                  `json:"valid"` // Valid is true if ShareAdjustmentStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullShareAdjustmentStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.ShareAdjustmentStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ShareAdjustmentStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullShareAdjustmentStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ShareAdjustmentStatus), nil
+}
+
 type ShareTransactionType string
 
 const (
@@ -111,12 +154,20 @@ type ShareAccount struct {
 }
 
 type ShareAdjustment struct {
-	ID                 pgtype.UUID        `json:"id"`
-	ShareTransactionID pgtype.UUID        `json:"shareTransactionId"`
-	ApproverID         pgtype.UUID        `json:"approverId"`
-	Reason             string             `json:"reason"`
-	AuditReportID      pgtype.UUID        `json:"auditReportId"`
-	CreatedAt          pgtype.Timestamptz `json:"createdAt"`
+	ID                  pgtype.UUID           `json:"id"`
+	ShareTransactionID  pgtype.UUID           `json:"shareTransactionId"`
+	ApproverID          pgtype.UUID           `json:"approverId"`
+	Reason              string                `json:"reason"`
+	AuditReportID       pgtype.UUID           `json:"auditReportId"`
+	CreatedAt           pgtype.Timestamptz    `json:"createdAt"`
+	ShareAccountID      pgtype.UUID           `json:"shareAccountId"`
+	Amount              pgtype.Numeric        `json:"amount"`
+	ReferenceID         pgtype.UUID           `json:"referenceId"`
+	RequestedBy         pgtype.UUID           `json:"requestedBy"`
+	Status              ShareAdjustmentStatus `json:"status"`
+	PostedTransactionID pgtype.UUID           `json:"postedTransactionId"`
+	ApprovedBy          pgtype.UUID           `json:"approvedBy"`
+	ApprovedAt          pgtype.Timestamptz    `json:"approvedAt"`
 }
 
 type ShareTransaction struct {

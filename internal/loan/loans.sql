@@ -45,7 +45,7 @@ RETURNING id, member_id, branch_id, principal, interest_rate, repayment_period_m
 -- name: MarkLoanDisbursed :one
 UPDATE loans
 SET previous_status = status,
-    status = 'disbursed',
+    status = 'active',
     disbursed_at = NOW(),
     updated_by = $2,
     updated_at = NOW()

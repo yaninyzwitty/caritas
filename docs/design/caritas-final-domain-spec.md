@@ -16,7 +16,9 @@ Cross-domain writes must go through the owning service. Reports may join or snap
 
 ### ContributionReceipt
 
-Every received contribution must create exactly one `ContributionReceipt`, whether the source is cash, Lipa na M-Pesa, Paybill or another approved channel.
+Every received contribution must create exactly one `ContributionReceipt`, whether the source is cash, Daraja STK Express or manual verified entry.
+
+Daraja STK Express is the only automated M-Pesa receipt path. Paybill/C2B deposits are recorded through manual verified receipt entry with the M-Pesa receipt number as the external transaction ID; the system must not auto-match Paybill deposits by phone number, amount or timing.
 
 The receipt must contain:
 

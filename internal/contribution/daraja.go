@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
 	"strings"
 	"time"
 
@@ -23,6 +24,97 @@ type DarajaSTKPayment struct {
 	ReceivedAt        time.Time
 }
 
+type InitiateDarajaSTKPaymentParams struct {
+	IdempotencyKey     string
+	PhoneNumber        string
+	MemberID           pgtype.UUID
+	BranchID           int64
+	ContributionPeriod pgtype.Date
+	Amount             pgtype.Numeric
+	Allocations        []AllocationInput
+	RequestedBy        pgtype.UUID
+}
+
+// InitiateDarajaSTKPayment stores the immutable request before asking M-Pesa
+// for an STK prompt. Without this ordering, a retry after a client timeout could
+// create a second prompt with no durable idempotency record to stop it.
+func (s *Service) InitiateDarajaSTKPayment(ctx context.Context, params InitiateDarajaSTKPaymentParams, initiator DarajaSTKInitiator) (contributionsqlc.ContributionPaymentRequest, error) {
+	if initiator == nil {
+		return contributionsqlc.ContributionPaymentRequest{}, ErrDarajaClientMissing
+	}
+	params.IdempotencyKey = strings.TrimSpace(params.IdempotencyKey)
+	params.PhoneNumber = strings.TrimSpace(params.PhoneNumber)
+	if params.IdempotencyKey == "" || params.PhoneNumber == "" || !params.MemberID.Valid || params.BranchID == 0 || !params.ContributionPeriod.Valid {
+		return contributionsqlc.ContributionPaymentRequest{}, ErrInvalidPayment
+	}
+	if err := validatePaymentRequestAmount(params.Amount, params.Allocations); err != nil {
+		return contributionsqlc.ContributionPaymentRequest{}, err
+	}
+	plan, err := buildAllocationPlan(params.Allocations)
+	if err != nil {
+		return contributionsqlc.ContributionPaymentRequest{}, err
+	}
+
+	request, created, err := s.createContributionPaymentRequest(ctx, params, plan)
+	if err != nil || !created {
+		return request, err
+	}
+
+	amount, err := darajaWholeAmount(params.Amount)
+	if err != nil {
+		_, _ = s.store.UpdateContributionPaymentRequestFailed(ctx, contributionsqlc.UpdateContributionPaymentRequestFailedParams{
+			ID:            request.ID,
+			FailureReason: text(err.Error()),
+		})
+		return contributionsqlc.ContributionPaymentRequest{}, err
+	}
+	checkoutID, err := initiator.InitiateSTK(ctx, DarajaSTKInitiationRequest{
+		PhoneNumber: params.PhoneNumber,
+		Amount:      amount,
+	})
+	if err != nil {
+		_, _ = s.store.UpdateContributionPaymentRequestFailed(ctx, contributionsqlc.UpdateContributionPaymentRequestFailedParams{
+			ID:            request.ID,
+			FailureReason: text(err.Error()),
+		})
+		return contributionsqlc.ContributionPaymentRequest{}, err
+	}
+	return s.store.UpdateContributionPaymentRequestCheckoutID(ctx, contributionsqlc.UpdateContributionPaymentRequestCheckoutIDParams{
+		ID:                request.ID,
+		CheckoutRequestID: pgtype.Text{String: checkoutID, Valid: true},
+	})
+}
+
+// createContributionPaymentRequest gives STK initiation one sqlc-only
+// idempotent insert path. Without it, InitiateDarajaSTKPayment would duplicate
+// the pgx.ErrNoRows conflict handling needed to return an existing request.
+func (s *Service) createContributionPaymentRequest(ctx context.Context, params InitiateDarajaSTKPaymentParams, plan []byte) (contributionsqlc.ContributionPaymentRequest, bool, error) {
+	request, err := s.store.InsertContributionPaymentRequest(ctx, contributionsqlc.InsertContributionPaymentRequestParams{
+		IdempotencyKey:     params.IdempotencyKey,
+		CheckoutRequestID:  pgtype.Text{},
+		MemberID:           params.MemberID,
+		BranchID:           params.BranchID,
+		ContributionPeriod: params.ContributionPeriod,
+		ExpectedAmount:     params.Amount,
+		AllocationPlan:     plan,
+		RequestedBy:        params.RequestedBy,
+	})
+	if err == nil {
+		return request, true, nil
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return contributionsqlc.ContributionPaymentRequest{}, false, fmt.Errorf("insert payment request: %w", err)
+	}
+	request, err = s.store.GetContributionPaymentRequestByIdempotencyKey(ctx, params.IdempotencyKey)
+	if err != nil {
+		return contributionsqlc.ContributionPaymentRequest{}, false, fmt.Errorf("get payment request by idempotency key: %w", err)
+	}
+	if !request.CheckoutRequestID.Valid || strings.TrimSpace(request.CheckoutRequestID.String) == "" {
+		return request, false, ErrPaymentRequestInProgress
+	}
+	return request, false, nil
+}
+
 // ProcessDarajaSTKPayment turns one successful Daraja STK callback into one
 // contribution receipt, then processes that receipt. Removing it would push
 // idempotency and request matching into the HTTP handler.
@@ -37,7 +129,7 @@ func (s *Service) ProcessDarajaSTKPayment(ctx context.Context, payment DarajaSTK
 	var result CreatedReceipt
 	var processErr error
 	err := s.store.ExecTx(ctx, func(q contributionsqlc.Querier) error {
-		request, err := q.LockContributionPaymentRequestByCheckoutID(ctx, checkoutID)
+		request, err := q.LockContributionPaymentRequestByCheckoutID(ctx, pgtype.Text{String: checkoutID, Valid: true})
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return ErrPaymentRequestNotFound
@@ -142,7 +234,7 @@ func (s *Service) MarkDarajaSTKPaymentFailed(ctx context.Context, checkoutID, re
 		return ErrPaymentRequestNotFound
 	}
 	return s.store.ExecTx(ctx, func(q contributionsqlc.Querier) error {
-		request, err := q.LockContributionPaymentRequestByCheckoutID(ctx, checkoutID)
+		request, err := q.LockContributionPaymentRequestByCheckoutID(ctx, pgtype.Text{String: checkoutID, Valid: true})
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return ErrPaymentRequestNotFound
@@ -205,4 +297,50 @@ func parseAllocationPlan(body []byte) ([]AllocationInput, error) {
 		allocations = append(allocations, allocation)
 	}
 	return allocations, nil
+}
+
+// buildAllocationPlan serializes the exact allocation plan persisted on the
+// pending payment request. Without it, the callback would have to reconstruct
+// allocations after money arrives, which can post funds using changed inputs.
+func buildAllocationPlan(allocations []AllocationInput) ([]byte, error) {
+	plan := allocationPlan{Items: make([]allocationPlanItem, 0, len(allocations))}
+	for _, allocation := range allocations {
+		amount := numericToScale(allocation.Amount, -4)
+		targetID := ""
+		if allocation.TargetID.Valid {
+			targetID = allocation.TargetID.String()
+		}
+		plan.Items = append(plan.Items, allocationPlanItem{
+			Type:     allocation.Type,
+			TargetID: targetID,
+			Amount:   new(big.Rat).SetFrac(amount, big.NewInt(10000)).FloatString(4),
+		})
+	}
+	return json.Marshal(plan)
+}
+
+// validatePaymentRequestAmount reuses receipt validation before money is
+// requested. Without this preflight check, the service could prompt a member
+// for an amount that the later callback is guaranteed to reject.
+func validatePaymentRequestAmount(amount pgtype.Numeric, allocations []AllocationInput) error {
+	return validateReceipt(contributionsqlc.InsertContributionReceiptParams{
+		SourceChannel:     contributionsqlc.ContributionSourceChannelDarajaStk,
+		CheckoutRequestID: pgtype.Text{String: "pending", Valid: true},
+		ReceivedAmount:    amount,
+		AllocationPlan:    []byte(`{"items":[]}`),
+	}, allocations)
+}
+
+// darajaWholeAmount converts NUMERIC money into the whole-shilling amount STK
+// accepts. Without this guard, fractional cents could be silently truncated in
+// the external payment prompt.
+func darajaWholeAmount(amount pgtype.Numeric) (int64, error) {
+	value := numericToScale(amount, 0)
+	if new(big.Int).Mul(value, big.NewInt(10000)).Cmp(numericToScale(amount, -4)) != 0 {
+		return 0, ErrInvalidReceiptAmount
+	}
+	if !value.IsInt64() || value.Sign() <= 0 {
+		return 0, ErrInvalidReceiptAmount
+	}
+	return value.Int64(), nil
 }

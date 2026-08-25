@@ -19,16 +19,17 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ShareService_OpenShareAccount_FullMethodName       = "/share.v1.ShareService/OpenShareAccount"
-	ShareService_GetShareAccount_FullMethodName        = "/share.v1.ShareService/GetShareAccount"
-	ShareService_ListShareAccounts_FullMethodName      = "/share.v1.ShareService/ListShareAccounts"
-	ShareService_PurchaseShares_FullMethodName         = "/share.v1.ShareService/PurchaseShares"
-	ShareService_WithdrawShares_FullMethodName         = "/share.v1.ShareService/WithdrawShares"
-	ShareService_GetShareBalance_FullMethodName        = "/share.v1.ShareService/GetShareBalance"
-	ShareService_ListShareTransactions_FullMethodName  = "/share.v1.ShareService/ListShareTransactions"
-	ShareService_GetShareTransaction_FullMethodName    = "/share.v1.ShareService/GetShareTransaction"
-	ShareService_CreateAdjustment_FullMethodName       = "/share.v1.ShareService/CreateAdjustment"
-	ShareService_ApproveShareAdjustment_FullMethodName = "/share.v1.ShareService/ApproveShareAdjustment"
+	ShareService_OpenShareAccount_FullMethodName        = "/share.v1.ShareService/OpenShareAccount"
+	ShareService_GetShareAccount_FullMethodName         = "/share.v1.ShareService/GetShareAccount"
+	ShareService_ListShareAccounts_FullMethodName       = "/share.v1.ShareService/ListShareAccounts"
+	ShareService_PurchaseShares_FullMethodName          = "/share.v1.ShareService/PurchaseShares"
+	ShareService_WithdrawShares_FullMethodName          = "/share.v1.ShareService/WithdrawShares"
+	ShareService_GetShareBalance_FullMethodName         = "/share.v1.ShareService/GetShareBalance"
+	ShareService_ListShareTransactions_FullMethodName   = "/share.v1.ShareService/ListShareTransactions"
+	ShareService_GetShareTransaction_FullMethodName     = "/share.v1.ShareService/GetShareTransaction"
+	ShareService_CreateAdjustment_FullMethodName        = "/share.v1.ShareService/CreateAdjustment"
+	ShareService_ApproveShareAdjustment_FullMethodName  = "/share.v1.ShareService/ApproveShareAdjustment"
+	ShareService_ReverseShareTransaction_FullMethodName = "/share.v1.ShareService/ReverseShareTransaction"
 )
 
 // ShareServiceClient is the client API for ShareService service.
@@ -45,6 +46,7 @@ type ShareServiceClient interface {
 	GetShareTransaction(ctx context.Context, in *GetShareTransactionRequest, opts ...grpc.CallOption) (*GetShareTransactionResponse, error)
 	CreateAdjustment(ctx context.Context, in *CreateAdjustmentRequest, opts ...grpc.CallOption) (*CreateAdjustmentResponse, error)
 	ApproveShareAdjustment(ctx context.Context, in *ApproveShareAdjustmentRequest, opts ...grpc.CallOption) (*ApproveShareAdjustmentResponse, error)
+	ReverseShareTransaction(ctx context.Context, in *ReverseShareTransactionRequest, opts ...grpc.CallOption) (*ReverseShareTransactionResponse, error)
 }
 
 type shareServiceClient struct {
@@ -155,6 +157,16 @@ func (c *shareServiceClient) ApproveShareAdjustment(ctx context.Context, in *App
 	return out, nil
 }
 
+func (c *shareServiceClient) ReverseShareTransaction(ctx context.Context, in *ReverseShareTransactionRequest, opts ...grpc.CallOption) (*ReverseShareTransactionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ReverseShareTransactionResponse)
+	err := c.cc.Invoke(ctx, ShareService_ReverseShareTransaction_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ShareServiceServer is the server API for ShareService service.
 // All implementations must embed UnimplementedShareServiceServer
 // for forward compatibility.
@@ -169,6 +181,7 @@ type ShareServiceServer interface {
 	GetShareTransaction(context.Context, *GetShareTransactionRequest) (*GetShareTransactionResponse, error)
 	CreateAdjustment(context.Context, *CreateAdjustmentRequest) (*CreateAdjustmentResponse, error)
 	ApproveShareAdjustment(context.Context, *ApproveShareAdjustmentRequest) (*ApproveShareAdjustmentResponse, error)
+	ReverseShareTransaction(context.Context, *ReverseShareTransactionRequest) (*ReverseShareTransactionResponse, error)
 	mustEmbedUnimplementedShareServiceServer()
 }
 
@@ -208,6 +221,9 @@ func (UnimplementedShareServiceServer) CreateAdjustment(context.Context, *Create
 }
 func (UnimplementedShareServiceServer) ApproveShareAdjustment(context.Context, *ApproveShareAdjustmentRequest) (*ApproveShareAdjustmentResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ApproveShareAdjustment not implemented")
+}
+func (UnimplementedShareServiceServer) ReverseShareTransaction(context.Context, *ReverseShareTransactionRequest) (*ReverseShareTransactionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ReverseShareTransaction not implemented")
 }
 func (UnimplementedShareServiceServer) mustEmbedUnimplementedShareServiceServer() {}
 func (UnimplementedShareServiceServer) testEmbeddedByValue()                      {}
@@ -410,6 +426,24 @@ func _ShareService_ApproveShareAdjustment_Handler(srv interface{}, ctx context.C
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ShareService_ReverseShareTransaction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReverseShareTransactionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ShareServiceServer).ReverseShareTransaction(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ShareService_ReverseShareTransaction_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ShareServiceServer).ReverseShareTransaction(ctx, req.(*ReverseShareTransactionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ShareService_ServiceDesc is the grpc.ServiceDesc for ShareService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -456,6 +490,10 @@ var ShareService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ApproveShareAdjustment",
 			Handler:    _ShareService_ApproveShareAdjustment_Handler,
+		},
+		{
+			MethodName: "ReverseShareTransaction",
+			Handler:    _ShareService_ReverseShareTransaction_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

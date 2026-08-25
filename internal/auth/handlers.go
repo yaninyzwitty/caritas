@@ -3,7 +3,6 @@ package auth
 import (
 	"context"
 	"errors"
-	"log/slog"
 	"strings"
 	"time"
 
@@ -27,43 +26,21 @@ func NewHandlers(store *Store, tokenSecret string) *Handlers {
 }
 
 func (h *Handlers) Login(ctx context.Context, req *authv1.LoginRequest) (*authv1.LoginResponse, error) {
-	started := time.Now()
 
 	reqCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
-
-	slog.Info(
-		"starting staff lookup",
-		"email", req.GetEmail(),
-		"parent_ctx_error", ctx.Err(),
-		"child_ctx_error", reqCtx.Err(),
-	)
 
 	email := strings.ToLower(strings.TrimSpace(req.GetEmail()))
 	if email == "" || req.GetPassword() == "" {
 		return nil, status.Error(codes.InvalidArgument, "email and password are required")
 	}
 
-	slog.Info("starting staff lookup", "email", email)
-
 	staff, err := h.store.GetActiveStaffByEmail(reqCtx, email)
-	slog.Info(
-		"staff lookup returned",
-		"duration", time.Since(started),
-	)
+
 	if err != nil {
-		slog.Error(
-			"staff lookup failed",
-			"error", err,
-			"parent_ctx_error", ctx.Err(),
-			"child_ctx_error", reqCtx.Err(),
-			"parent_cause", context.Cause(ctx),
-			"child_cause", context.Cause(reqCtx),
-		)
 
 		return nil, status.Error(codes.Unauthenticated, "invalid credentials")
 	}
-	slog.Info("[password_hash]", "Val", staff.PasswordHash)
 	if err := bcrypt.CompareHashAndPassword([]byte(staff.PasswordHash), []byte(req.GetPassword())); err != nil {
 		return nil, status.Error(codes.Unauthenticated, "invalid credentials")
 	}

@@ -193,10 +193,9 @@ func (ns NullContributionReceiptStatus) Value() (driver.Value, error) {
 type ContributionSourceChannel string
 
 const (
-	ContributionSourceChannelDarajaStk     ContributionSourceChannel = "daraja_stk"
-	ContributionSourceChannelDarajaPaybill ContributionSourceChannel = "daraja_paybill"
-	ContributionSourceChannelCash          ContributionSourceChannel = "cash"
-	ContributionSourceChannelManual        ContributionSourceChannel = "manual"
+	ContributionSourceChannelDarajaStk ContributionSourceChannel = "daraja_stk"
+	ContributionSourceChannelCash      ContributionSourceChannel = "cash"
+	ContributionSourceChannelManual    ContributionSourceChannel = "manual"
 )
 
 func (e *ContributionSourceChannel) Scan(src interface{}) error {
@@ -250,7 +249,7 @@ type ContributionAllocation struct {
 
 type ContributionPaymentRequest struct {
 	ID                 pgtype.UUID                      `json:"id"`
-	CheckoutRequestID  string                           `json:"checkoutRequestId"`
+	CheckoutRequestID  pgtype.Text                      `json:"checkoutRequestId"`
 	MemberID           pgtype.UUID                      `json:"memberId"`
 	BranchID           int64                            `json:"branchId"`
 	ContributionPeriod pgtype.Date                      `json:"contributionPeriod"`
@@ -262,6 +261,7 @@ type ContributionPaymentRequest struct {
 	RequestedBy        pgtype.UUID                      `json:"requestedBy"`
 	CreatedAt          pgtype.Timestamptz               `json:"createdAt"`
 	UpdatedAt          pgtype.Timestamptz               `json:"updatedAt"`
+	IdempotencyKey     string                           `json:"idempotencyKey"`
 }
 
 type ContributionReceipt struct {

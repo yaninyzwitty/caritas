@@ -11,8 +11,40 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const getAdjustmentByReference = `-- name: GetAdjustmentByReference :one
+SELECT id, share_transaction_id, approver_id, reason, audit_report_id, created_at, share_account_id, amount, reference_id, requested_by, status, posted_transaction_id, approved_by, approved_at FROM share_adjustments
+WHERE share_account_id = $1 AND reference_id = $2
+`
+
+type GetAdjustmentByReferenceParams struct {
+	ShareAccountID pgtype.UUID `json:"shareAccountId"`
+	ReferenceID    pgtype.UUID `json:"referenceId"`
+}
+
+func (q *Queries) GetAdjustmentByReference(ctx context.Context, arg GetAdjustmentByReferenceParams) (ShareAdjustment, error) {
+	row := q.db.QueryRow(ctx, getAdjustmentByReference, arg.ShareAccountID, arg.ReferenceID)
+	var i ShareAdjustment
+	err := row.Scan(
+		&i.ID,
+		&i.ShareTransactionID,
+		&i.ApproverID,
+		&i.Reason,
+		&i.AuditReportID,
+		&i.CreatedAt,
+		&i.ShareAccountID,
+		&i.Amount,
+		&i.ReferenceID,
+		&i.RequestedBy,
+		&i.Status,
+		&i.PostedTransactionID,
+		&i.ApprovedBy,
+		&i.ApprovedAt,
+	)
+	return i, err
+}
+
 const getAdjustmentByTransactionID = `-- name: GetAdjustmentByTransactionID :one
-SELECT id, share_transaction_id, approver_id, reason, audit_report_id, created_at FROM share_adjustments
+SELECT id, share_transaction_id, approver_id, reason, audit_report_id, created_at, share_account_id, amount, reference_id, requested_by, status, posted_transaction_id, approved_by, approved_at FROM share_adjustments
 WHERE share_transaction_id = $1
 `
 
@@ -26,25 +58,114 @@ func (q *Queries) GetAdjustmentByTransactionID(ctx context.Context, shareTransac
 		&i.Reason,
 		&i.AuditReportID,
 		&i.CreatedAt,
+		&i.ShareAccountID,
+		&i.Amount,
+		&i.ReferenceID,
+		&i.RequestedBy,
+		&i.Status,
+		&i.PostedTransactionID,
+		&i.ApprovedBy,
+		&i.ApprovedAt,
 	)
 	return i, err
 }
 
 const insertAdjustment = `-- name: InsertAdjustment :one
-INSERT INTO share_adjustments (share_transaction_id, approver_id, reason, audit_report_id)
-VALUES ($1, $2, $3, $4)
-RETURNING id, share_transaction_id, approver_id, reason, audit_report_id, created_at
+INSERT INTO share_adjustments (share_account_id, amount, reference_id, requested_by, reason)
+VALUES ($1, $2, $3, $4, $5)
+ON CONFLICT (share_account_id, reference_id) DO NOTHING
+RETURNING id, share_transaction_id, approver_id, reason, audit_report_id, created_at, share_account_id, amount, reference_id, requested_by, status, posted_transaction_id, approved_by, approved_at
 `
 
 type InsertAdjustmentParams struct {
+	ShareAccountID pgtype.UUID    `json:"shareAccountId"`
+	Amount         pgtype.Numeric `json:"amount"`
+	ReferenceID    pgtype.UUID    `json:"referenceId"`
+	RequestedBy    pgtype.UUID    `json:"requestedBy"`
+	Reason         string         `json:"reason"`
+}
+
+func (q *Queries) InsertAdjustment(ctx context.Context, arg InsertAdjustmentParams) (ShareAdjustment, error) {
+	row := q.db.QueryRow(ctx, insertAdjustment,
+		arg.ShareAccountID,
+		arg.Amount,
+		arg.ReferenceID,
+		arg.RequestedBy,
+		arg.Reason,
+	)
+	var i ShareAdjustment
+	err := row.Scan(
+		&i.ID,
+		&i.ShareTransactionID,
+		&i.ApproverID,
+		&i.Reason,
+		&i.AuditReportID,
+		&i.CreatedAt,
+		&i.ShareAccountID,
+		&i.Amount,
+		&i.ReferenceID,
+		&i.RequestedBy,
+		&i.Status,
+		&i.PostedTransactionID,
+		&i.ApprovedBy,
+		&i.ApprovedAt,
+	)
+	return i, err
+}
+
+const lockAdjustmentByID = `-- name: LockAdjustmentByID :one
+SELECT id, share_transaction_id, approver_id, reason, audit_report_id, created_at, share_account_id, amount, reference_id, requested_by, status, posted_transaction_id, approved_by, approved_at FROM share_adjustments
+WHERE id = $1
+FOR UPDATE
+`
+
+func (q *Queries) LockAdjustmentByID(ctx context.Context, id pgtype.UUID) (ShareAdjustment, error) {
+	row := q.db.QueryRow(ctx, lockAdjustmentByID, id)
+	var i ShareAdjustment
+	err := row.Scan(
+		&i.ID,
+		&i.ShareTransactionID,
+		&i.ApproverID,
+		&i.Reason,
+		&i.AuditReportID,
+		&i.CreatedAt,
+		&i.ShareAccountID,
+		&i.Amount,
+		&i.ReferenceID,
+		&i.RequestedBy,
+		&i.Status,
+		&i.PostedTransactionID,
+		&i.ApprovedBy,
+		&i.ApprovedAt,
+	)
+	return i, err
+}
+
+const updateAdjustmentApproved = `-- name: UpdateAdjustmentApproved :one
+UPDATE share_adjustments
+SET status = 'approved',
+    share_transaction_id = $2,
+    posted_transaction_id = $2,
+    approver_id = $3,
+    approved_by = $3,
+    reason = $4,
+    audit_report_id = $5,
+    approved_at = NOW()
+WHERE id = $1
+RETURNING id, share_transaction_id, approver_id, reason, audit_report_id, created_at, share_account_id, amount, reference_id, requested_by, status, posted_transaction_id, approved_by, approved_at
+`
+
+type UpdateAdjustmentApprovedParams struct {
+	ID                 pgtype.UUID `json:"id"`
 	ShareTransactionID pgtype.UUID `json:"shareTransactionId"`
 	ApproverID         pgtype.UUID `json:"approverId"`
 	Reason             string      `json:"reason"`
 	AuditReportID      pgtype.UUID `json:"auditReportId"`
 }
 
-func (q *Queries) InsertAdjustment(ctx context.Context, arg InsertAdjustmentParams) (ShareAdjustment, error) {
-	row := q.db.QueryRow(ctx, insertAdjustment,
+func (q *Queries) UpdateAdjustmentApproved(ctx context.Context, arg UpdateAdjustmentApprovedParams) (ShareAdjustment, error) {
+	row := q.db.QueryRow(ctx, updateAdjustmentApproved,
+		arg.ID,
 		arg.ShareTransactionID,
 		arg.ApproverID,
 		arg.Reason,
@@ -58,6 +179,14 @@ func (q *Queries) InsertAdjustment(ctx context.Context, arg InsertAdjustmentPara
 		&i.Reason,
 		&i.AuditReportID,
 		&i.CreatedAt,
+		&i.ShareAccountID,
+		&i.Amount,
+		&i.ReferenceID,
+		&i.RequestedBy,
+		&i.Status,
+		&i.PostedTransactionID,
+		&i.ApprovedBy,
+		&i.ApprovedAt,
 	)
 	return i, err
 }

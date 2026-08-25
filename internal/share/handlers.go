@@ -288,13 +288,8 @@ func (h *Handlers) GetShareBalance(ctx context.Context, req *sharev1.GetShareBal
 		return nil, status.Error(codes.Internal, "failed to get latest balance")
 	}
 
-	accountIDStr, err := uuidToString(accountID)
-	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to convert account ID")
-	}
 	return &sharev1.GetShareBalanceResponse{
-		Balance:   balance,
-		AccountId: accountIDStr,
+		Balance: balance,
 	}, nil
 }
 
@@ -370,8 +365,9 @@ func (h *Handlers) GetShareTransaction(ctx context.Context, req *sharev1.GetShar
 	return &sharev1.GetShareTransactionResponse{Transaction: convertTransactionToProto(tx)}, nil
 }
 
-// CreateAdjustment handles creating a manual adjustment transaction. Without it
-// manual corrections for audit failures cannot be initiated.
+// CreateAdjustment handles opening a pending manual correction request. Without
+// it, manual corrections would either bypass approval or have no durable request
+// for an approver to review.
 func (h *Handlers) CreateAdjustment(ctx context.Context, req *sharev1.CreateAdjustmentRequest) (*sharev1.CreateAdjustmentResponse, error) {
 	accountID, err := stringToUUID(req.GetAccountId())
 	if err != nil {
@@ -385,26 +381,26 @@ func (h *Handlers) CreateAdjustment(ctx context.Context, req *sharev1.CreateAdju
 	if !ok {
 		return nil, status.Error(codes.Unauthenticated, "authenticated admin is required")
 	}
-	tx, err := h.service.CreateAdjustment(ctx, accountID, moneyToNumeric(req.GetAmount()), referenceID, actor.ID, req.GetReason())
+	adjustment, err := h.service.CreateAdjustment(ctx, accountID, moneyToNumeric(req.GetAmount()), referenceID, actor.ID, req.GetReason())
 	if err != nil {
 		return nil, mapServiceError(err)
 	}
-	txID, err := uuidToString(tx.ID)
+	adjustmentID, err := uuidToString(adjustment.ID)
 	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to convert transaction ID")
+		return nil, status.Error(codes.Internal, "failed to convert adjustment ID")
 	}
 	return &sharev1.CreateAdjustmentResponse{
-		TransactionId: txID,
-		BalanceAfter:  numericToMoney(tx.BalanceAfter),
+		AdjustmentId: adjustmentID,
 	}, nil
 }
 
-// ApproveShareAdjustment handles recording the audit approval for an adjustment
-// transaction. Without it manual corrections cannot be approved or audited.
+// ApproveShareAdjustment posts an approved pending correction to the ledger.
+// Without it, CreateAdjustment would remain a request only and balances would
+// never reflect approved manual corrections.
 func (h *Handlers) ApproveShareAdjustment(ctx context.Context, req *sharev1.ApproveShareAdjustmentRequest) (*sharev1.ApproveShareAdjustmentResponse, error) {
-	transactionID, err := stringToUUID(req.GetTransactionId())
+	adjustmentID, err := stringToUUID(req.GetAdjustmentId())
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid transaction_id")
+		return nil, status.Error(codes.InvalidArgument, "invalid adjustment_id")
 	}
 	actor, ok := auth.PrincipalFromContext(ctx)
 	if !ok {
@@ -417,13 +413,47 @@ func (h *Handlers) ApproveShareAdjustment(ctx context.Context, req *sharev1.Appr
 			return nil, status.Error(codes.InvalidArgument, "invalid audit_report_id")
 		}
 	}
-	adjustment, err := h.service.ApproveShareAdjustment(ctx, transactionID, actor.ID, req.GetReason(), auditReportID)
+	adjustment, err := h.service.ApproveShareAdjustment(ctx, adjustmentID, actor.ID, req.GetReason(), auditReportID)
 	if err != nil {
 		return nil, mapServiceError(err)
 	}
-	adjustmentID, err := uuidToString(adjustment.ID)
+	adjustmentIDString, err := uuidToString(adjustment.ID)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to encode adjustment ID")
 	}
-	return &sharev1.ApproveShareAdjustmentResponse{AdjustmentId: adjustmentID}, nil
+	transactionID, err := uuidToString(adjustment.PostedTransactionID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to encode transaction ID")
+	}
+	return &sharev1.ApproveShareAdjustmentResponse{AdjustmentId: adjustmentIDString, TransactionId: transactionID}, nil
+}
+
+// ReverseShareTransaction handles append-only reversal of an existing ledger
+// entry. Without it, operators would use free-form adjustments for exact undo
+// cases, losing the reversal_of audit link required by the shares spec.
+func (h *Handlers) ReverseShareTransaction(ctx context.Context, req *sharev1.ReverseShareTransactionRequest) (*sharev1.ReverseShareTransactionResponse, error) {
+	transactionID, err := stringToUUID(req.GetTransactionId())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid transaction_id")
+	}
+	referenceID, err := stringToUUID(req.GetReferenceId())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid reference_id")
+	}
+	actor, ok := auth.PrincipalFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "authenticated admin is required")
+	}
+	tx, err := h.service.ReverseShareTransaction(ctx, transactionID, referenceID, actor.ID, req.GetReason())
+	if err != nil {
+		return nil, mapServiceError(err)
+	}
+	txID, err := uuidToString(tx.ID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to encode transaction ID")
+	}
+	return &sharev1.ReverseShareTransactionResponse{
+		TransactionId: txID,
+		BalanceAfter:  numericToMoney(tx.BalanceAfter),
+	}, nil
 }

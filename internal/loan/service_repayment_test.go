@@ -20,6 +20,64 @@ import (
 
 var repaymentMemberNumber int64
 
+func TestDisburseLoanCreatesPrincipalOnlyEndOfMonthScheduleAndActivatesLoan(t *testing.T) {
+	ctx := context.Background()
+	store, pool := repaymentStore(t, ctx)
+	service := NewService(store, nil)
+	q := loansqlc.New(pool)
+
+	loanID := createRepaymentLoan(t, ctx, pool, loansqlc.LoanStatusApproved)
+	guarantorID, err := newUUID()
+	if err != nil {
+		t.Fatalf("generate guarantor id: %v", err)
+	}
+	_, err = pool.Exec(ctx, `
+		INSERT INTO members (id, branch_id, member_number, national_id, status)
+		VALUES ($1, 1, $2, $3, 'active')
+	`, guarantorID, atomic.AddInt64(&repaymentMemberNumber, 1), guarantorID.String())
+	if err != nil {
+		t.Fatalf("insert guarantor member: %v", err)
+	}
+	if _, err := q.CreateLoanGuarantor(ctx, loansqlc.CreateLoanGuarantorParams{
+		LoanID:           loanID,
+		GuarantorID:      guarantorID,
+		GuaranteedAmount: mustNumeric(t, "100000"),
+		Status:           loansqlc.GuarantorStatusApproved,
+		ApprovedBy:       testUUID("00000000-0000-0000-0000-000000000011"),
+	}); err != nil {
+		t.Fatalf("create approved guarantor: %v", err)
+	}
+
+	_, loan, err := service.DisburseLoan(ctx, loanID, testUUID("00000000-0000-0000-0000-000000000012"), "test disbursement")
+	if err != nil {
+		t.Fatalf("disburse loan: %v", err)
+	}
+	if loan.Status != loansqlc.LoanStatusActive {
+		t.Fatalf("loan status = %q, want %q", loan.Status, loansqlc.LoanStatusActive)
+	}
+
+	schedules, err := q.ListRepaymentSchedulesByLoan(ctx, loanID)
+	if err != nil {
+		t.Fatalf("list repayment schedules: %v", err)
+	}
+	if len(schedules) != 2 {
+		t.Fatalf("schedule count = %d, want 2", len(schedules))
+	}
+	for i, schedule := range schedules {
+		if got := numericToString(schedule.AmountDue); got != "50000" {
+			t.Fatalf("schedule %d amount = %q, want 50000", i+1, got)
+		}
+		if schedule.Status != loansqlc.RepaymentScheduleStatusUpcoming {
+			t.Fatalf("schedule %d status = %q, want upcoming", i+1, schedule.Status)
+		}
+		dueSeed := loan.DisbursedAt.Time.AddDate(0, i+1, 0)
+		wantDue := time.Date(dueSeed.Year(), dueSeed.Month()+1, 0, 0, 0, 0, 0, dueSeed.Location())
+		if !schedule.DueDate.Time.Equal(wantDue) {
+			t.Fatalf("schedule %d due date = %s, want %s", i+1, schedule.DueDate.Time, wantDue)
+		}
+	}
+}
+
 func TestRecordRepaymentExactPaymentClosesLoanWithoutCredit(t *testing.T) {
 	ctx := context.Background()
 	store, pool := repaymentStore(t, ctx)
