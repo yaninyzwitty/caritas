@@ -265,6 +265,7 @@ func (s *Service) ApproveGuarantor(
 ) (loansqlc.LoanGuarantor, error) {
 	var guarantor loansqlc.LoanGuarantor
 	err := s.store.ExecTx(ctx, func(q loansqlc.Querier) error {
+		// TODO-that guarantor must have the right amount of colateral inorder to get approved, and must not reduce their shares by more than 30%
 		current, err := q.LockGuarantor(ctx, loansqlc.LockGuarantorParams{
 			LoanID:      loanID,
 			GuarantorID: guarantorID,
@@ -496,7 +497,39 @@ func (s *Service) DisburseLoan(
 		if err != nil {
 			return fmt.Errorf("mark loan disbursed: %w", err)
 		}
-		if err := insertStatusAudit(ctx, q, loanID, current.Status, loansqlc.LoanStatusDisbursed, disbursedBy, reason); err != nil {
+
+		// Create the initial schedule in this transaction so an active loan can
+		// never commit without the rows RecordRepayment locks and allocates over.
+		if current.RepaymentPeriodMonths <= 0 {
+			return ErrInvalidRepaymentPeriod
+		}
+		total := numericToScale(current.Principal, -4)
+		months := big.NewInt(int64(current.RepaymentPeriodMonths))
+		installment := new(big.Int).Quo(total, months)
+		remainder := new(big.Int).Mod(total, months)
+		if installment.Sign() <= 0 {
+			return ErrInvalidLoanAmount
+		}
+
+		for installmentNo := int32(1); installmentNo <= current.RepaymentPeriodMonths; installmentNo++ {
+			amountDue := new(big.Int).Set(installment)
+			if installmentNo == current.RepaymentPeriodMonths {
+				amountDue.Add(amountDue, remainder)
+			}
+			dueSeed := loan.DisbursedAt.Time.AddDate(0, int(installmentNo), 0)
+			dueDate := time.Date(dueSeed.Year(), dueSeed.Month()+1, 0, 0, 0, 0, 0, dueSeed.Location())
+			if _, err := q.CreateRepaymentSchedule(ctx, loansqlc.CreateRepaymentScheduleParams{
+				LoanID:        loanID,
+				InstallmentNo: installmentNo,
+				DueDate:       pgtype.Date{Time: dueDate, Valid: true},
+				AmountDue:     numericFromScale(amountDue),
+				Status:        loansqlc.RepaymentScheduleStatusUpcoming,
+			}); err != nil {
+				return fmt.Errorf("create repayment schedule: %w", err)
+			}
+		}
+
+		if err := insertStatusAudit(ctx, q, loanID, current.Status, loansqlc.LoanStatusActive, disbursedBy, reason); err != nil {
 			return err
 		}
 		return nil

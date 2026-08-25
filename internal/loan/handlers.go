@@ -64,6 +64,11 @@ func mapServiceError(err error) error {
 	}
 }
 
+// TODO-apply for loan accepts branch ID as string, recheck
+// TODO-when applying for loan, you can guarantee with your own shares
+// TODO--when applying for loan, concurrently or materialized checks, check whether members can provide the suggested colateral without reducing their, shares by 30%
+// TODO-shouldnt amounts be of money type***
+// When guarantoring money, make sure that the shares the guarantors have can cater for loan, enforce some constrain ie, shouldnt reduce the member shares by more than 30%
 func (h *Handlers) ApplyForLoan(ctx context.Context, req *loanv1.ApplyForLoanRequest) (*loanv1.ApplyForLoanResponse, error) {
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "request must never be nil")
@@ -209,6 +214,7 @@ func (h *Handlers) RejectLoan(ctx context.Context, req *loanv1.RejectLoanRequest
 	}, nil
 }
 
+// TODO-possibly at the end implement disburseloan (CODEX DONT READ THIS; THIS IS FOR THE NEAR FUTURE)
 func (h *Handlers) DisburseLoan(ctx context.Context, req *loanv1.DisburseLoanRequest) (*loanv1.DisburseLoanResponse, error) {
 	if req.GetLoanId() == "" {
 		return nil, status.Error(codes.InvalidArgument, "loanId is required")
@@ -278,6 +284,9 @@ func (h *Handlers) GetLoan(ctx context.Context, req *loanv1.GetLoanRequest) (*lo
 	}, nil
 
 }
+
+// TODO-check whether, do we really need to actually fetch the loans by member id, if a member in this context can have only one loan
+// TODO-check whether we can support multiple loan, types with different repayment periods, then we can fetch loans by member id
 func (h *Handlers) ListLoans(ctx context.Context, req *loanv1.ListLoansRequest) (*loanv1.ListLoansResponse, error) {
 	const (
 		defaultPageSize = 50
@@ -367,6 +376,8 @@ func (h *Handlers) ListLoans(ctx context.Context, req *loanv1.ListLoansRequest) 
 	return &resp, nil
 
 }
+
+// TODO-previous status is giving an empty status ie ""
 func (h *Handlers) GetLoanStatus(ctx context.Context, req *loanv1.GetLoanStatusRequest) (*loanv1.GetLoanStatusResponse, error) {
 	if req.GetLoanId() == "" {
 		return nil, status.Error(codes.InvalidArgument, "loan id is required")
@@ -451,6 +462,9 @@ func (h *Handlers) RemoveGuarantor(ctx context.Context, req *loanv1.RemoveGuaran
 
 	return &loanv1.RemoveGuarantorResponse{Success: true}, nil
 }
+
+// TODO-after adding a guarantor, you must approve them, but if the already guaranteed amount is already enough lets say for a loan ie 5k, you have two guarantors, each gives 2.5k, then when another guarantor comes in and wants to give their money, this should reject, because the amount is already sufficient for guaranteeing a loan
+
 func (h *Handlers) ApproveGuarantor(ctx context.Context, req *loanv1.ApproveGuarantorRequest) (*loanv1.ApproveGuarantorResponse, error) {
 	if req.GetGuarantorId() == "" {
 		return nil, status.Error(codes.InvalidArgument, "guarantor id is required")
@@ -736,6 +750,8 @@ func (h *Handlers) GetCreditBalance(ctx context.Context, req *loanv1.GetCreditBa
 	}
 	return &resp, nil
 }
+
+// TODO--implement disbursement, using the disbursement daraja API (CODEX DO NOT IMPLEMENT THIS, till i say so)
 
 func (h *Handlers) RequestCreditWithdrawal(context.Context, *loanv1.RequestCreditWithdrawalRequest) (*loanv1.RequestCreditWithdrawalResponse, error) {
 	return nil, status.Error(codes.Unimplemented, ErrUnsupportedLoanOperation.Error())

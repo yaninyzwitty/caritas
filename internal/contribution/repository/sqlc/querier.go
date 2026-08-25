@@ -12,7 +12,8 @@ import (
 
 type Querier interface {
 	GetContributionAllocationByID(ctx context.Context, id pgtype.UUID) (ContributionAllocation, error)
-	GetContributionPaymentRequestByCheckoutID(ctx context.Context, checkoutRequestID string) (ContributionPaymentRequest, error)
+	GetContributionPaymentRequestByCheckoutID(ctx context.Context, checkoutRequestID pgtype.Text) (ContributionPaymentRequest, error)
+	GetContributionPaymentRequestByIdempotencyKey(ctx context.Context, idempotencyKey string) (ContributionPaymentRequest, error)
 	GetContributionReceiptByCheckoutRequestID(ctx context.Context, checkoutRequestID pgtype.Text) (ContributionReceipt, error)
 	GetContributionReceiptByExternalTransactionID(ctx context.Context, externalTransactionID pgtype.Text) (ContributionReceipt, error)
 	GetContributionReceiptByID(ctx context.Context, id pgtype.UUID) (ContributionReceipt, error)
@@ -22,10 +23,11 @@ type Querier interface {
 	ListContributionAllocationsByReceipt(ctx context.Context, receiptID pgtype.UUID) ([]ContributionAllocation, error)
 	ListContributionReceiptsByMember(ctx context.Context, arg ListContributionReceiptsByMemberParams) ([]ContributionReceipt, error)
 	LockContributionAllocationsByReceipt(ctx context.Context, receiptID pgtype.UUID) ([]ContributionAllocation, error)
-	LockContributionPaymentRequestByCheckoutID(ctx context.Context, checkoutRequestID string) (ContributionPaymentRequest, error)
+	LockContributionPaymentRequestByCheckoutID(ctx context.Context, checkoutRequestID pgtype.Text) (ContributionPaymentRequest, error)
 	LockContributionReceiptByID(ctx context.Context, id pgtype.UUID) (ContributionReceipt, error)
 	UpdateContributionAllocationCompleted(ctx context.Context, arg UpdateContributionAllocationCompletedParams) (ContributionAllocation, error)
 	UpdateContributionAllocationFailed(ctx context.Context, arg UpdateContributionAllocationFailedParams) (ContributionAllocation, error)
+	UpdateContributionPaymentRequestCheckoutID(ctx context.Context, arg UpdateContributionPaymentRequestCheckoutIDParams) (ContributionPaymentRequest, error)
 	UpdateContributionPaymentRequestCompleted(ctx context.Context, arg UpdateContributionPaymentRequestCompletedParams) (ContributionPaymentRequest, error)
 	UpdateContributionPaymentRequestFailed(ctx context.Context, arg UpdateContributionPaymentRequestFailedParams) (ContributionPaymentRequest, error)
 	UpdateContributionReceiptStatus(ctx context.Context, arg UpdateContributionReceiptStatusParams) (ContributionReceipt, error)

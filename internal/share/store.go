@@ -2,9 +2,11 @@ package share
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	sharesqlc "github.com/yaninyzwitty/caritas-backend/internal/share/repository/sqlc"
 )
@@ -32,7 +34,7 @@ func (s *Store) ExecTx(ctx context.Context, fn func(q sharesqlc.Querier) error) 
 	}
 
 	defer func() {
-		if err := tx.Rollback(ctx); err != nil {
+		if err := tx.Rollback(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
 			slog.Error("rollback error", "error", err)
 		}
 

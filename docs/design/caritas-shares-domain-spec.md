@@ -150,6 +150,8 @@ The Shares domain records the share purchase. It does not decide how a full cont
 
 CEEP snapshots must read finalized Shares ledger data. CEEP must not write shares.
 
+Current implementation note: share transaction `reference_id` remains a UUID because STK contribution allocation IDs are the only supported idempotency source for now. Revisit this if bank, cash-receipt or other non-UUID external references become first-class share transaction sources.
+
 ## 6. Withdrawals
 
 Share withdrawal must:

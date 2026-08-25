@@ -165,13 +165,13 @@ func mapServiceError(err error) error {
 	switch {
 	case errors.Is(err, ErrInvalidIdentifier):
 		return status.Error(codes.InvalidArgument, err.Error())
-	case errors.Is(err, ErrAccountNotFound), errors.Is(err, ErrTransactionNotFound):
+	case errors.Is(err, ErrAccountNotFound), errors.Is(err, ErrTransactionNotFound), errors.Is(err, ErrAdjustmentNotFound):
 		return status.Error(codes.NotFound, err.Error())
 	case errors.Is(err, pgx.ErrNoRows):
 		return status.Error(codes.NotFound, "not found")
-	case errors.Is(err, ErrAccountAlreadyExists), errors.Is(err, ErrAdjustmentExists), errors.Is(err, ErrDuplicateReference):
+	case errors.Is(err, ErrAccountAlreadyExists), errors.Is(err, ErrAdjustmentExists), errors.Is(err, ErrDuplicateReference), errors.Is(err, ErrAlreadyReversed):
 		return status.Error(codes.AlreadyExists, err.Error())
-	case errors.Is(err, ErrAccountNotActive), errors.Is(err, ErrInsufficientBalance):
+	case errors.Is(err, ErrAccountNotActive), errors.Is(err, ErrInsufficientBalance), errors.Is(err, ErrAdjustmentNotPending), errors.Is(err, ErrCannotReverse):
 		return status.Error(codes.FailedPrecondition, err.Error())
 	case errors.Is(err, ErrNotAdjustment):
 		return status.Error(codes.NotFound, "share adjustment not found")

@@ -2,7 +2,6 @@ syntax = "proto3";
 
 package share.v1;
 
-
 import "member/v1/member.proto";
 import "google/protobuf/timestamp.proto";
 
@@ -17,6 +16,7 @@ service ShareService {
   rpc GetShareTransaction(GetShareTransactionRequest) returns (GetShareTransactionResponse);
   rpc CreateAdjustment(CreateAdjustmentRequest) returns (CreateAdjustmentResponse);
   rpc ApproveShareAdjustment(ApproveShareAdjustmentRequest) returns (ApproveShareAdjustmentResponse);
+  rpc ReverseShareTransaction(ReverseShareTransactionRequest) returns (ReverseShareTransactionResponse);
 }
 
 enum ShareAccountStatus {
@@ -102,30 +102,30 @@ message ListShareAccountsResponse {
 }
 
 message PurchaseSharesRequest {
-  string                  account_id    = 1;
+  string          account_id    = 1;
   member.v1.Money amount        = 2;
-  string                  reference_id  = 3;
-  string                  originator_id = 4;
-  string                  reason        = 5;
+  string          reference_id  = 3;
+  string          originator_id = 4;
+  string          reason        = 5;
 }
 
 message PurchaseSharesResponse {
-  string                  transaction_id = 1;
+  string          transaction_id = 1;
   member.v1.Money balance_after  = 2;
 }
 
 message WithdrawSharesRequest {
-  string                  account_id    = 1;
+  string          account_id    = 1;
   member.v1.Money amount        = 2;
-  string                  reference_id  = 3;
-  string                  originator_id = 4;
-  string                  reason        = 5;
+  string          reference_id  = 3;
+  string          originator_id = 4;
+  string          reason        = 5;
 }
 
 message WithdrawSharesResponse {
-  string                  transaction_id = 1;
-  
-  member.v1.Money balance_after  = 2;
+  string transaction_id = 1;
+
+  member.v1.Money balance_after = 2;
 }
 
 message GetShareBalanceRequest {
@@ -134,8 +134,7 @@ message GetShareBalanceRequest {
 }
 
 message GetShareBalanceResponse {
-  member.v1.Money balance    = 1;
-  string                  account_id = 2;
+  member.v1.Money balance = 1;
 }
 
 message ListShareTransactionsRequest {
@@ -158,7 +157,7 @@ message GetShareTransactionResponse {
 }
 
 message ApproveShareAdjustmentRequest {
-  string transaction_id  = 1;
+  string adjustment_id   = 1;
   string approver_id     = 2; // fix this with proper authentication JWT
   string reason          = 3;
   string audit_report_id = 4;
@@ -166,17 +165,28 @@ message ApproveShareAdjustmentRequest {
 
 message ApproveShareAdjustmentResponse {
   string adjustment_id = 1;
+  string transaction_id = 2;
 }
 
 message CreateAdjustmentRequest {
-  string                  account_id    = 1;
+  string          account_id    = 1;
   member.v1.Money amount        = 2;
-  string                  reference_id  = 3;
-  string                  originator_id = 4;
-  string                  reason        = 5;
+  string          reference_id  = 3;
+  string          originator_id = 4;
+  string          reason        = 5;
 }
 
 message CreateAdjustmentResponse {
-  string                  transaction_id = 1;
+  string adjustment_id = 1;
+}
+
+message ReverseShareTransactionRequest {
+  string transaction_id = 1;
+  string reference_id   = 2;
+  string reason         = 3;
+}
+
+message ReverseShareTransactionResponse {
+  string          transaction_id = 1;
   member.v1.Money balance_after  = 2;
 }

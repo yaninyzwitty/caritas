@@ -4,7 +4,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"log"
 	"log/slog"
 	"net"
 	"net/http"
@@ -16,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/yaninyzwitty/caritas-backend/config"
 	authv1 "github.com/yaninyzwitty/caritas-backend/gen/auth/v1"
+	contributionv1 "github.com/yaninyzwitty/caritas-backend/gen/contribution/v1"
 	loanv1 "github.com/yaninyzwitty/caritas-backend/gen/loan/v1"
 	memberv1 "github.com/yaninyzwitty/caritas-backend/gen/member/v1"
 	sharev1 "github.com/yaninyzwitty/caritas-backend/gen/share/v1"
@@ -34,29 +34,23 @@ func main() {
 	flag.Parse()
 
 	cfg, err := config.Load(*configPath)
-	if err != nil {
-		log.Fatalf("Failed to load config: %v", err)
-	}
+	exitOnError("failed to load config", err)
 
 	dbURL, err := config.GetDatabaseURL()
-	if err != nil {
-		log.Fatalf("Failed to get database URL: %v", err)
-	}
+	exitOnError("failed to get database URL", err)
 	authTokenSecret, err := config.GetAuthTokenSecret()
-	if err != nil {
-		log.Fatalf("Failed to get auth token secret: %v", err)
-	}
+	exitOnError("failed to get auth token secret", err)
 
 	poolConfig, err := pgxpool.ParseConfig(dbURL)
-	if err != nil {
-		log.Fatalf("Failed to parse database URL: %v", err)
-	}
+	exitOnError("failed to parse database URL", err)
 
 	if cfg.Database.MaxOpenConns > 2147483647 {
-		log.Fatalf("Database.MaxOpenConns exceeds int32 max: %d", cfg.Database.MaxOpenConns)
+		slog.Error("database max_open_conns exceeds int32 max", "value", cfg.Database.MaxOpenConns)
+		os.Exit(1)
 	}
 	if cfg.Database.MaxIdleConns > 2147483647 {
-		log.Fatalf("Database.MaxIdleConns exceeds int32 max: %d", cfg.Database.MaxIdleConns)
+		slog.Error("database max_idle_conns exceeds int32 max", "value", cfg.Database.MaxIdleConns)
+		os.Exit(1)
 	}
 
 	poolConfig.MaxConns = int32(cfg.Database.MaxOpenConns)
@@ -65,12 +59,8 @@ func main() {
 	poolConfig.MaxConnIdleTime = cfg.Database.ConnMaxIdleTime
 
 	pool, err := pgxpool.NewWithConfig(ctx, poolConfig)
-	if err != nil {
-		log.Fatalf("Failed to create database pool: %v", err)
-	}
+	exitOnError("failed to create database pool", err)
 	defer pool.Close()
-
-	// TODO-move the postgres logic into its own separate file
 	// retry on startup to prevent: context timeout deadline or whatever
 	backoff := time.Second
 
@@ -85,7 +75,8 @@ func main() {
 		}
 
 		if attempt == 5 {
-			log.Fatalf("Failed to connect to PostgreSQL after %d attempts: %v", attempt, err)
+			slog.Error("failed to connect to PostgreSQL", "attempts", attempt, "error", err)
+			os.Exit(1)
 		}
 
 		slog.Warn(
@@ -109,14 +100,15 @@ func main() {
 	loanServer := loan.NewHandlers(loanStore, loanService)
 	contributionStore := contribution.NewStore(pool)
 	contributionService := contribution.NewService(contributionStore, shareService, loanService)
-	darajaHandlers := contribution.NewDarajaHandlers(contributionService)
+	darajaClient, err := newDarajaClient(*cfg)
+	exitOnError("failed to configure Daraja STK initiator", err)
+	contributionServer := contribution.NewHandlers(contributionService, darajaClient)
+	darajaHandlers := contribution.NewDarajaHandlers(ctx, contributionService)
 	authStore := auth.NewStore(pool)
 	authServer := auth.NewHandlers(authStore, authTokenSecret)
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.GRPC.Port))
-	if err != nil {
-		log.Fatalf("Failed to listen: %v", err)
-	}
+	exitOnError("failed to listen for gRPC", err)
 
 	s := grpc.NewServer(
 		grpc.UnaryInterceptor(
@@ -129,6 +121,7 @@ func main() {
 	loanv1.RegisterLoanServiceServer(s, loanServer)
 	loanv1.RegisterRepaymentServiceServer(s, loanServer)
 	loanv1.RegisterCreditServiceServer(s, loanServer)
+	contributionv1.RegisterContributionServiceServer(s, contributionServer)
 
 	mux := http.NewServeMux()
 	darajaHandlers.RegisterDarajaRoutes(mux)
@@ -139,16 +132,14 @@ func main() {
 	}
 
 	go func() {
-		log.Printf("Starting gRPC server on port %d", cfg.GRPC.Port)
-		if err := s.Serve(lis); err != nil {
-			log.Fatalf("Failed to serve: %v", err)
-		}
+		slog.Info("starting gRPC server", "port", cfg.GRPC.Port)
+		exitOnError("failed to serve gRPC", s.Serve(lis))
 	}()
 
 	go func() {
-		log.Printf("Starting HTTP server on port %d", cfg.HTTP.Port)
+		slog.Info("starting HTTP server", "port", cfg.HTTP.Port)
 		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("Failed to serve HTTP: %v", err)
+			exitOnError("failed to serve HTTP", err)
 		}
 	}()
 
@@ -156,7 +147,7 @@ func main() {
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 	sig := <-sigCh
 
-	log.Printf("Received signal: %v, initiating graceful shutdown...", sig)
+	slog.Info("received shutdown signal", "signal", sig)
 
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer shutdownCancel()
@@ -172,9 +163,9 @@ func main() {
 
 	select {
 	case <-shutdownDone:
-		log.Println("Server shutdown complete")
+		slog.Info("server shutdown complete")
 	case <-shutdownCtx.Done():
-		log.Println("Shutdown timeout, forcing exit")
+		slog.Warn("shutdown timeout, forcing exit")
 		s.Stop()
 	}
 }

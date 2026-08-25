@@ -9,16 +9,29 @@ import (
 	"os"
 	"time"
 
+	"github.com/joho/godotenv"
 	"github.com/yaninyzwitty/caritas-backend/config"
-	loanv1 "github.com/yaninyzwitty/caritas-backend/gen/loan/v1"
+	sharev1 "github.com/yaninyzwitty/caritas-backend/gen/share/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 )
 
+// TODO--check why error tx is closed
+func withAccessToken(ctx context.Context, token string) context.Context {
+	return metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+token)
+}
+
 func main() {
+	if err := godotenv.Load(); err != nil {
+		slog.Error("failed to load", "error", err)
+		os.Exit(1)
+	}
+
+	bearerToken := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI4YzhmMGQ3OS05NGNjLTQzMWYtYmM1My1iMjBiNDk5NjgwZDAiLCJyb2xlIjoic3lzdGVtX2FkbWluIiwiYnJhbmNoX2lkIjoxLCJpc3MiOiJjYXJpdGFzLWJhY2tlbmQiLCJhdWQiOiJjYXJpdGFzLWFkbWluIiwiaWF0IjoxNzg3NjY3NTc3LCJleHAiOjE3ODc2NzAyNzd9._naNpEkuAl7SqbyboLnDcaCq9qvpwzFmvgIKJfCPSDc"
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
+	ctx = withAccessToken(ctx, bearerToken)
 	configPath := flag.String("config", "config.yaml", "the path to your config file")
 	flag.Parse()
 
@@ -38,20 +51,26 @@ func main() {
 		}
 	}()
 
-	loanClient := loanv1.NewLoanServiceClient(conn)
+	// auth := authv1.NewAuthServiceClient(conn)
+	// loginres, _ := auth.Login(ctx, &authv1.LoginRequest{
+	// 	Email:    "brianjoseph13@gmail.com",
+	// 	Password: "1234567",
+	// })
 
-	accessToken := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiZGFjYzFjOS1jYTRhLTQxZTEtYjE5OS0zZjE2NzEwZTdiYzkiLCJyb2xlIjoic3lzdGVtX2FkbWluIiwiYnJhbmNoX2lkIjoxLCJpc3MiOiJjYXJpdGFzLWJhY2tlbmQiLCJhdWQiOiJjYXJpdGFzLWFkbWluIiwiaWF0IjoxNzg1OTg5NDU2LCJleHAiOjE3ODU5OTAzNTZ9.932D8_ZlAlY6ZkrSdqfRlNL_gtWDoe400ljadLp44BU"
+	// slog.Info("val", "res", loginres.AccessToken)
 
-	ctx = metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+accessToken)
+	share := sharev1.NewShareServiceClient(conn)
 
-	loan, err := loanClient.RejectLoan(ctx, &loanv1.RejectLoanRequest{
-		LoanId: "71393be9-2298-4bb5-87ab-7527fea24194",
-		Reason: "Member doesn't get paid enough to cover for the loan",
+	shareBalanceRes, err := share.GetShareBalance(ctx, &sharev1.GetShareBalanceRequest{
+		AccountId:         "adfde512-4b04-40c2-b78f-fd8d7d377ba9",
+		ConsistencyStrong: true,
 	})
+
 	if err != nil {
-		slog.Error("RejectLoan failed", "error", err)
+		slog.Error("get share balance", "error", err)
 		os.Exit(1)
 	}
-	slog.Info("loan rejected", "status", loan.NewStatus.String())
+
+	slog.Info("get share balance", "account_id", "adfde512-4b04-40c2-b78f-fd8d7d377ba9", "balance_units", shareBalanceRes.Balance.Units)
 
 }

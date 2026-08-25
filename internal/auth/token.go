@@ -18,7 +18,7 @@ import (
 const (
 	tokenIssuer   = "caritas-backend"
 	tokenAudience = "caritas-admin"
-	tokenTTL      = 15 * time.Minute
+	tokenTTL      = 45 * time.Minute
 )
 
 var ErrInvalidToken = errors.New("invalid token")

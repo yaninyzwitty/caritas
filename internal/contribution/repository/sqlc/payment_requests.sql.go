@@ -12,12 +12,12 @@ import (
 )
 
 const getContributionPaymentRequestByCheckoutID = `-- name: GetContributionPaymentRequestByCheckoutID :one
-SELECT id, checkout_request_id, member_id, branch_id, contribution_period, expected_amount, allocation_plan, status, receipt_id, failure_reason, requested_by, created_at, updated_at
+SELECT id, checkout_request_id, member_id, branch_id, contribution_period, expected_amount, allocation_plan, status, receipt_id, failure_reason, requested_by, created_at, updated_at, idempotency_key
 FROM contribution_payment_requests
 WHERE checkout_request_id = $1
 `
 
-func (q *Queries) GetContributionPaymentRequestByCheckoutID(ctx context.Context, checkoutRequestID string) (ContributionPaymentRequest, error) {
+func (q *Queries) GetContributionPaymentRequestByCheckoutID(ctx context.Context, checkoutRequestID pgtype.Text) (ContributionPaymentRequest, error) {
 	row := q.db.QueryRow(ctx, getContributionPaymentRequestByCheckoutID, checkoutRequestID)
 	var i ContributionPaymentRequest
 	err := row.Scan(
@@ -34,12 +34,42 @@ func (q *Queries) GetContributionPaymentRequestByCheckoutID(ctx context.Context,
 		&i.RequestedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.IdempotencyKey,
+	)
+	return i, err
+}
+
+const getContributionPaymentRequestByIdempotencyKey = `-- name: GetContributionPaymentRequestByIdempotencyKey :one
+SELECT id, checkout_request_id, member_id, branch_id, contribution_period, expected_amount, allocation_plan, status, receipt_id, failure_reason, requested_by, created_at, updated_at, idempotency_key
+FROM contribution_payment_requests
+WHERE idempotency_key = $1
+`
+
+func (q *Queries) GetContributionPaymentRequestByIdempotencyKey(ctx context.Context, idempotencyKey string) (ContributionPaymentRequest, error) {
+	row := q.db.QueryRow(ctx, getContributionPaymentRequestByIdempotencyKey, idempotencyKey)
+	var i ContributionPaymentRequest
+	err := row.Scan(
+		&i.ID,
+		&i.CheckoutRequestID,
+		&i.MemberID,
+		&i.BranchID,
+		&i.ContributionPeriod,
+		&i.ExpectedAmount,
+		&i.AllocationPlan,
+		&i.Status,
+		&i.ReceiptID,
+		&i.FailureReason,
+		&i.RequestedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.IdempotencyKey,
 	)
 	return i, err
 }
 
 const insertContributionPaymentRequest = `-- name: InsertContributionPaymentRequest :one
 INSERT INTO contribution_payment_requests (
+    idempotency_key,
     checkout_request_id,
     member_id,
     branch_id,
@@ -48,14 +78,22 @@ INSERT INTO contribution_payment_requests (
     allocation_plan,
     requested_by
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7
+    $1,
+    $2,
+    $3,
+    $4,
+    $5,
+    $6,
+    $7,
+    $8
 )
 ON CONFLICT DO NOTHING
-RETURNING id, checkout_request_id, member_id, branch_id, contribution_period, expected_amount, allocation_plan, status, receipt_id, failure_reason, requested_by, created_at, updated_at
+RETURNING id, checkout_request_id, member_id, branch_id, contribution_period, expected_amount, allocation_plan, status, receipt_id, failure_reason, requested_by, created_at, updated_at, idempotency_key
 `
 
 type InsertContributionPaymentRequestParams struct {
-	CheckoutRequestID  string         `json:"checkoutRequestId"`
+	IdempotencyKey     string         `json:"idempotencyKey"`
+	CheckoutRequestID  pgtype.Text    `json:"checkoutRequestId"`
 	MemberID           pgtype.UUID    `json:"memberId"`
 	BranchID           int64          `json:"branchId"`
 	ContributionPeriod pgtype.Date    `json:"contributionPeriod"`
@@ -66,6 +104,7 @@ type InsertContributionPaymentRequestParams struct {
 
 func (q *Queries) InsertContributionPaymentRequest(ctx context.Context, arg InsertContributionPaymentRequestParams) (ContributionPaymentRequest, error) {
 	row := q.db.QueryRow(ctx, insertContributionPaymentRequest,
+		arg.IdempotencyKey,
 		arg.CheckoutRequestID,
 		arg.MemberID,
 		arg.BranchID,
@@ -89,18 +128,19 @@ func (q *Queries) InsertContributionPaymentRequest(ctx context.Context, arg Inse
 		&i.RequestedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.IdempotencyKey,
 	)
 	return i, err
 }
 
 const lockContributionPaymentRequestByCheckoutID = `-- name: LockContributionPaymentRequestByCheckoutID :one
-SELECT id, checkout_request_id, member_id, branch_id, contribution_period, expected_amount, allocation_plan, status, receipt_id, failure_reason, requested_by, created_at, updated_at
+SELECT id, checkout_request_id, member_id, branch_id, contribution_period, expected_amount, allocation_plan, status, receipt_id, failure_reason, requested_by, created_at, updated_at, idempotency_key
 FROM contribution_payment_requests
 WHERE checkout_request_id = $1
 FOR UPDATE
 `
 
-func (q *Queries) LockContributionPaymentRequestByCheckoutID(ctx context.Context, checkoutRequestID string) (ContributionPaymentRequest, error) {
+func (q *Queries) LockContributionPaymentRequestByCheckoutID(ctx context.Context, checkoutRequestID pgtype.Text) (ContributionPaymentRequest, error) {
 	row := q.db.QueryRow(ctx, lockContributionPaymentRequestByCheckoutID, checkoutRequestID)
 	var i ContributionPaymentRequest
 	err := row.Scan(
@@ -117,6 +157,42 @@ func (q *Queries) LockContributionPaymentRequestByCheckoutID(ctx context.Context
 		&i.RequestedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.IdempotencyKey,
+	)
+	return i, err
+}
+
+const updateContributionPaymentRequestCheckoutID = `-- name: UpdateContributionPaymentRequestCheckoutID :one
+UPDATE contribution_payment_requests
+SET checkout_request_id = $2,
+    updated_at = NOW()
+WHERE id = $1
+RETURNING id, checkout_request_id, member_id, branch_id, contribution_period, expected_amount, allocation_plan, status, receipt_id, failure_reason, requested_by, created_at, updated_at, idempotency_key
+`
+
+type UpdateContributionPaymentRequestCheckoutIDParams struct {
+	ID                pgtype.UUID `json:"id"`
+	CheckoutRequestID pgtype.Text `json:"checkoutRequestId"`
+}
+
+func (q *Queries) UpdateContributionPaymentRequestCheckoutID(ctx context.Context, arg UpdateContributionPaymentRequestCheckoutIDParams) (ContributionPaymentRequest, error) {
+	row := q.db.QueryRow(ctx, updateContributionPaymentRequestCheckoutID, arg.ID, arg.CheckoutRequestID)
+	var i ContributionPaymentRequest
+	err := row.Scan(
+		&i.ID,
+		&i.CheckoutRequestID,
+		&i.MemberID,
+		&i.BranchID,
+		&i.ContributionPeriod,
+		&i.ExpectedAmount,
+		&i.AllocationPlan,
+		&i.Status,
+		&i.ReceiptID,
+		&i.FailureReason,
+		&i.RequestedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.IdempotencyKey,
 	)
 	return i, err
 }
@@ -128,7 +204,7 @@ SET status = 'completed',
     failure_reason = NULL,
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, checkout_request_id, member_id, branch_id, contribution_period, expected_amount, allocation_plan, status, receipt_id, failure_reason, requested_by, created_at, updated_at
+RETURNING id, checkout_request_id, member_id, branch_id, contribution_period, expected_amount, allocation_plan, status, receipt_id, failure_reason, requested_by, created_at, updated_at, idempotency_key
 `
 
 type UpdateContributionPaymentRequestCompletedParams struct {
@@ -153,6 +229,7 @@ func (q *Queries) UpdateContributionPaymentRequestCompleted(ctx context.Context,
 		&i.RequestedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.IdempotencyKey,
 	)
 	return i, err
 }
@@ -163,7 +240,7 @@ SET status = 'failed',
     failure_reason = $2,
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, checkout_request_id, member_id, branch_id, contribution_period, expected_amount, allocation_plan, status, receipt_id, failure_reason, requested_by, created_at, updated_at
+RETURNING id, checkout_request_id, member_id, branch_id, contribution_period, expected_amount, allocation_plan, status, receipt_id, failure_reason, requested_by, created_at, updated_at, idempotency_key
 `
 
 type UpdateContributionPaymentRequestFailedParams struct {
@@ -188,6 +265,7 @@ func (q *Queries) UpdateContributionPaymentRequestFailed(ctx context.Context, ar
 		&i.RequestedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.IdempotencyKey,
 	)
 	return i, err
 }

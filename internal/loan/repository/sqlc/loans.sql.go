@@ -367,7 +367,7 @@ func (q *Queries) LockLoanByID(ctx context.Context, id pgtype.UUID) (LockLoanByI
 const markLoanDisbursed = `-- name: MarkLoanDisbursed :one
 UPDATE loans
 SET previous_status = status,
-    status = 'disbursed',
+    status = 'active',
     disbursed_at = NOW(),
     updated_by = $2,
     updated_at = NOW()

@@ -14,6 +14,7 @@ type Querier interface {
 	CreateShareAccount(ctx context.Context, arg CreateShareAccountParams) (ShareAccount, error)
 	GetAccountByID(ctx context.Context, id pgtype.UUID) (ShareAccount, error)
 	GetAccountByMemberID(ctx context.Context, memberID pgtype.UUID) (ShareAccount, error)
+	GetAdjustmentByReference(ctx context.Context, arg GetAdjustmentByReferenceParams) (ShareAdjustment, error)
 	GetAdjustmentByTransactionID(ctx context.Context, shareTransactionID pgtype.UUID) (ShareAdjustment, error)
 	GetLatestBalance(ctx context.Context, shareAccountID pgtype.UUID) (pgtype.Numeric, error)
 	GetReversalTransactions(ctx context.Context, reversalOf pgtype.UUID) ([]ShareTransaction, error)
@@ -23,9 +24,11 @@ type Querier interface {
 	InsertShareTransaction(ctx context.Context, arg InsertShareTransactionParams) (ShareTransaction, error)
 	ListAccounts(ctx context.Context, arg ListAccountsParams) ([]ShareAccount, error)
 	ListTransactions(ctx context.Context, arg ListTransactionsParams) ([]ShareTransaction, error)
+	LockAdjustmentByID(ctx context.Context, id pgtype.UUID) (ShareAdjustment, error)
 	LockAndGetLatestBalance(ctx context.Context, shareAccountID pgtype.UUID) (pgtype.Numeric, error)
 	LockAndReadAccount(ctx context.Context, id pgtype.UUID) (ShareAccount, error)
 	UpdateAccountStatus(ctx context.Context, arg UpdateAccountStatusParams) (ShareAccount, error)
+	UpdateAdjustmentApproved(ctx context.Context, arg UpdateAdjustmentApprovedParams) (ShareAdjustment, error)
 }
 
 var _ Querier = (*Queries)(nil)

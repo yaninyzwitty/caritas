@@ -38,6 +38,18 @@ func TestValidateReceiptRequiresReference(t *testing.T) {
 	}
 }
 
+func TestValidateReceiptRejectsUnsupportedSourceChannel(t *testing.T) {
+	params := validReceiptParams(t, "1000")
+	params.SourceChannel = contributionsqlc.ContributionSourceChannel("daraja_paybill")
+
+	err := validateReceipt(params, []AllocationInput{
+		{Type: contributionsqlc.ContributionAllocationTypeCom, Amount: mustNumeric(t, "1000")},
+	})
+	if !errors.Is(err, ErrInvalidPayment) {
+		t.Fatalf("error = %v, want %v", err, ErrInvalidPayment)
+	}
+}
+
 func TestValidateReceiptRequiresAllocationTotalToMatchAmount(t *testing.T) {
 	params := validReceiptParams(t, "1000")
 
