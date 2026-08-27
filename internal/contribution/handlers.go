@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"math/big"
+	"regexp"
 	"strings"
 	"time"
 
@@ -55,9 +56,14 @@ func (h *Handlers) InitiateDarajaSTKContribution(ctx context.Context, req *contr
 		branchID = actor.BranchID
 	}
 
+	actualPhoneNumber, err := normalizePhoneNumber(req.PhoneNumber)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "normalize phone number: %v", err)
+	}
+
 	paymentRequest, err := h.service.InitiateDarajaSTKPayment(ctx, InitiateDarajaSTKPaymentParams{
 		IdempotencyKey:     req.GetIdempotencyKey(),
-		PhoneNumber:        req.GetPhoneNumber(),
+		PhoneNumber:        actualPhoneNumber,
 		MemberID:           memberID,
 		BranchID:           branchID,
 		ContributionPeriod: pgtype.Date{Time: period, Valid: true},
@@ -119,6 +125,32 @@ func allocationTypeFromProto(value contributionv1.ContributionAllocationType) co
 	default:
 		return ""
 	}
+}
+
+var kenyanPhone = regexp.MustCompile(`^254[17]\d{8}$`)
+
+// normalizes phone numbers, ie from 07 - 254 the required format
+func normalizePhoneNumber(phone string) (string, error) {
+	// Remove common formatting
+	phone = strings.TrimSpace(phone)
+	phone = strings.ReplaceAll(phone, " ", "")
+	phone = strings.ReplaceAll(phone, "-", "")
+	phone = strings.TrimPrefix(phone, "+")
+
+	switch {
+	case strings.HasPrefix(phone, "0"):
+		phone = "254" + phone[1:]
+
+	case strings.HasPrefix(phone, "7"),
+		strings.HasPrefix(phone, "1"):
+		phone = "254" + phone
+
+	}
+
+	if !kenyanPhone.MatchString(phone) {
+		return "", errors.New("invalid Kenyan phone number")
+	}
+	return phone, nil
 }
 
 // moneyToNumeric collapses proto Money into pgtype.Numeric without using
