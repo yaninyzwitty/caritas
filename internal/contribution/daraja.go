@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"math/big"
 	"strings"
 	"time"
@@ -44,9 +45,11 @@ func (s *Service) InitiateDarajaSTKPayment(ctx context.Context, params InitiateD
 	}
 	params.IdempotencyKey = strings.TrimSpace(params.IdempotencyKey)
 	params.PhoneNumber = strings.TrimSpace(params.PhoneNumber)
+
 	if params.IdempotencyKey == "" || params.PhoneNumber == "" || !params.MemberID.Valid || params.BranchID == 0 || !params.ContributionPeriod.Valid {
 		return contributionsqlc.ContributionPaymentRequest{}, ErrInvalidPayment
 	}
+
 	if err := validatePaymentRequestAmount(params.Amount, params.Allocations); err != nil {
 		return contributionsqlc.ContributionPaymentRequest{}, err
 	}
@@ -125,6 +128,9 @@ func (s *Service) ProcessDarajaSTKPayment(ctx context.Context, payment DarajaSTK
 		return CreatedReceipt{}, ErrInvalidPayment
 	}
 
+	// TODO-remove this logging
+	slog.Info("values", "checkoutID", checkoutID, "mpesaReceiptID", mpesaReceipt, "amount", payment.Amount)
+
 	var receiptID pgtype.UUID
 	var result CreatedReceipt
 	var processErr error
@@ -172,6 +178,10 @@ func (s *Service) ProcessDarajaSTKPayment(ctx context.Context, payment DarajaSTK
 				return fmt.Errorf("mark payment request failed: %w", updateErr)
 			}
 			return nil
+		}
+
+		for _, allocation := range allocations {
+			slog.Info("allocation params", "Value", allocation.Amount, "allocationType", allocation.Type, "targetID", allocation.TargetID)
 		}
 
 		receivedAt := payment.ReceivedAt
@@ -222,7 +232,7 @@ func (s *Service) ProcessDarajaSTKPayment(ctx context.Context, payment DarajaSTK
 	if processErr != nil {
 		return result, processErr
 	}
-	return s.ProcessReceipt(ctx, receiptID, pgtype.UUID{})
+	return s.ProcessReceipt(ctx, receiptID, result.Receipt.ReceivedBy)
 }
 
 // MarkDarajaSTKPaymentFailed records a terminal Daraja failure against the

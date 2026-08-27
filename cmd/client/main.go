@@ -9,15 +9,16 @@ import (
 	"os"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 	"github.com/yaninyzwitty/caritas-backend/config"
-	sharev1 "github.com/yaninyzwitty/caritas-backend/gen/share/v1"
+	contributionv1 "github.com/yaninyzwitty/caritas-backend/gen/contribution/v1"
+	memberv1 "github.com/yaninyzwitty/caritas-backend/gen/member/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 )
 
-// TODO--check why error tx is closed
 func withAccessToken(ctx context.Context, token string) context.Context {
 	return metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+token)
 }
@@ -28,7 +29,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	bearerToken := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI4YzhmMGQ3OS05NGNjLTQzMWYtYmM1My1iMjBiNDk5NjgwZDAiLCJyb2xlIjoic3lzdGVtX2FkbWluIiwiYnJhbmNoX2lkIjoxLCJpc3MiOiJjYXJpdGFzLWJhY2tlbmQiLCJhdWQiOiJjYXJpdGFzLWFkbWluIiwiaWF0IjoxNzg3NjY3NTc3LCJleHAiOjE3ODc2NzAyNzd9._naNpEkuAl7SqbyboLnDcaCq9qvpwzFmvgIKJfCPSDc"
+	bearerToken := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI4YzhmMGQ3OS05NGNjLTQzMWYtYmM1My1iMjBiNDk5NjgwZDAiLCJyb2xlIjoic3lzdGVtX2FkbWluIiwiYnJhbmNoX2lkIjoxLCJpc3MiOiJjYXJpdGFzLWJhY2tlbmQiLCJhdWQiOiJjYXJpdGFzLWFkbWluIiwiaWF0IjoxNzg3ODM1NzY5LCJleHAiOjE3ODc4Mzg0Njl9.v25PDTFEAxl8BEwCL0FPVDG9w-8XiOncExWTmOsM-lw"
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	ctx = withAccessToken(ctx, bearerToken)
@@ -59,18 +60,60 @@ func main() {
 
 	// slog.Info("val", "res", loginres.AccessToken)
 
-	share := sharev1.NewShareServiceClient(conn)
+	contribution := contributionv1.NewContributionServiceClient(conn)
 
-	shareBalanceRes, err := share.GetShareBalance(ctx, &sharev1.GetShareBalanceRequest{
-		AccountId:         "adfde512-4b04-40c2-b78f-fd8d7d377ba9",
-		ConsistencyStrong: true,
-	})
+	darajaSTKResponse, err := contribution.InitiateDarajaSTKContribution(
+		ctx,
+		&contributionv1.InitiateDarajaSTKContributionRequest{
+			IdempotencyKey: uuid.NewString(),
+			MemberId:       "63670bd6-4e7a-4e1d-bb6b-b1a7a86bfbfa",
+			BranchId:       1,
+			PhoneNumber:    "0768108321",
+			Amount: &memberv1.Money{
+				CurrencyCode: "KES",
+				Units:        120,
+			},
+			ContributionPeriod: "2026-09-01",
+			Allocations: []*contributionv1.ContributionAllocationInput{
+				{
+					Type: contributionv1.ContributionAllocationType_CONTRIBUTION_ALLOCATION_TYPE_COM,
+					Amount: &memberv1.Money{
+						CurrencyCode: "KES",
+						Units:        30,
+					},
+				},
+				{
+					Type: contributionv1.ContributionAllocationType_CONTRIBUTION_ALLOCATION_TYPE_LGOM,
+					Amount: &memberv1.Money{
+						CurrencyCode: "KES",
+						Units:        30,
+					},
+				},
+				{
+					Type:     contributionv1.ContributionAllocationType_CONTRIBUTION_ALLOCATION_TYPE_LOAN_PRINCIPAL,
+					TargetId: "6a84db78-3393-479d-8123-fff16cba303f",
+					Amount: &memberv1.Money{
+						CurrencyCode: "KES",
+						Units:        40,
+					},
+				},
 
+				{
+					Type:     contributionv1.ContributionAllocationType_CONTRIBUTION_ALLOCATION_TYPE_SHARE_PURCHASE,
+					TargetId: "adfde512-4b04-40c2-b78f-fd8d7d377ba9",
+					Amount: &memberv1.Money{
+						CurrencyCode: "KES",
+						Units:        20,
+					},
+				},
+			},
+		},
+	)
 	if err != nil {
-		slog.Error("get share balance", "error", err)
+		slog.Error("Failed", "error", err)
 		os.Exit(1)
 	}
 
-	slog.Info("get share balance", "account_id", "adfde512-4b04-40c2-b78f-fd8d7d377ba9", "balance_units", shareBalanceRes.Balance.Units)
+	slog.Info("daraja response", "checkoutRequestID", darajaSTKResponse.CheckoutRequestId, "paymentRequestID", darajaSTKResponse.PaymentRequestId)
 
 }

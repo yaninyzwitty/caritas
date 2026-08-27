@@ -205,7 +205,7 @@ func (s *Service) ProcessReceipt(ctx context.Context, receiptID, processedBy pgt
 				return failReceipt(ctx, q, receipt.ID, processErr, &result)
 			}
 
-			referenceID, externalReference, err := s.processAllocation(ctx, receipt, allocation, processedBy)
+			referenceID, externalReference, err := s.processAllocation(ctx, receipt, allocation, receipt.ReceivedBy)
 			if err != nil {
 				processErr = fmt.Errorf("%w: %s", err, allocation.Type)
 				if _, updateErr := q.UpdateContributionAllocationFailed(ctx, contributionsqlc.UpdateContributionAllocationFailedParams{
