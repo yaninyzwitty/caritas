@@ -7,6 +7,7 @@
 package loanv1
 
 import (
+	v1 "github.com/yaninyzwitty/caritas-backend/gen/member/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -584,16 +585,17 @@ func (x *ProposedGuarantor) GetGuaranteedAmount() string {
 
 // ApplyForLoanRequest contains the information needed to apply for a new loan.
 type ApplyForLoanRequest struct {
-	state                 protoimpl.MessageState `protogen:"open.v1"`
-	MemberId              string                 `protobuf:"bytes,1,opt,name=member_id,json=memberId,proto3" json:"member_id,omitempty"`
-	BranchId              string                 `protobuf:"bytes,2,opt,name=branch_id,json=branchId,proto3" json:"branch_id,omitempty"`
-	Principal             string                 `protobuf:"bytes,3,opt,name=principal,proto3" json:"principal,omitempty"`                           // decimal.Decimal as string
-	InterestRate          string                 `protobuf:"bytes,4,opt,name=interest_rate,json=interestRate,proto3" json:"interest_rate,omitempty"` // decimal.Decimal as string (percentage rate)
-	RepaymentPeriodMonths int32                  `protobuf:"varint,5,opt,name=repayment_period_months,json=repaymentPeriodMonths,proto3" json:"repayment_period_months,omitempty"`
-	OfficerId             string                 `protobuf:"bytes,6,opt,name=officer_id,json=officerId,proto3" json:"officer_id,omitempty"` //TODO -remove this handle carefully with authentication
-	Guarantors            []*ProposedGuarantor   `protobuf:"bytes,7,rep,name=guarantors,proto3" json:"guarantors,omitempty"`
-	unknownFields         protoimpl.UnknownFields
-	sizeCache             protoimpl.SizeCache
+	state                      protoimpl.MessageState `protogen:"open.v1"`
+	MemberId                   string                 `protobuf:"bytes,1,opt,name=member_id,json=memberId,proto3" json:"member_id,omitempty"`
+	BranchId                   int32                  `protobuf:"varint,2,opt,name=branch_id,json=branchId,proto3" json:"branch_id,omitempty"`
+	Principal                  string                 `protobuf:"bytes,3,opt,name=principal,proto3" json:"principal,omitempty"`                           // decimal.Decimal as string
+	InterestRate               string                 `protobuf:"bytes,4,opt,name=interest_rate,json=interestRate,proto3" json:"interest_rate,omitempty"` // decimal.Decimal as string (percentage rate)
+	RepaymentPeriodMonths      int32                  `protobuf:"varint,5,opt,name=repayment_period_months,json=repaymentPeriodMonths,proto3" json:"repayment_period_months,omitempty"`
+	OfficerId                  string                 `protobuf:"bytes,6,opt,name=officer_id,json=officerId,proto3" json:"officer_id,omitempty"`
+	Guarantors                 []*ProposedGuarantor   `protobuf:"bytes,7,rep,name=guarantors,proto3" json:"guarantors,omitempty"`
+	ApplicantSharePledgeAmount *v1.Money              `protobuf:"bytes,8,opt,name=applicant_share_pledge_amount,json=applicantSharePledgeAmount,proto3" json:"applicant_share_pledge_amount,omitempty"`
+	unknownFields              protoimpl.UnknownFields
+	sizeCache                  protoimpl.SizeCache
 }
 
 func (x *ApplyForLoanRequest) Reset() {
@@ -633,11 +635,11 @@ func (x *ApplyForLoanRequest) GetMemberId() string {
 	return ""
 }
 
-func (x *ApplyForLoanRequest) GetBranchId() string {
+func (x *ApplyForLoanRequest) GetBranchId() int32 {
 	if x != nil {
 		return x.BranchId
 	}
-	return ""
+	return 0
 }
 
 func (x *ApplyForLoanRequest) GetPrincipal() string {
@@ -671,6 +673,13 @@ func (x *ApplyForLoanRequest) GetOfficerId() string {
 func (x *ApplyForLoanRequest) GetGuarantors() []*ProposedGuarantor {
 	if x != nil {
 		return x.Guarantors
+	}
+	return nil
+}
+
+func (x *ApplyForLoanRequest) GetApplicantSharePledgeAmount() *v1.Money {
+	if x != nil {
+		return x.ApplicantSharePledgeAmount
 	}
 	return nil
 }
@@ -733,7 +742,7 @@ type ApproveLoanRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	LoanId        string                 `protobuf:"bytes,1,opt,name=loan_id,json=loanId,proto3" json:"loan_id,omitempty"`
 	Reason        string                 `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
-	OfficerId     string                 `protobuf:"bytes,3,opt,name=officer_id,json=officerId,proto3" json:"officer_id,omitempty"` //TODO -remove this handle carefully with authentication
+	OfficerId     string                 `protobuf:"bytes,3,opt,name=officer_id,json=officerId,proto3" json:"officer_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1848,7 +1857,7 @@ var File_loan_v1_loan_proto protoreflect.FileDescriptor
 
 const file_loan_v1_loan_proto_rawDesc = "" +
 	"\n" +
-	"\x12loan/v1/loan.proto\x12\aloan.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xf5\x03\n" +
+	"\x12loan/v1/loan.proto\x12\aloan.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16member/v1/member.proto\"\xf5\x03\n" +
 	"\x04Loan\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tmember_id\x18\x02 \x01(\tR\bmemberId\x12\x1b\n" +
@@ -1889,10 +1898,10 @@ const file_loan_v1_loan_proto_rawDesc = "" +
 	"\x10last_activity_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\x0elastActivityAt\"c\n" +
 	"\x11ProposedGuarantor\x12!\n" +
 	"\fguarantor_id\x18\x01 \x01(\tR\vguarantorId\x12+\n" +
-	"\x11guaranteed_amount\x18\x02 \x01(\tR\x10guaranteedAmount\"\xa5\x02\n" +
+	"\x11guaranteed_amount\x18\x02 \x01(\tR\x10guaranteedAmount\"\xfa\x02\n" +
 	"\x13ApplyForLoanRequest\x12\x1b\n" +
 	"\tmember_id\x18\x01 \x01(\tR\bmemberId\x12\x1b\n" +
-	"\tbranch_id\x18\x02 \x01(\tR\bbranchId\x12\x1c\n" +
+	"\tbranch_id\x18\x02 \x01(\x05R\bbranchId\x12\x1c\n" +
 	"\tprincipal\x18\x03 \x01(\tR\tprincipal\x12#\n" +
 	"\rinterest_rate\x18\x04 \x01(\tR\finterestRate\x126\n" +
 	"\x17repayment_period_months\x18\x05 \x01(\x05R\x15repaymentPeriodMonths\x12\x1d\n" +
@@ -1900,7 +1909,8 @@ const file_loan_v1_loan_proto_rawDesc = "" +
 	"officer_id\x18\x06 \x01(\tR\tofficerId\x12:\n" +
 	"\n" +
 	"guarantors\x18\a \x03(\v2\x1a.loan.v1.ProposedGuarantorR\n" +
-	"guarantors\"\\\n" +
+	"guarantors\x12S\n" +
+	"\x1dapplicant_share_pledge_amount\x18\b \x01(\v2\x10.member.v1.MoneyR\x1aapplicantSharePledgeAmount\"\\\n" +
 	"\x14ApplyForLoanResponse\x12\x17\n" +
 	"\aloan_id\x18\x01 \x01(\tR\x06loanId\x12+\n" +
 	"\x06status\x18\x02 \x01(\x0e2\x13.loan.v1.LoanStatusR\x06status\"d\n" +
@@ -2069,6 +2079,7 @@ var file_loan_v1_loan_proto_goTypes = []any{
 	(*ListGuarantorsRequest)(nil),    // 27: loan.v1.ListGuarantorsRequest
 	(*ListGuarantorsResponse)(nil),   // 28: loan.v1.ListGuarantorsResponse
 	(*timestamppb.Timestamp)(nil),    // 29: google.protobuf.Timestamp
+	(*v1.Money)(nil),                 // 30: member.v1.Money
 }
 var file_loan_v1_loan_proto_depIdxs = []int32{
 	0,  // 0: loan.v1.Loan.status:type_name -> loan.v1.LoanStatus
@@ -2082,50 +2093,51 @@ var file_loan_v1_loan_proto_depIdxs = []int32{
 	29, // 8: loan.v1.CreditBalance.created_at:type_name -> google.protobuf.Timestamp
 	29, // 9: loan.v1.CreditBalance.last_activity_at:type_name -> google.protobuf.Timestamp
 	6,  // 10: loan.v1.ApplyForLoanRequest.guarantors:type_name -> loan.v1.ProposedGuarantor
-	0,  // 11: loan.v1.ApplyForLoanResponse.status:type_name -> loan.v1.LoanStatus
-	0,  // 12: loan.v1.ApproveLoanResponse.new_status:type_name -> loan.v1.LoanStatus
-	29, // 13: loan.v1.ApproveLoanResponse.approved_at:type_name -> google.protobuf.Timestamp
-	0,  // 14: loan.v1.RejectLoanResponse.new_status:type_name -> loan.v1.LoanStatus
-	29, // 15: loan.v1.RejectLoanResponse.rejected_at:type_name -> google.protobuf.Timestamp
-	0,  // 16: loan.v1.DisburseLoanResponse.new_status:type_name -> loan.v1.LoanStatus
-	29, // 17: loan.v1.DisburseLoanResponse.disbursed_at:type_name -> google.protobuf.Timestamp
-	3,  // 18: loan.v1.GetLoanResponse.loan:type_name -> loan.v1.Loan
-	0,  // 19: loan.v1.ListLoansRequest.status_filter:type_name -> loan.v1.LoanStatus
-	3,  // 20: loan.v1.ListLoansResponse.loans:type_name -> loan.v1.Loan
-	0,  // 21: loan.v1.GetLoanStatusResponse.status:type_name -> loan.v1.LoanStatus
-	29, // 22: loan.v1.GetLoanStatusResponse.last_updated:type_name -> google.protobuf.Timestamp
-	1,  // 23: loan.v1.AddGuarantorResponse.status:type_name -> loan.v1.GuarantorStatus
-	29, // 24: loan.v1.AddGuarantorResponse.created_at:type_name -> google.protobuf.Timestamp
-	1,  // 25: loan.v1.ApproveGuarantorResponse.new_status:type_name -> loan.v1.GuarantorStatus
-	29, // 26: loan.v1.ApproveGuarantorResponse.approved_at:type_name -> google.protobuf.Timestamp
-	4,  // 27: loan.v1.ListGuarantorsResponse.guarantors:type_name -> loan.v1.LoanGuarantor
-	7,  // 28: loan.v1.LoanService.ApplyForLoan:input_type -> loan.v1.ApplyForLoanRequest
-	9,  // 29: loan.v1.LoanService.ApproveLoan:input_type -> loan.v1.ApproveLoanRequest
-	11, // 30: loan.v1.LoanService.RejectLoan:input_type -> loan.v1.RejectLoanRequest
-	13, // 31: loan.v1.LoanService.DisburseLoan:input_type -> loan.v1.DisburseLoanRequest
-	15, // 32: loan.v1.LoanService.GetLoan:input_type -> loan.v1.GetLoanRequest
-	17, // 33: loan.v1.LoanService.ListLoans:input_type -> loan.v1.ListLoansRequest
-	19, // 34: loan.v1.LoanService.GetLoanStatus:input_type -> loan.v1.GetLoanStatusRequest
-	21, // 35: loan.v1.LoanService.AddGuarantor:input_type -> loan.v1.AddGuarantorRequest
-	23, // 36: loan.v1.LoanService.RemoveGuarantor:input_type -> loan.v1.RemoveGuarantorRequest
-	25, // 37: loan.v1.LoanService.ApproveGuarantor:input_type -> loan.v1.ApproveGuarantorRequest
-	27, // 38: loan.v1.LoanService.ListGuarantors:input_type -> loan.v1.ListGuarantorsRequest
-	8,  // 39: loan.v1.LoanService.ApplyForLoan:output_type -> loan.v1.ApplyForLoanResponse
-	10, // 40: loan.v1.LoanService.ApproveLoan:output_type -> loan.v1.ApproveLoanResponse
-	12, // 41: loan.v1.LoanService.RejectLoan:output_type -> loan.v1.RejectLoanResponse
-	14, // 42: loan.v1.LoanService.DisburseLoan:output_type -> loan.v1.DisburseLoanResponse
-	16, // 43: loan.v1.LoanService.GetLoan:output_type -> loan.v1.GetLoanResponse
-	18, // 44: loan.v1.LoanService.ListLoans:output_type -> loan.v1.ListLoansResponse
-	20, // 45: loan.v1.LoanService.GetLoanStatus:output_type -> loan.v1.GetLoanStatusResponse
-	22, // 46: loan.v1.LoanService.AddGuarantor:output_type -> loan.v1.AddGuarantorResponse
-	24, // 47: loan.v1.LoanService.RemoveGuarantor:output_type -> loan.v1.RemoveGuarantorResponse
-	26, // 48: loan.v1.LoanService.ApproveGuarantor:output_type -> loan.v1.ApproveGuarantorResponse
-	28, // 49: loan.v1.LoanService.ListGuarantors:output_type -> loan.v1.ListGuarantorsResponse
-	39, // [39:50] is the sub-list for method output_type
-	28, // [28:39] is the sub-list for method input_type
-	28, // [28:28] is the sub-list for extension type_name
-	28, // [28:28] is the sub-list for extension extendee
-	0,  // [0:28] is the sub-list for field type_name
+	30, // 11: loan.v1.ApplyForLoanRequest.applicant_share_pledge_amount:type_name -> member.v1.Money
+	0,  // 12: loan.v1.ApplyForLoanResponse.status:type_name -> loan.v1.LoanStatus
+	0,  // 13: loan.v1.ApproveLoanResponse.new_status:type_name -> loan.v1.LoanStatus
+	29, // 14: loan.v1.ApproveLoanResponse.approved_at:type_name -> google.protobuf.Timestamp
+	0,  // 15: loan.v1.RejectLoanResponse.new_status:type_name -> loan.v1.LoanStatus
+	29, // 16: loan.v1.RejectLoanResponse.rejected_at:type_name -> google.protobuf.Timestamp
+	0,  // 17: loan.v1.DisburseLoanResponse.new_status:type_name -> loan.v1.LoanStatus
+	29, // 18: loan.v1.DisburseLoanResponse.disbursed_at:type_name -> google.protobuf.Timestamp
+	3,  // 19: loan.v1.GetLoanResponse.loan:type_name -> loan.v1.Loan
+	0,  // 20: loan.v1.ListLoansRequest.status_filter:type_name -> loan.v1.LoanStatus
+	3,  // 21: loan.v1.ListLoansResponse.loans:type_name -> loan.v1.Loan
+	0,  // 22: loan.v1.GetLoanStatusResponse.status:type_name -> loan.v1.LoanStatus
+	29, // 23: loan.v1.GetLoanStatusResponse.last_updated:type_name -> google.protobuf.Timestamp
+	1,  // 24: loan.v1.AddGuarantorResponse.status:type_name -> loan.v1.GuarantorStatus
+	29, // 25: loan.v1.AddGuarantorResponse.created_at:type_name -> google.protobuf.Timestamp
+	1,  // 26: loan.v1.ApproveGuarantorResponse.new_status:type_name -> loan.v1.GuarantorStatus
+	29, // 27: loan.v1.ApproveGuarantorResponse.approved_at:type_name -> google.protobuf.Timestamp
+	4,  // 28: loan.v1.ListGuarantorsResponse.guarantors:type_name -> loan.v1.LoanGuarantor
+	7,  // 29: loan.v1.LoanService.ApplyForLoan:input_type -> loan.v1.ApplyForLoanRequest
+	9,  // 30: loan.v1.LoanService.ApproveLoan:input_type -> loan.v1.ApproveLoanRequest
+	11, // 31: loan.v1.LoanService.RejectLoan:input_type -> loan.v1.RejectLoanRequest
+	13, // 32: loan.v1.LoanService.DisburseLoan:input_type -> loan.v1.DisburseLoanRequest
+	15, // 33: loan.v1.LoanService.GetLoan:input_type -> loan.v1.GetLoanRequest
+	17, // 34: loan.v1.LoanService.ListLoans:input_type -> loan.v1.ListLoansRequest
+	19, // 35: loan.v1.LoanService.GetLoanStatus:input_type -> loan.v1.GetLoanStatusRequest
+	21, // 36: loan.v1.LoanService.AddGuarantor:input_type -> loan.v1.AddGuarantorRequest
+	23, // 37: loan.v1.LoanService.RemoveGuarantor:input_type -> loan.v1.RemoveGuarantorRequest
+	25, // 38: loan.v1.LoanService.ApproveGuarantor:input_type -> loan.v1.ApproveGuarantorRequest
+	27, // 39: loan.v1.LoanService.ListGuarantors:input_type -> loan.v1.ListGuarantorsRequest
+	8,  // 40: loan.v1.LoanService.ApplyForLoan:output_type -> loan.v1.ApplyForLoanResponse
+	10, // 41: loan.v1.LoanService.ApproveLoan:output_type -> loan.v1.ApproveLoanResponse
+	12, // 42: loan.v1.LoanService.RejectLoan:output_type -> loan.v1.RejectLoanResponse
+	14, // 43: loan.v1.LoanService.DisburseLoan:output_type -> loan.v1.DisburseLoanResponse
+	16, // 44: loan.v1.LoanService.GetLoan:output_type -> loan.v1.GetLoanResponse
+	18, // 45: loan.v1.LoanService.ListLoans:output_type -> loan.v1.ListLoansResponse
+	20, // 46: loan.v1.LoanService.GetLoanStatus:output_type -> loan.v1.GetLoanStatusResponse
+	22, // 47: loan.v1.LoanService.AddGuarantor:output_type -> loan.v1.AddGuarantorResponse
+	24, // 48: loan.v1.LoanService.RemoveGuarantor:output_type -> loan.v1.RemoveGuarantorResponse
+	26, // 49: loan.v1.LoanService.ApproveGuarantor:output_type -> loan.v1.ApproveGuarantorResponse
+	28, // 50: loan.v1.LoanService.ListGuarantors:output_type -> loan.v1.ListGuarantorsResponse
+	40, // [40:51] is the sub-list for method output_type
+	29, // [29:40] is the sub-list for method input_type
+	29, // [29:29] is the sub-list for extension type_name
+	29, // [29:29] is the sub-list for extension extendee
+	0,  // [0:29] is the sub-list for field type_name
 }
 
 func init() { file_loan_v1_loan_proto_init() }
