@@ -64,7 +64,6 @@ func mapServiceError(err error) error {
 	}
 }
 
-// TODO-apply for loan accepts branch ID as string, recheck
 // TODO-when applying for loan, you can guarantee with your own shares
 // TODO--when applying for loan, concurrently or materialized checks, check whether members can provide the suggested colateral without reducing their, shares by 30%
 // TODO-shouldnt amounts be of money type***
@@ -74,7 +73,7 @@ func (h *Handlers) ApplyForLoan(ctx context.Context, req *loanv1.ApplyForLoanReq
 		return nil, status.Error(codes.InvalidArgument, "request must never be nil")
 	}
 
-	if req.GetBranchId() == "" {
+	if req.GetBranchId() <= 0 {
 		return nil, status.Error(codes.InvalidArgument, "branch id is invalid")
 
 	}

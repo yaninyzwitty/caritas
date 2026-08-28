@@ -326,7 +326,6 @@ func receiptExternalReference(receipt contributionsqlc.ContributionReceipt) pgty
 	return receipt.CheckoutRequestID
 }
 
-// TODO-verify working of this code
 func verifyAllocationsMatch(
 	expected []AllocationInput,
 	actual []contributionsqlc.ContributionAllocation,

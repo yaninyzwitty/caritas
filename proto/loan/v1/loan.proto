@@ -4,6 +4,8 @@ package loan.v1;
 
 
 import "google/protobuf/timestamp.proto";
+import "member/v1/member.proto";
+
 
 // LoanService manages loan lifecycle operations including application, approval, and disbursement.
 service LoanService {
@@ -120,12 +122,13 @@ message ProposedGuarantor {
 // ApplyForLoanRequest contains the information needed to apply for a new loan.
 message ApplyForLoanRequest {
   string  member_id               = 1;
-  string  branch_id               = 2;
+  int32  branch_id               = 2;
   string  principal               = 3;  // decimal.Decimal as string
   string  interest_rate           = 4;  // decimal.Decimal as string (percentage rate)
   int32   repayment_period_months = 5;
-  string officer_id  = 6; //TODO -remove this handle carefully with authentication
+  string officer_id  = 6; 
   repeated ProposedGuarantor guarantors = 7;
+  member.v1.Money applicant_share_pledge_amount = 8;
 }
 
 // ApplyForLoanResponse returns the newly created loan application's identifiers.
@@ -138,7 +141,7 @@ message ApplyForLoanResponse {
 message ApproveLoanRequest {
   string loan_id = 1;
   string reason  = 2;
-  string officer_id  = 3; //TODO -remove this handle carefully with authentication
+  string officer_id  = 3; 
 
 }
 

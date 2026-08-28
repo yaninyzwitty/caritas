@@ -128,9 +128,6 @@ func (s *Service) ProcessDarajaSTKPayment(ctx context.Context, payment DarajaSTK
 		return CreatedReceipt{}, ErrInvalidPayment
 	}
 
-	// TODO-remove this logging
-	slog.Info("values", "checkoutID", checkoutID, "mpesaReceiptID", mpesaReceipt, "amount", payment.Amount)
-
 	var receiptID pgtype.UUID
 	var result CreatedReceipt
 	var processErr error
