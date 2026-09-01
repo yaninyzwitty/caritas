@@ -7,6 +7,12 @@ import "member/v1/member.proto";
 
 service ContributionService {
   rpc InitiateDarajaSTKContribution(InitiateDarajaSTKContributionRequest) returns (InitiateDarajaSTKContributionResponse);
+  rpc OpenCashierSession(OpenCashierSessionRequest) returns (OpenCashierSessionResponse);
+  rpc CreateCashContribution(CreateCashContributionRequest) returns (CreateCashContributionResponse);
+  rpc CloseCashierSession(CloseCashierSessionRequest) returns (CloseCashierSessionResponse);
+  rpc AcceptCashHandover(AcceptCashHandoverRequest) returns (AcceptCashHandoverResponse);
+  rpc RecordCashDeposit(RecordCashDepositRequest) returns (RecordCashDepositResponse);
+  rpc VerifyCashDeposit(VerifyCashDepositRequest) returns (VerifyCashDepositResponse);
 }
 
 enum ContributionPaymentRequestStatus {
@@ -49,4 +55,93 @@ message InitiateDarajaSTKContributionResponse {
   string checkout_request_id = 2;
   ContributionPaymentRequestStatus status = 3;
   google.protobuf.Timestamp created_at = 4;
+}
+
+message OpenCashierSessionRequest {}
+
+message OpenCashierSessionResponse {
+  CashierSession session = 1;
+}
+
+message CashierSession {
+  string id = 1;
+  int64 branch_id = 2;
+  string cashier_id = 3;
+  string status = 4;
+  member.v1.Money expected_amount = 5;
+  member.v1.Money counted_amount = 6;
+  member.v1.Money variance = 7;
+  string variance_reason = 8;
+  google.protobuf.Timestamp opened_at = 9;
+  google.protobuf.Timestamp closed_at = 10;
+  google.protobuf.Timestamp handed_over_at = 11;
+  google.protobuf.Timestamp deposited_at = 12;
+}
+
+message CreateCashContributionRequest {
+  string idempotency_key = 1;
+  string session_id = 2;
+  string member_id = 3;
+  member.v1.Money amount = 4;
+  string contribution_period = 5;
+  repeated ContributionAllocationInput allocations = 6;
+}
+
+message CashContributionReceipt {
+  string id = 1;
+  string internal_receipt_reference = 2;
+  string session_id = 3;
+  string status = 4;
+  member.v1.Money amount = 5;
+  google.protobuf.Timestamp received_at = 6;
+}
+
+message CreateCashContributionResponse {
+  CashContributionReceipt receipt = 1;
+}
+
+message CloseCashierSessionRequest {
+  string session_id = 1;
+  member.v1.Money counted_amount = 2;
+  string variance_reason = 3;
+}
+
+message CloseCashierSessionResponse {
+  CashierSession session = 1;
+}
+
+message AcceptCashHandoverRequest {
+  string session_id = 1;
+}
+
+message AcceptCashHandoverResponse {
+  CashierSession session = 1;
+}
+
+message RecordCashDepositRequest {
+  repeated string session_ids = 1;
+  member.v1.Money amount = 2;
+  string bank_reference = 3;
+}
+
+message CashDeposit {
+  string id = 1;
+  int64 branch_id = 2;
+  member.v1.Money amount = 3;
+  string bank_reference = 4;
+  string status = 5;
+  google.protobuf.Timestamp recorded_at = 6;
+  google.protobuf.Timestamp verified_at = 7;
+}
+
+message RecordCashDepositResponse {
+  CashDeposit deposit = 1;
+}
+
+message VerifyCashDepositRequest {
+  string deposit_id = 1;
+}
+
+message VerifyCashDepositResponse {
+  CashDeposit deposit = 1;
 }

@@ -29,6 +29,8 @@ const (
 	permissionLoanDisburse    = "loan.disburse"
 	permissionRepaymentRecord = "repayment.record"
 	permissionCreditWithdraw  = "credit.withdraw"
+	permissionCashRecord      = "cash.record"
+	permissionCashApprove     = "cash.approve"
 )
 
 var methodPermissions = map[string]string{
@@ -54,6 +56,12 @@ var methodPermissions = map[string]string{
 	"/loan.v1.RepaymentService/RecordRepayment":                          permissionRepaymentRecord,
 	"/loan.v1.CreditService/RequestCreditWithdrawal":                     permissionCreditWithdraw,
 	"/contribution.v1.ContributionService/InitiateDarajaSTKContribution": permissionRepaymentRecord,
+	"/contribution.v1.ContributionService/OpenCashierSession":            permissionCashRecord,
+	"/contribution.v1.ContributionService/CreateCashContribution":        permissionCashRecord,
+	"/contribution.v1.ContributionService/CloseCashierSession":           permissionCashRecord,
+	"/contribution.v1.ContributionService/AcceptCashHandover":            permissionCashApprove,
+	"/contribution.v1.ContributionService/RecordCashDeposit":             permissionCashApprove,
+	"/contribution.v1.ContributionService/VerifyCashDeposit":             permissionCashApprove,
 }
 
 var rolePermissions = map[string]map[string]bool{
@@ -67,6 +75,8 @@ var rolePermissions = map[string]map[string]bool{
 		permissionLoanDisburse:    true,
 		permissionRepaymentRecord: true,
 		permissionCreditWithdraw:  true,
+		permissionCashRecord:      true,
+		permissionCashApprove:     true,
 	},
 	roleManager: {
 		permissionMemberWrite:     true,
@@ -77,6 +87,8 @@ var rolePermissions = map[string]map[string]bool{
 		permissionLoanDisburse:    true,
 		permissionRepaymentRecord: true,
 		permissionCreditWithdraw:  true,
+		permissionCashRecord:      true,
+		permissionCashApprove:     true,
 	},
 	roleLoanOfficer: {
 		permissionMemberWrite: true,
@@ -85,6 +97,7 @@ var rolePermissions = map[string]map[string]bool{
 	roleCashier: {
 		permissionShareWrite:      true,
 		permissionRepaymentRecord: true,
+		permissionCashRecord:      true,
 	},
 	roleChairperson: {
 		permissionLoanApprove:    true,

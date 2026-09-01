@@ -190,7 +190,7 @@ func (s *Service) ProcessReceipt(ctx context.Context, receiptID, processedBy pgt
 
 		if len(allocations) == 0 {
 			processErr = ErrAllocationRequired
-			return failReceipt(ctx, q, receipt.ID, processErr, &result)
+			return failReceipt(ctx, q, receipt.ID, receiptFailureStatus(receipt), processErr, &result)
 		}
 
 		result.Allocations = result.Allocations[:0]
@@ -202,7 +202,7 @@ func (s *Service) ProcessReceipt(ctx context.Context, receiptID, processedBy pgt
 			case contributionsqlc.ContributionAllocationStatusPending:
 			default:
 				processErr = ErrReceiptNotProcessable
-				return failReceipt(ctx, q, receipt.ID, processErr, &result)
+				return failReceipt(ctx, q, receipt.ID, receiptFailureStatus(receipt), processErr, &result)
 			}
 
 			referenceID, externalReference, err := s.processAllocation(ctx, receipt, allocation, receipt.ReceivedBy)
@@ -214,7 +214,7 @@ func (s *Service) ProcessReceipt(ctx context.Context, receiptID, processedBy pgt
 				}); updateErr != nil {
 					return fmt.Errorf("mark allocation failed: %w", updateErr)
 				}
-				return failReceipt(ctx, q, receipt.ID, processErr, &result)
+				return failReceipt(ctx, q, receipt.ID, receiptFailureStatus(receipt), processErr, &result)
 			}
 
 			allocation, err = q.UpdateContributionAllocationCompleted(ctx, contributionsqlc.UpdateContributionAllocationCompletedParams{
@@ -301,12 +301,13 @@ func failReceipt(
 	ctx context.Context,
 	q contributionsqlc.Querier,
 	receiptID pgtype.UUID,
+	status contributionsqlc.ContributionReceiptStatus,
 	cause error,
 	result *CreatedReceipt,
 ) error {
 	receipt, err := q.UpdateContributionReceiptStatus(ctx, contributionsqlc.UpdateContributionReceiptStatusParams{
 		ID:            receiptID,
-		Status:        contributionsqlc.ContributionReceiptStatusFailed,
+		Status:        status,
 		FailureReason: text(cause.Error()),
 	})
 	if err != nil {
@@ -316,12 +317,25 @@ func failReceipt(
 	return nil
 }
 
-// receiptExternalReference preserves the payment gateway reference on every
-// completed allocation. Removing it would force reconciliation to recover the
-// external ID by joining back to the receipt for each allocation row.
+// receiptFailureStatus keeps accepted cash visible to till reconciliation.
+// Without it, a downstream allocation error would make physical money look
+// like a payment that was never received.
+func receiptFailureStatus(receipt contributionsqlc.ContributionReceipt) contributionsqlc.ContributionReceiptStatus {
+	if receipt.SourceChannel == contributionsqlc.ContributionSourceChannelCash {
+		return contributionsqlc.ContributionReceiptStatusManualReview
+	}
+	return contributionsqlc.ContributionReceiptStatusFailed
+}
+
+// receiptExternalReference preserves the source receipt reference on every
+// completed allocation. Removing it would force reconciliation to join every
+// allocation back to its cash or gateway receipt.
 func receiptExternalReference(receipt contributionsqlc.ContributionReceipt) pgtype.Text {
 	if receipt.ExternalTransactionID.Valid {
 		return receipt.ExternalTransactionID
+	}
+	if receipt.InternalReceiptReference.Valid {
+		return receipt.InternalReceiptReference
 	}
 	return receipt.CheckoutRequestID
 }
@@ -410,6 +424,15 @@ func existingReceipt(
 	q contributionsqlc.Querier,
 	params contributionsqlc.InsertContributionReceiptParams,
 ) (contributionsqlc.ContributionReceipt, error) {
+	if params.IdempotencyKey.Valid {
+		receipt, err := q.GetContributionReceiptByIdempotencyKey(ctx, params.IdempotencyKey)
+		if err == nil {
+			return receipt, nil
+		}
+		if !errors.Is(err, pgx.ErrNoRows) {
+			return contributionsqlc.ContributionReceipt{}, fmt.Errorf("get receipt by idempotency key: %w", err)
+		}
+	}
 	if params.ExternalTransactionID.Valid {
 		receipt, err := q.GetContributionReceiptByExternalTransactionID(ctx, params.ExternalTransactionID)
 		if err == nil {
@@ -448,9 +471,10 @@ func validateReceipt(params contributionsqlc.InsertContributionReceiptParams, al
 	if len(allocations) == 0 {
 		return ErrAllocationRequired
 	}
-	hasExternalID := params.ExternalTransactionID.Valid && strings.TrimSpace(params.ExternalTransactionID.String) != ""
-	hasCheckoutID := params.CheckoutRequestID.Valid && strings.TrimSpace(params.CheckoutRequestID.String) != ""
-	if !hasExternalID && !hasCheckoutID {
+	hasReference := params.ExternalTransactionID.Valid && strings.TrimSpace(params.ExternalTransactionID.String) != ""
+	hasReference = hasReference || params.CheckoutRequestID.Valid && strings.TrimSpace(params.CheckoutRequestID.String) != ""
+	hasReference = hasReference || params.InternalReceiptReference.Valid && strings.TrimSpace(params.InternalReceiptReference.String) != ""
+	if !hasReference {
 		return ErrReceiptReferenceRequired
 	}
 

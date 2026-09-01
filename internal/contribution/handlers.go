@@ -77,6 +77,159 @@ func (h *Handlers) InitiateDarajaSTKContribution(ctx context.Context, req *contr
 	return paymentRequestToProto(paymentRequest)
 }
 
+// OpenCashierSession starts the custody boundary that every cash receipt must
+// join. Without it, received notes cannot be assigned to one accountable till.
+func (h *Handlers) OpenCashierSession(ctx context.Context, _ *contributionv1.OpenCashierSessionRequest) (*contributionv1.OpenCashierSessionResponse, error) {
+	actor, ok := auth.PrincipalFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "authenticated cashier is required")
+	}
+	session, err := h.service.OpenCashierSession(ctx, actor.BranchID, actor.ID)
+	if err != nil {
+		return nil, mapContributionError(err)
+	}
+	result, err := cashierSessionToProto(session)
+	return &contributionv1.OpenCashierSessionResponse{Session: result}, err
+}
+
+// CreateCashContribution records accepted cash before applying its immutable
+// allocation plan. Without this endpoint, cashiers can only use the STK path
+// and physical receipts remain outside reconciliation.
+func (h *Handlers) CreateCashContribution(ctx context.Context, req *contributionv1.CreateCashContributionRequest) (*contributionv1.CreateCashContributionResponse, error) {
+	actor, ok := auth.PrincipalFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "authenticated cashier is required")
+	}
+	sessionID, err := stringToUUID(req.GetSessionId())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid session_id")
+	}
+	memberID, err := stringToUUID(req.GetMemberId())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid member_id")
+	}
+	period, err := time.Parse("2006-01-02", req.GetContributionPeriod())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid contribution_period")
+	}
+	allocations, err := allocationsFromProto(req.GetAllocations())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	result, err := h.service.CreateCashReceipt(ctx, contributionsqlc.InsertContributionReceiptParams{
+		IdempotencyKey:     text(req.GetIdempotencyKey()),
+		CashierSessionID:   sessionID,
+		MemberID:           memberID,
+		BranchID:           actor.BranchID,
+		ContributionPeriod: pgtype.Date{Time: period, Valid: true},
+		ReceivedAmount:     moneyToNumeric(req.GetAmount()),
+		ReceivedBy:         actor.ID,
+	}, allocations)
+	if err != nil {
+		return nil, mapContributionError(err)
+	}
+	id, err := uuidToString(result.Receipt.ID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to encode receipt id")
+	}
+	session, err := uuidToString(result.Receipt.CashierSessionID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to encode cashier session id")
+	}
+	response := &contributionv1.CashContributionReceipt{
+		Id:                       id,
+		InternalReceiptReference: result.Receipt.InternalReceiptReference.String,
+		SessionId:                session,
+		Status:                   string(result.Receipt.Status),
+		Amount:                   numericToMoney(result.Receipt.ReceivedAmount),
+	}
+	if result.Receipt.ReceivedAt.Valid {
+		response.ReceivedAt = timestamppb.New(result.Receipt.ReceivedAt.Time)
+	}
+	return &contributionv1.CreateCashContributionResponse{Receipt: response}, nil
+}
+
+// CloseCashierSession snapshots expected cash while the session row is locked.
+// Without it, a receipt could race the count and create an unexplained variance.
+func (h *Handlers) CloseCashierSession(ctx context.Context, req *contributionv1.CloseCashierSessionRequest) (*contributionv1.CloseCashierSessionResponse, error) {
+	actor, ok := auth.PrincipalFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "authenticated cashier is required")
+	}
+	id, err := stringToUUID(req.GetSessionId())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid session_id")
+	}
+	session, err := h.service.CloseCashierSession(ctx, id, actor.ID, moneyToNumeric(req.GetCountedAmount()), req.GetVarianceReason())
+	if err != nil {
+		return nil, mapContributionError(err)
+	}
+	result, err := cashierSessionToProto(session)
+	return &contributionv1.CloseCashierSessionResponse{Session: result}, err
+}
+
+// AcceptCashHandover records the second person who takes custody from the
+// cashier. Removing it collapses collection and handover into one actor.
+func (h *Handlers) AcceptCashHandover(ctx context.Context, req *contributionv1.AcceptCashHandoverRequest) (*contributionv1.AcceptCashHandoverResponse, error) {
+	actor, ok := auth.PrincipalFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "authenticated manager is required")
+	}
+	id, err := stringToUUID(req.GetSessionId())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid session_id")
+	}
+	session, err := h.service.AcceptCashHandover(ctx, id, actor.ID, actor.BranchID)
+	if err != nil {
+		return nil, mapContributionError(err)
+	}
+	result, err := cashierSessionToProto(session)
+	return &contributionv1.AcceptCashHandoverResponse{Session: result}, err
+}
+
+// RecordCashDeposit joins handed-over sessions to one bank reference. Without
+// the join, the system can prove collection but not where the cash went.
+func (h *Handlers) RecordCashDeposit(ctx context.Context, req *contributionv1.RecordCashDepositRequest) (*contributionv1.RecordCashDepositResponse, error) {
+	actor, ok := auth.PrincipalFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "authenticated manager is required")
+	}
+	ids := make([]pgtype.UUID, 0, len(req.GetSessionIds()))
+	for _, value := range req.GetSessionIds() {
+		id, err := stringToUUID(value)
+		if err != nil {
+			return nil, status.Error(codes.InvalidArgument, "invalid session_id")
+		}
+		ids = append(ids, id)
+	}
+	deposit, err := h.service.RecordCashDeposit(ctx, ids, moneyToNumeric(req.GetAmount()), req.GetBankReference(), actor.BranchID, actor.ID)
+	if err != nil {
+		return nil, mapContributionError(err)
+	}
+	result, err := cashDepositToProto(deposit)
+	return &contributionv1.RecordCashDepositResponse{Deposit: result}, err
+}
+
+// VerifyCashDeposit records bank-side confirmation separately from the person
+// who entered the slip. Without it, a typed bank reference is treated as proof.
+func (h *Handlers) VerifyCashDeposit(ctx context.Context, req *contributionv1.VerifyCashDepositRequest) (*contributionv1.VerifyCashDepositResponse, error) {
+	actor, ok := auth.PrincipalFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "authenticated manager is required")
+	}
+	id, err := stringToUUID(req.GetDepositId())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid deposit_id")
+	}
+	deposit, err := h.service.VerifyCashDeposit(ctx, id, actor.ID, actor.BranchID)
+	if err != nil {
+		return nil, mapContributionError(err)
+	}
+	result, err := cashDepositToProto(deposit)
+	return &contributionv1.VerifyCashDepositResponse{Deposit: result}, err
+}
+
 // allocationsFromProto maps API allocation rows to service inputs in one pass.
 // Without it, the RPC body would mix enum conversion, UUID parsing and request
 // orchestration, making invalid target handling easy to miss.
@@ -165,6 +318,80 @@ func moneyToNumeric(m *memberv1.Money) pgtype.Numeric {
 	return pgtype.Numeric{Int: total, Exp: -9, Valid: true}
 }
 
+// numericToMoney is shared by receipt, session, and deposit responses. Without
+// one scale conversion, NUMERIC(19,4) values can be rendered differently at
+// each custody boundary.
+func numericToMoney(n pgtype.Numeric) *memberv1.Money {
+	if !n.Valid || n.Int == nil {
+		return nil
+	}
+	nanos := numericToScale(n, -9)
+	units := new(big.Int)
+	fraction := new(big.Int)
+	units.QuoRem(nanos, big.NewInt(1_000_000_000), fraction)
+	return &memberv1.Money{CurrencyCode: "KES", Units: units.Int64(), Nanos: int32(fraction.Int64())}
+}
+
+// cashierSessionToProto keeps the three session transitions on one response
+// shape. Removing it would duplicate nullable money and timestamp handling in
+// open, close, and handover RPCs.
+func cashierSessionToProto(row contributionsqlc.CashierSession) (*contributionv1.CashierSession, error) {
+	id, err := uuidToString(row.ID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to encode cashier session id")
+	}
+	cashierID, err := uuidToString(row.CashierID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to encode cashier id")
+	}
+	result := &contributionv1.CashierSession{
+		Id:             id,
+		BranchId:       row.BranchID,
+		CashierId:      cashierID,
+		Status:         string(row.Status),
+		ExpectedAmount: numericToMoney(row.ExpectedAmount),
+		CountedAmount:  numericToMoney(row.CountedAmount),
+		Variance:       numericToMoney(row.Variance),
+		VarianceReason: row.VarianceReason.String,
+	}
+	if row.OpenedAt.Valid {
+		result.OpenedAt = timestamppb.New(row.OpenedAt.Time)
+	}
+	if row.ClosedAt.Valid {
+		result.ClosedAt = timestamppb.New(row.ClosedAt.Time)
+	}
+	if row.HandedOverAt.Valid {
+		result.HandedOverAt = timestamppb.New(row.HandedOverAt.Time)
+	}
+	if row.DepositedAt.Valid {
+		result.DepositedAt = timestamppb.New(row.DepositedAt.Time)
+	}
+	return result, nil
+}
+
+// cashDepositToProto gives record and verification RPCs the same immutable
+// deposit identity. Without it, those endpoints can disagree on bank evidence.
+func cashDepositToProto(row contributionsqlc.CashDeposit) (*contributionv1.CashDeposit, error) {
+	id, err := uuidToString(row.ID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to encode cash deposit id")
+	}
+	result := &contributionv1.CashDeposit{
+		Id:            id,
+		BranchId:      row.BranchID,
+		Amount:        numericToMoney(row.Amount),
+		BankReference: row.BankReference,
+		Status:        string(row.Status),
+	}
+	if row.RecordedAt.Valid {
+		result.RecordedAt = timestamppb.New(row.RecordedAt.Time)
+	}
+	if row.VerifiedAt.Valid {
+		result.VerifiedAt = timestamppb.New(row.VerifiedAt.Time)
+	}
+	return result, nil
+}
+
 // paymentRequestToProto maps the sqlc row returned by initiation to the RPC
 // response. Without it, the handler would repeat nullable checkout/status/time
 // translation every time this request state is returned.
@@ -217,6 +444,17 @@ func mapContributionError(err error) error {
 		return status.Error(codes.InvalidArgument, err.Error())
 	case errors.Is(err, ErrPaymentRequestInProgress):
 		return status.Error(codes.AlreadyExists, err.Error())
+	case errors.Is(err, ErrCashierSessionNotFound):
+		return status.Error(codes.NotFound, err.Error())
+	case errors.Is(err, ErrCashierSessionState),
+		errors.Is(err, ErrCashSeparationOfDuties),
+		errors.Is(err, ErrCashDepositSelfVerify):
+		return status.Error(codes.FailedPrecondition, err.Error())
+	case errors.Is(err, ErrCashVarianceReason),
+		errors.Is(err, ErrCashDepositInvalid),
+		errors.Is(err, ErrReceiptReferenceRequired),
+		errors.Is(err, ErrInconsistentReceipt):
+		return status.Error(codes.InvalidArgument, err.Error())
 	case errors.Is(err, ErrDarajaClientMissing):
 		return status.Error(codes.FailedPrecondition, err.Error())
 	case errors.Is(err, context.Canceled):

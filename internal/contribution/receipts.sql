@@ -3,6 +3,9 @@ INSERT INTO contribution_receipts (
     source_channel,
     external_transaction_id,
     checkout_request_id,
+    internal_receipt_reference,
+    idempotency_key,
+    cashier_session_id,
     member_id,
     branch_id,
     contribution_period,
@@ -12,7 +15,7 @@ INSERT INTO contribution_receipts (
     received_by,
     received_at
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, 'pending', $9, $10
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'pending', $12, $13
 )
 ON CONFLICT DO NOTHING
 RETURNING *;
@@ -31,6 +34,11 @@ WHERE external_transaction_id = $1 AND is_deleted = FALSE;
 SELECT *
 FROM contribution_receipts
 WHERE checkout_request_id = $1 AND is_deleted = FALSE;
+
+-- name: GetContributionReceiptByIdempotencyKey :one
+SELECT *
+FROM contribution_receipts
+WHERE idempotency_key = $1 AND is_deleted = FALSE;
 
 -- name: LockContributionReceiptByID :one
 SELECT *
