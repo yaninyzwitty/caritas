@@ -11,6 +11,92 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type CashDepositStatus string
+
+const (
+	CashDepositStatusRecorded CashDepositStatus = "recorded"
+	CashDepositStatusVerified CashDepositStatus = "verified"
+)
+
+func (e *CashDepositStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = CashDepositStatus(s)
+	case string:
+		*e = CashDepositStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for CashDepositStatus: %T", src)
+	}
+	return nil
+}
+
+type NullCashDepositStatus struct {
+	CashDepositStatus CashDepositStatus `json:"cashDepositStatus"`
+	Valid             bool              `json:"valid"` // Valid is true if CashDepositStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullCashDepositStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.CashDepositStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.CashDepositStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullCashDepositStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.CashDepositStatus), nil
+}
+
+type CashierSessionStatus string
+
+const (
+	CashierSessionStatusOpen       CashierSessionStatus = "open"
+	CashierSessionStatusClosed     CashierSessionStatus = "closed"
+	CashierSessionStatusHandedOver CashierSessionStatus = "handed_over"
+	CashierSessionStatusDeposited  CashierSessionStatus = "deposited"
+)
+
+func (e *CashierSessionStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = CashierSessionStatus(s)
+	case string:
+		*e = CashierSessionStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for CashierSessionStatus: %T", src)
+	}
+	return nil
+}
+
+type NullCashierSessionStatus struct {
+	CashierSessionStatus CashierSessionStatus `json:"cashierSessionStatus"`
+	Valid                bool                 `json:"valid"` // Valid is true if CashierSessionStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullCashierSessionStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.CashierSessionStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.CashierSessionStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullCashierSessionStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.CashierSessionStatus), nil
+}
+
 type ContributionAllocationStatus string
 
 const (
@@ -233,6 +319,45 @@ func (ns NullContributionSourceChannel) Value() (driver.Value, error) {
 	return string(ns.ContributionSourceChannel), nil
 }
 
+type CashDeposit struct {
+	ID            pgtype.UUID        `json:"id"`
+	BranchID      int64              `json:"branchId"`
+	Amount        pgtype.Numeric     `json:"amount"`
+	BankReference string             `json:"bankReference"`
+	Status        CashDepositStatus  `json:"status"`
+	RecordedBy    pgtype.UUID        `json:"recordedBy"`
+	RecordedAt    pgtype.Timestamptz `json:"recordedAt"`
+	VerifiedBy    pgtype.UUID        `json:"verifiedBy"`
+	VerifiedAt    pgtype.Timestamptz `json:"verifiedAt"`
+	CreatedAt     pgtype.Timestamptz `json:"createdAt"`
+	UpdatedAt     pgtype.Timestamptz `json:"updatedAt"`
+}
+
+type CashDepositSession struct {
+	DepositID pgtype.UUID        `json:"depositId"`
+	SessionID pgtype.UUID        `json:"sessionId"`
+	CreatedAt pgtype.Timestamptz `json:"createdAt"`
+}
+
+type CashierSession struct {
+	ID             pgtype.UUID          `json:"id"`
+	BranchID       int64                `json:"branchId"`
+	CashierID      pgtype.UUID          `json:"cashierId"`
+	Status         CashierSessionStatus `json:"status"`
+	ExpectedAmount pgtype.Numeric       `json:"expectedAmount"`
+	CountedAmount  pgtype.Numeric       `json:"countedAmount"`
+	Variance       pgtype.Numeric       `json:"variance"`
+	VarianceReason pgtype.Text          `json:"varianceReason"`
+	OpenedAt       pgtype.Timestamptz   `json:"openedAt"`
+	ClosedAt       pgtype.Timestamptz   `json:"closedAt"`
+	ClosedBy       pgtype.UUID          `json:"closedBy"`
+	HandedOverAt   pgtype.Timestamptz   `json:"handedOverAt"`
+	HandedOverTo   pgtype.UUID          `json:"handedOverTo"`
+	DepositedAt    pgtype.Timestamptz   `json:"depositedAt"`
+	CreatedAt      pgtype.Timestamptz   `json:"createdAt"`
+	UpdatedAt      pgtype.Timestamptz   `json:"updatedAt"`
+}
+
 type ContributionAllocation struct {
 	ID                       pgtype.UUID                  `json:"id"`
 	ReceiptID                pgtype.UUID                  `json:"receiptId"`
@@ -265,23 +390,26 @@ type ContributionPaymentRequest struct {
 }
 
 type ContributionReceipt struct {
-	ID                    pgtype.UUID               `json:"id"`
-	SourceChannel         ContributionSourceChannel `json:"sourceChannel"`
-	ExternalTransactionID pgtype.Text               `json:"externalTransactionId"`
-	CheckoutRequestID     pgtype.Text               `json:"checkoutRequestId"`
-	MemberID              pgtype.UUID               `json:"memberId"`
-	BranchID              int64                     `json:"branchId"`
-	ContributionPeriod    pgtype.Date               `json:"contributionPeriod"`
-	ReceivedAmount        pgtype.Numeric            `json:"receivedAmount"`
-	AllocationPlan        []byte                    `json:"allocationPlan"`
-	Status                ContributionReceiptStatus `json:"status"`
-	FailureReason         pgtype.Text               `json:"failureReason"`
-	ReceivedBy            pgtype.UUID               `json:"receivedBy"`
-	ReceivedAt            pgtype.Timestamptz        `json:"receivedAt"`
-	IsDeleted             bool                      `json:"isDeleted"`
-	CreatedAt             pgtype.Timestamptz        `json:"createdAt"`
-	UpdatedAt             pgtype.Timestamptz        `json:"updatedAt"`
-	DeletedAt             pgtype.Timestamptz        `json:"deletedAt"`
-	DeletedBy             pgtype.UUID               `json:"deletedBy"`
-	DeletionReason        pgtype.Text               `json:"deletionReason"`
+	ID                       pgtype.UUID               `json:"id"`
+	SourceChannel            ContributionSourceChannel `json:"sourceChannel"`
+	ExternalTransactionID    pgtype.Text               `json:"externalTransactionId"`
+	CheckoutRequestID        pgtype.Text               `json:"checkoutRequestId"`
+	MemberID                 pgtype.UUID               `json:"memberId"`
+	BranchID                 int64                     `json:"branchId"`
+	ContributionPeriod       pgtype.Date               `json:"contributionPeriod"`
+	ReceivedAmount           pgtype.Numeric            `json:"receivedAmount"`
+	AllocationPlan           []byte                    `json:"allocationPlan"`
+	Status                   ContributionReceiptStatus `json:"status"`
+	FailureReason            pgtype.Text               `json:"failureReason"`
+	ReceivedBy               pgtype.UUID               `json:"receivedBy"`
+	ReceivedAt               pgtype.Timestamptz        `json:"receivedAt"`
+	IsDeleted                bool                      `json:"isDeleted"`
+	CreatedAt                pgtype.Timestamptz        `json:"createdAt"`
+	UpdatedAt                pgtype.Timestamptz        `json:"updatedAt"`
+	DeletedAt                pgtype.Timestamptz        `json:"deletedAt"`
+	DeletedBy                pgtype.UUID               `json:"deletedBy"`
+	DeletionReason           pgtype.Text               `json:"deletionReason"`
+	InternalReceiptReference pgtype.Text               `json:"internalReceiptReference"`
+	IdempotencyKey           pgtype.Text               `json:"idempotencyKey"`
+	CashierSessionID         pgtype.UUID               `json:"cashierSessionId"`
 }

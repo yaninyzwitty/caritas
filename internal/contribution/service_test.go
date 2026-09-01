@@ -38,6 +38,27 @@ func TestValidateReceiptRequiresReference(t *testing.T) {
 	}
 }
 
+func TestValidateReceiptAcceptsInternalCashReference(t *testing.T) {
+	params := validReceiptParams(t, "1000")
+	params.SourceChannel = contributionsqlc.ContributionSourceChannelCash
+	params.ExternalTransactionID = pgtype.Text{}
+	params.InternalReceiptReference = text("CASH-1")
+
+	err := validateReceipt(params, []AllocationInput{
+		{Type: contributionsqlc.ContributionAllocationTypeCom, Amount: mustNumeric(t, "1000")},
+	})
+	if err != nil {
+		t.Fatalf("validate cash receipt: %v", err)
+	}
+}
+
+func TestCashAllocationFailureRequiresManualReview(t *testing.T) {
+	receipt := contributionsqlc.ContributionReceipt{SourceChannel: contributionsqlc.ContributionSourceChannelCash}
+	if got := receiptFailureStatus(receipt); got != contributionsqlc.ContributionReceiptStatusManualReview {
+		t.Fatalf("failure status = %q, want manual_review", got)
+	}
+}
+
 func TestValidateReceiptRejectsUnsupportedSourceChannel(t *testing.T) {
 	params := validReceiptParams(t, "1000")
 	params.SourceChannel = contributionsqlc.ContributionSourceChannel("daraja_paybill")
@@ -109,6 +130,13 @@ func TestProcessAllocationCompletesContributionOwnedFeeLocally(t *testing.T) {
 	}
 	if externalReference.String != "mpesa-receipt-2" || !externalReference.Valid {
 		t.Fatalf("external reference = %+v", externalReference)
+	}
+}
+
+func TestCashReceiptReferenceFollowsAllocations(t *testing.T) {
+	receipt := contributionsqlc.ContributionReceipt{InternalReceiptReference: text("CASH-1")}
+	if got := receiptExternalReference(receipt); !got.Valid || got.String != "CASH-1" {
+		t.Fatalf("allocation reference = %+v", got)
 	}
 }
 

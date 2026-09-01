@@ -20,6 +20,12 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	ContributionService_InitiateDarajaSTKContribution_FullMethodName = "/contribution.v1.ContributionService/InitiateDarajaSTKContribution"
+	ContributionService_OpenCashierSession_FullMethodName            = "/contribution.v1.ContributionService/OpenCashierSession"
+	ContributionService_CreateCashContribution_FullMethodName        = "/contribution.v1.ContributionService/CreateCashContribution"
+	ContributionService_CloseCashierSession_FullMethodName           = "/contribution.v1.ContributionService/CloseCashierSession"
+	ContributionService_AcceptCashHandover_FullMethodName            = "/contribution.v1.ContributionService/AcceptCashHandover"
+	ContributionService_RecordCashDeposit_FullMethodName             = "/contribution.v1.ContributionService/RecordCashDeposit"
+	ContributionService_VerifyCashDeposit_FullMethodName             = "/contribution.v1.ContributionService/VerifyCashDeposit"
 )
 
 // ContributionServiceClient is the client API for ContributionService service.
@@ -27,6 +33,12 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ContributionServiceClient interface {
 	InitiateDarajaSTKContribution(ctx context.Context, in *InitiateDarajaSTKContributionRequest, opts ...grpc.CallOption) (*InitiateDarajaSTKContributionResponse, error)
+	OpenCashierSession(ctx context.Context, in *OpenCashierSessionRequest, opts ...grpc.CallOption) (*OpenCashierSessionResponse, error)
+	CreateCashContribution(ctx context.Context, in *CreateCashContributionRequest, opts ...grpc.CallOption) (*CreateCashContributionResponse, error)
+	CloseCashierSession(ctx context.Context, in *CloseCashierSessionRequest, opts ...grpc.CallOption) (*CloseCashierSessionResponse, error)
+	AcceptCashHandover(ctx context.Context, in *AcceptCashHandoverRequest, opts ...grpc.CallOption) (*AcceptCashHandoverResponse, error)
+	RecordCashDeposit(ctx context.Context, in *RecordCashDepositRequest, opts ...grpc.CallOption) (*RecordCashDepositResponse, error)
+	VerifyCashDeposit(ctx context.Context, in *VerifyCashDepositRequest, opts ...grpc.CallOption) (*VerifyCashDepositResponse, error)
 }
 
 type contributionServiceClient struct {
@@ -47,11 +59,77 @@ func (c *contributionServiceClient) InitiateDarajaSTKContribution(ctx context.Co
 	return out, nil
 }
 
+func (c *contributionServiceClient) OpenCashierSession(ctx context.Context, in *OpenCashierSessionRequest, opts ...grpc.CallOption) (*OpenCashierSessionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(OpenCashierSessionResponse)
+	err := c.cc.Invoke(ctx, ContributionService_OpenCashierSession_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *contributionServiceClient) CreateCashContribution(ctx context.Context, in *CreateCashContributionRequest, opts ...grpc.CallOption) (*CreateCashContributionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateCashContributionResponse)
+	err := c.cc.Invoke(ctx, ContributionService_CreateCashContribution_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *contributionServiceClient) CloseCashierSession(ctx context.Context, in *CloseCashierSessionRequest, opts ...grpc.CallOption) (*CloseCashierSessionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CloseCashierSessionResponse)
+	err := c.cc.Invoke(ctx, ContributionService_CloseCashierSession_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *contributionServiceClient) AcceptCashHandover(ctx context.Context, in *AcceptCashHandoverRequest, opts ...grpc.CallOption) (*AcceptCashHandoverResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AcceptCashHandoverResponse)
+	err := c.cc.Invoke(ctx, ContributionService_AcceptCashHandover_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *contributionServiceClient) RecordCashDeposit(ctx context.Context, in *RecordCashDepositRequest, opts ...grpc.CallOption) (*RecordCashDepositResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RecordCashDepositResponse)
+	err := c.cc.Invoke(ctx, ContributionService_RecordCashDeposit_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *contributionServiceClient) VerifyCashDeposit(ctx context.Context, in *VerifyCashDepositRequest, opts ...grpc.CallOption) (*VerifyCashDepositResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(VerifyCashDepositResponse)
+	err := c.cc.Invoke(ctx, ContributionService_VerifyCashDeposit_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ContributionServiceServer is the server API for ContributionService service.
 // All implementations must embed UnimplementedContributionServiceServer
 // for forward compatibility.
 type ContributionServiceServer interface {
 	InitiateDarajaSTKContribution(context.Context, *InitiateDarajaSTKContributionRequest) (*InitiateDarajaSTKContributionResponse, error)
+	OpenCashierSession(context.Context, *OpenCashierSessionRequest) (*OpenCashierSessionResponse, error)
+	CreateCashContribution(context.Context, *CreateCashContributionRequest) (*CreateCashContributionResponse, error)
+	CloseCashierSession(context.Context, *CloseCashierSessionRequest) (*CloseCashierSessionResponse, error)
+	AcceptCashHandover(context.Context, *AcceptCashHandoverRequest) (*AcceptCashHandoverResponse, error)
+	RecordCashDeposit(context.Context, *RecordCashDepositRequest) (*RecordCashDepositResponse, error)
+	VerifyCashDeposit(context.Context, *VerifyCashDepositRequest) (*VerifyCashDepositResponse, error)
 	mustEmbedUnimplementedContributionServiceServer()
 }
 
@@ -64,6 +142,24 @@ type UnimplementedContributionServiceServer struct{}
 
 func (UnimplementedContributionServiceServer) InitiateDarajaSTKContribution(context.Context, *InitiateDarajaSTKContributionRequest) (*InitiateDarajaSTKContributionResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method InitiateDarajaSTKContribution not implemented")
+}
+func (UnimplementedContributionServiceServer) OpenCashierSession(context.Context, *OpenCashierSessionRequest) (*OpenCashierSessionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method OpenCashierSession not implemented")
+}
+func (UnimplementedContributionServiceServer) CreateCashContribution(context.Context, *CreateCashContributionRequest) (*CreateCashContributionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateCashContribution not implemented")
+}
+func (UnimplementedContributionServiceServer) CloseCashierSession(context.Context, *CloseCashierSessionRequest) (*CloseCashierSessionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CloseCashierSession not implemented")
+}
+func (UnimplementedContributionServiceServer) AcceptCashHandover(context.Context, *AcceptCashHandoverRequest) (*AcceptCashHandoverResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AcceptCashHandover not implemented")
+}
+func (UnimplementedContributionServiceServer) RecordCashDeposit(context.Context, *RecordCashDepositRequest) (*RecordCashDepositResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RecordCashDeposit not implemented")
+}
+func (UnimplementedContributionServiceServer) VerifyCashDeposit(context.Context, *VerifyCashDepositRequest) (*VerifyCashDepositResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method VerifyCashDeposit not implemented")
 }
 func (UnimplementedContributionServiceServer) mustEmbedUnimplementedContributionServiceServer() {}
 func (UnimplementedContributionServiceServer) testEmbeddedByValue()                             {}
@@ -104,6 +200,114 @@ func _ContributionService_InitiateDarajaSTKContribution_Handler(srv interface{},
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ContributionService_OpenCashierSession_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(OpenCashierSessionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ContributionServiceServer).OpenCashierSession(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ContributionService_OpenCashierSession_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ContributionServiceServer).OpenCashierSession(ctx, req.(*OpenCashierSessionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ContributionService_CreateCashContribution_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateCashContributionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ContributionServiceServer).CreateCashContribution(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ContributionService_CreateCashContribution_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ContributionServiceServer).CreateCashContribution(ctx, req.(*CreateCashContributionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ContributionService_CloseCashierSession_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CloseCashierSessionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ContributionServiceServer).CloseCashierSession(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ContributionService_CloseCashierSession_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ContributionServiceServer).CloseCashierSession(ctx, req.(*CloseCashierSessionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ContributionService_AcceptCashHandover_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AcceptCashHandoverRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ContributionServiceServer).AcceptCashHandover(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ContributionService_AcceptCashHandover_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ContributionServiceServer).AcceptCashHandover(ctx, req.(*AcceptCashHandoverRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ContributionService_RecordCashDeposit_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RecordCashDepositRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ContributionServiceServer).RecordCashDeposit(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ContributionService_RecordCashDeposit_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ContributionServiceServer).RecordCashDeposit(ctx, req.(*RecordCashDepositRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ContributionService_VerifyCashDeposit_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(VerifyCashDepositRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ContributionServiceServer).VerifyCashDeposit(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ContributionService_VerifyCashDeposit_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ContributionServiceServer).VerifyCashDeposit(ctx, req.(*VerifyCashDepositRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ContributionService_ServiceDesc is the grpc.ServiceDesc for ContributionService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -114,6 +318,30 @@ var ContributionService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "InitiateDarajaSTKContribution",
 			Handler:    _ContributionService_InitiateDarajaSTKContribution_Handler,
+		},
+		{
+			MethodName: "OpenCashierSession",
+			Handler:    _ContributionService_OpenCashierSession_Handler,
+		},
+		{
+			MethodName: "CreateCashContribution",
+			Handler:    _ContributionService_CreateCashContribution_Handler,
+		},
+		{
+			MethodName: "CloseCashierSession",
+			Handler:    _ContributionService_CloseCashierSession_Handler,
+		},
+		{
+			MethodName: "AcceptCashHandover",
+			Handler:    _ContributionService_AcceptCashHandover_Handler,
+		},
+		{
+			MethodName: "RecordCashDeposit",
+			Handler:    _ContributionService_RecordCashDeposit_Handler,
+		},
+		{
+			MethodName: "VerifyCashDeposit",
+			Handler:    _ContributionService_VerifyCashDeposit_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
