@@ -105,7 +105,11 @@ func (s *Service) postTransaction(
 
 		switch txType {
 		case sharesqlc.ShareTransactionTypeWithdrawal:
-			if balanceNanos.Cmp(amountNanos) < 0 {
+			pledged, err := q.GetActivePledgedAmount(ctx, accountID)
+			if err != nil {
+				return fmt.Errorf("read active pledges: %w", err)
+			}
+			if new(big.Int).Sub(new(big.Int).Set(balanceNanos), amountNanos).Cmp(numericToNanos(pledged)) < 0 {
 				return ErrInsufficientBalance
 			}
 			balanceNanos.Sub(balanceNanos, amountNanos)
@@ -270,7 +274,11 @@ func (s *Service) ApproveShareAdjustment(
 
 		newBalance := new(big.Int).Set(balanceNanos)
 		newBalance.Add(newBalance, numericToNanos(adjustment.Amount))
-		if newBalance.Sign() < 0 {
+		pledged, err := q.GetActivePledgedAmount(ctx, adjustment.ShareAccountID)
+		if err != nil {
+			return fmt.Errorf("read active pledges: %w", err)
+		}
+		if newBalance.Cmp(numericToNanos(pledged)) < 0 {
 			return ErrInsufficientBalance
 		}
 		if reason == "" {
@@ -371,7 +379,11 @@ func (s *Service) ReverseShareTransaction(
 
 		newBalance := new(big.Int).Set(balanceNanos)
 		newBalance.Add(newBalance, reversalAmount)
-		if newBalance.Sign() < 0 {
+		pledged, err := q.GetActivePledgedAmount(ctx, original.ShareAccountID)
+		if err != nil {
+			return fmt.Errorf("read active pledges: %w", err)
+		}
+		if newBalance.Cmp(numericToNanos(pledged)) < 0 {
 			return ErrInsufficientBalance
 		}
 

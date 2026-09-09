@@ -9,9 +9,11 @@ import (
 	"os"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 	"github.com/yaninyzwitty/caritas-backend/config"
-	contributionv1 "github.com/yaninyzwitty/caritas-backend/gen/contribution/v1"
+	memberv1 "github.com/yaninyzwitty/caritas-backend/gen/member/v1"
+	sharev1 "github.com/yaninyzwitty/caritas-backend/gen/share/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
@@ -27,7 +29,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	bearerToken := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2ZjQ2ZDc5Mi03MDZhLTQzYmMtODFjNy02M2E3NTgwMzQ5NTEiLCJyb2xlIjoibWFuYWdlciIsImJyYW5jaF9pZCI6MSwiaXNzIjoiY2FyaXRhcy1iYWNrZW5kIiwiYXVkIjoiY2FyaXRhcy1hZG1pbiIsImlhdCI6MTc4ODE5ODE0NCwiZXhwIjoxNzg4MjAwODQ0fQ.BokuhkySlpq1JYAXsWQIIK2hh8RGKFVM9_6rmgl20eQ"
+	bearerToken := os.Getenv("BEARER_TOKEN")
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	ctx = withAccessToken(ctx, bearerToken)
@@ -51,22 +53,33 @@ func main() {
 	}()
 
 	// auth := authv1.NewAuthServiceClient(conn)
-	// loginres, _ := auth.Login(ctx, &authv1.LoginRequest{
-	// 	Email:    "jackymsoo@gmail.com",
+	// login, err := auth.Login(ctx, &authv1.LoginRequest{
+	// 	Email:    "brianjoseph13@gmail.com",
 	// 	Password: "1234567",
 	// })
 
-	// slog.Info("val", "res", loginres.AccessToken)
-	contribution := contributionv1.NewContributionServiceClient(conn)
+	// if err != nil {
+	// 	slog.Error("failed to login", "error", err)
+	// }
 
-	verifyCashDeposit, err := contribution.VerifyCashDeposit(ctx, &contributionv1.VerifyCashDepositRequest{
-		DepositId: "f54cd75c-de4b-4f70-b903-127810d40990",
+	// slog.Info("login successful", "token", login.AccessToken)
+
+	shareClient := sharev1.NewShareServiceClient(conn)
+
+	withdrawSharesRes, err := shareClient.WithdrawShares(ctx, &sharev1.WithdrawSharesRequest{
+		AccountId: "80a83eee-9b67-45fb-b1b2-220c5de17fb5",
+		Amount: &memberv1.Money{
+			CurrencyCode: "KES",
+			Units:        500,
+			Nanos:        0,
+		},
+		ReferenceId: uuid.NewString(),
+		Reason:      "verify pledged shares can't be withdrawn",
 	})
-
 	if err != nil {
-		slog.Error("verify cash deposit", "error", err)
+		slog.Error("failed to withdraw shares", "error", err)
 		os.Exit(1)
 	}
+	slog.Info("withdraw shares successful", "txID", withdrawSharesRes.TransactionId)
 
-	slog.Info("verify cash deposit", "bankREF", verifyCashDeposit.Deposit.BankReference)
 }

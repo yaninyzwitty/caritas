@@ -55,7 +55,7 @@ UPDATE cashier_sessions
 SET status = 'closed',
     expected_amount = $2,
     counted_amount = $3,
-    variance = $3::NUMERIC(19,4) - $2::NUMERIC(19,4),
+    variance = $3::NUMERIC(19,4) - $2::NUMERIC(19,4), --explict rumeric prevents errors
     variance_reason = $4,
     closed_at = NOW(),
     closed_by = $5,
