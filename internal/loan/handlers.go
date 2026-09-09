@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
 	"strconv"
 	"strings"
 	"time"
@@ -51,7 +52,7 @@ func mapServiceError(err error) error {
 		errors.Is(err, ErrInvalidGuaranteedAmount), errors.Is(err, ErrGatewayTransactionID), errors.Is(err, ErrDuplicateGuarantor):
 		return status.Error(codes.InvalidArgument, err.Error())
 	case errors.Is(err, ErrInvalidStatusTransition), errors.Is(err, ErrInvalidGuarantorStatus), errors.Is(err, ErrSelfGuarantee),
-		errors.Is(err, ErrTooManyGuarantors), errors.Is(err, ErrInsufficientGuarantors), errors.Is(err, ErrInsufficientGuarantee),
+		errors.Is(err, ErrTooManyGuarantors), errors.Is(err, ErrInsufficientCollateral),
 		errors.Is(err, ErrPaymentNotAllowed), errors.Is(err, ErrRepaymentScheduleMissing), errors.Is(err, ErrMemberNotActive),
 		errors.Is(err, ErrGuarantorNotActive):
 		return status.Error(codes.FailedPrecondition, err.Error())
@@ -64,10 +65,6 @@ func mapServiceError(err error) error {
 	}
 }
 
-// TODO-when applying for loan, you can guarantee with your own shares
-// TODO--when applying for loan, concurrently or materialized checks, check whether members can provide the suggested colateral without reducing their, shares by 30%
-// TODO-shouldnt amounts be of money type***
-// When guarantoring money, make sure that the shares the guarantors have can cater for loan, enforce some constrain ie, shouldnt reduce the member shares by more than 30%
 func (h *Handlers) ApplyForLoan(ctx context.Context, req *loanv1.ApplyForLoanRequest) (*loanv1.ApplyForLoanResponse, error) {
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "request must never be nil")
@@ -94,8 +91,8 @@ func (h *Handlers) ApplyForLoan(ctx context.Context, req *loanv1.ApplyForLoanReq
 		return nil, status.Error(codes.InvalidArgument, "interest rate must be a valid numeric value")
 	}
 
-	if len(req.GetGuarantors()) <= 0 || len(req.GetGuarantors()) > 20 {
-		return nil, status.Error(codes.InvalidArgument, "guarantors must contain between 1 and 20 guarantors")
+	if len(req.GetGuarantors()) > 20 {
+		return nil, status.Error(codes.InvalidArgument, "guarantors cannot contain more than 20 guarantors")
 	}
 
 	memberID, err := stringToUUID(req.GetMemberId())
@@ -131,6 +128,13 @@ func (h *Handlers) ApplyForLoan(ctx context.Context, req *loanv1.ApplyForLoanReq
 		})
 	}
 
+	sharePledge := pgtype.Numeric{Int: new(big.Int), Exp: -9, Valid: true}
+	if amount := req.GetApplicantSharePledgeAmount(); amount != nil {
+		sharePledge.Int.SetInt64(amount.GetUnits())
+		sharePledge.Int.Mul(sharePledge.Int, big.NewInt(1_000_000_000))
+		sharePledge.Int.Add(sharePledge.Int, big.NewInt(int64(amount.GetNanos())))
+	}
+
 	loan, err := h.service.ApplyForLoan(ctx, loansqlc.CreateLoanParams{
 		MemberID:              memberID,
 		BranchID:              branchID,
@@ -138,7 +142,7 @@ func (h *Handlers) ApplyForLoan(ctx context.Context, req *loanv1.ApplyForLoanReq
 		InterestRate:          interestAmountInPercentage,
 		RepaymentPeriodMonths: req.GetRepaymentPeriodMonths(),
 		UpdatedBy:             actor.ID,
-	}, guarantors)
+	}, sharePledge, guarantors)
 
 	if err != nil {
 		return nil, mapServiceError(err)
@@ -235,7 +239,6 @@ func (h *Handlers) DisburseLoan(ctx context.Context, req *loanv1.DisburseLoanReq
 
 	transaction, loanDisbursed, err := h.service.DisburseLoan(ctx, loanID, actor.ID, req.GetReason())
 
-	// TODO-look to handle errors for different conditions ie based on status, fail preconditon, no rows etc
 	if err != nil {
 		return nil, mapServiceError(err)
 
@@ -284,18 +287,13 @@ func (h *Handlers) GetLoan(ctx context.Context, req *loanv1.GetLoanRequest) (*lo
 
 }
 
-// TODO-check whether, do we really need to actually fetch the loans by member id, if a member in this context can have only one loan
-// TODO-check whether we can support multiple loan, types with different repayment periods, then we can fetch loans by member id
+// TODO-LATER check whether we can support multiple loan, types with different repayment periods, then we can fetch loans by member id
 func (h *Handlers) ListLoans(ctx context.Context, req *loanv1.ListLoansRequest) (*loanv1.ListLoansResponse, error) {
 	const (
 		defaultPageSize = 50
 		maxPageSize     = 1000
 	)
 
-	// TODO-check the use of the branch id in this prospection
-	if req.BranchId == "" {
-		return nil, status.Error(codes.InvalidArgument, "branch id is required")
-	}
 	if req.MemberId == "" {
 		return nil, status.Error(codes.InvalidArgument, "member id is required")
 	}

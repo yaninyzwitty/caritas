@@ -161,7 +161,9 @@ Approval requires:
 - member is active at approval time
 - member has 6+ months of qualifying share contribution history
 - repayment period is between 1 and 36 months
-- at least 1 and at most 20 approved guarantors, unless this rule is explicitly changed
+- zero to 20 approved guarantors; guarantors are required only when guarantor shares contribute to collateral coverage
+- zero-guarantor loans are allowed when applicant shares and/or deposits provide adequate
+  coverage.
 - applicant does not guarantee their own loan
 - collateral rule passes
 - minimum monthly principal is respected or explicitly approved as an exception
@@ -173,7 +175,7 @@ Collateral rule:
 ```text
 approved_amount <= min(
   3 * applicant_eligible_shares,
-  applicant_eligible_shares
+  applicant_pledged_shares
     + approved_guarantor_available_shares
     + eligible_deposits
 )
@@ -198,8 +200,8 @@ Disbursement must run in one `ExecTx` and:
 - lock the loan row with `FOR UPDATE`
 - verify loan status is `Approved`
 - re-check member eligibility through `member_service`
-- re-check share and guarantor collateral through the Shares domain
-- verify approved guarantor coverage
+- re-check all pledged share collateral through the Shares domain
+- verify approved guarantor coverage when guarantor shares are used
 - write one disbursement transaction
 - set loan status to `Disbursed`
 
@@ -445,7 +447,6 @@ These were fixed while rewriting this spec:
 These must be settled before implementation:
 
 - Is the default repayment batching window exactly 1 hour?
-- Are zero-guarantor loans ever allowed for small amounts or special products?
 - Does the 1% monthly interest apply to all active loans, or only specific loan products?
 - Can repayment periods ever exceed 36 months after board-approved restructuring?
 - What precise approval role can authorize monthly principal below `principal / 36`?

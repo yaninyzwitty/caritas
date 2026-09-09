@@ -97,6 +97,92 @@ func (ns NullShareAdjustmentStatus) Value() (driver.Value, error) {
 	return string(ns.ShareAdjustmentStatus), nil
 }
 
+type SharePledgeStatus string
+
+const (
+	SharePledgeStatusPending   SharePledgeStatus = "pending"
+	SharePledgeStatusActive    SharePledgeStatus = "active"
+	SharePledgeStatusReleased  SharePledgeStatus = "released"
+	SharePledgeStatusCancelled SharePledgeStatus = "cancelled"
+)
+
+func (e *SharePledgeStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = SharePledgeStatus(s)
+	case string:
+		*e = SharePledgeStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for SharePledgeStatus: %T", src)
+	}
+	return nil
+}
+
+type NullSharePledgeStatus struct {
+	SharePledgeStatus SharePledgeStatus `json:"sharePledgeStatus"`
+	Valid             bool              `json:"valid"` // Valid is true if SharePledgeStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullSharePledgeStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.SharePledgeStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.SharePledgeStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullSharePledgeStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.SharePledgeStatus), nil
+}
+
+type SharePledgeType string
+
+const (
+	SharePledgeTypeApplicantSecurity SharePledgeType = "applicant_security"
+	SharePledgeTypeGuarantorSecurity SharePledgeType = "guarantor_security"
+)
+
+func (e *SharePledgeType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = SharePledgeType(s)
+	case string:
+		*e = SharePledgeType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for SharePledgeType: %T", src)
+	}
+	return nil
+}
+
+type NullSharePledgeType struct {
+	SharePledgeType SharePledgeType `json:"sharePledgeType"`
+	Valid           bool            `json:"valid"` // Valid is true if SharePledgeType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullSharePledgeType) Scan(value interface{}) error {
+	if value == nil {
+		ns.SharePledgeType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.SharePledgeType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullSharePledgeType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.SharePledgeType), nil
+}
+
 type ShareTransactionType string
 
 const (
@@ -168,6 +254,20 @@ type ShareAdjustment struct {
 	PostedTransactionID pgtype.UUID           `json:"postedTransactionId"`
 	ApprovedBy          pgtype.UUID           `json:"approvedBy"`
 	ApprovedAt          pgtype.Timestamptz    `json:"approvedAt"`
+}
+
+type SharePledge struct {
+	ID             pgtype.UUID        `json:"id"`
+	ShareAccountID pgtype.UUID        `json:"shareAccountId"`
+	LoanID         pgtype.UUID        `json:"loanId"`
+	PledgedAmount  pgtype.Numeric     `json:"pledgedAmount"`
+	Type           SharePledgeType    `json:"type"`
+	Status         SharePledgeStatus  `json:"status"`
+	ApprovedBy     pgtype.UUID        `json:"approvedBy"`
+	ApprovedAt     pgtype.Timestamptz `json:"approvedAt"`
+	ReleasedAt     pgtype.Timestamptz `json:"releasedAt"`
+	CreatedAt      pgtype.Timestamptz `json:"createdAt"`
+	UpdatedAt      pgtype.Timestamptz `json:"updatedAt"`
 }
 
 type ShareTransaction struct {

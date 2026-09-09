@@ -133,6 +133,28 @@ func (q *Queries) ListAccounts(ctx context.Context, arg ListAccountsParams) ([]S
 	return items, nil
 }
 
+const lockAccountByMemberID = `-- name: LockAccountByMemberID :one
+SELECT id, member_id, branch_id, status, opened_at, is_deleted, created_at, updated_at FROM share_accounts
+WHERE member_id = $1 AND is_deleted = FALSE
+FOR UPDATE
+`
+
+func (q *Queries) LockAccountByMemberID(ctx context.Context, memberID pgtype.UUID) (ShareAccount, error) {
+	row := q.db.QueryRow(ctx, lockAccountByMemberID, memberID)
+	var i ShareAccount
+	err := row.Scan(
+		&i.ID,
+		&i.MemberID,
+		&i.BranchID,
+		&i.Status,
+		&i.OpenedAt,
+		&i.IsDeleted,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const lockAndReadAccount = `-- name: LockAndReadAccount :one
 SELECT id, member_id, branch_id, status, opened_at, is_deleted, created_at, updated_at FROM share_accounts
 WHERE id = $1 AND is_deleted = FALSE

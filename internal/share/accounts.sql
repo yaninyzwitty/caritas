@@ -25,6 +25,11 @@ SELECT id, member_id, branch_id, status, opened_at, is_deleted, created_at, upda
 WHERE id = $1 AND is_deleted = FALSE
 FOR UPDATE;
 
+-- name: LockAccountByMemberID :one
+SELECT id, member_id, branch_id, status, opened_at, is_deleted, created_at, updated_at FROM share_accounts
+WHERE member_id = $1 AND is_deleted = FALSE
+FOR UPDATE;
+
 -- name: UpdateAccountStatus :one
 UPDATE share_accounts
     SET status = $2, updated_at = NOW()
