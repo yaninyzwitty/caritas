@@ -2,22 +2,30 @@ syntax = "proto3";
 
 package loan.v1;
 
-
+import "google/api/annotations.proto";
 import "google/protobuf/timestamp.proto";
 
 // RepaymentService handles loan repayment recording and schedule queries.
 service RepaymentService {
   // RecordRepayment records a loan repayment transaction.
-  rpc RecordRepayment(RecordRepaymentRequest) returns (RecordRepaymentResponse);
+  rpc RecordRepayment(RecordRepaymentRequest) returns (RecordRepaymentResponse) {
+    option (google.api.http) = {post: "/api/v1/repayments/record" body: "*"};
+  }
 
   // GetRepaymentSchedule retrieves the full repayment schedule for a loan.
-  rpc GetRepaymentSchedule(GetRepaymentScheduleRequest) returns (GetRepaymentScheduleResponse);
+  rpc GetRepaymentSchedule(GetRepaymentScheduleRequest) returns (GetRepaymentScheduleResponse) {
+    option (google.api.http) = {post: "/api/v1/repayments/schedule" body: "*"};
+  }
 
   // GetInstallmentDetails retrieves details of a specific repayment installment.
-  rpc GetInstallmentDetails(GetInstallmentDetailsRequest) returns (GetInstallmentDetailsResponse);
+  rpc GetInstallmentDetails(GetInstallmentDetailsRequest) returns (GetInstallmentDetailsResponse) {
+    option (google.api.http) = {post: "/api/v1/repayments/installment" body: "*"};
+  }
 
   // GetPaymentHistory retrieves the payment transaction history for a loan.
-  rpc GetPaymentHistory(GetPaymentHistoryRequest) returns (GetPaymentHistoryResponse);
+  rpc GetPaymentHistory(GetPaymentHistoryRequest) returns (GetPaymentHistoryResponse) {
+    option (google.api.http) = {post: "/api/v1/repayments/history" body: "*"};
+  }
 }
 
 // RepaymentStatus represents the status of a repayment installment.

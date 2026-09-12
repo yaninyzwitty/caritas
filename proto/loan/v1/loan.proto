@@ -2,43 +2,66 @@ syntax = "proto3";
 
 package loan.v1;
 
+import "google/api/annotations.proto";
 import "google/protobuf/timestamp.proto";
 import "member/v1/member.proto";
 
 // LoanService manages loan lifecycle operations including application, approval, and disbursement.
 service LoanService {
   // ApplyForLoan submits a new loan application for a member.
-  rpc ApplyForLoan(ApplyForLoanRequest) returns (ApplyForLoanResponse);
+  rpc ApplyForLoan(ApplyForLoanRequest) returns (ApplyForLoanResponse) {
+    option (google.api.http) = {post: "/api/v1/loans/apply" body: "*"};
+  }
 
   // ApproveLoan approves a pending loan application.
-  rpc ApproveLoan(ApproveLoanRequest) returns (ApproveLoanResponse);
+  rpc ApproveLoan(ApproveLoanRequest) returns (ApproveLoanResponse) {
+    option (google.api.http) = {post: "/api/v1/loans/approve" body: "*"};
+  }
 
   // RejectLoan rejects a pending loan application.
-  rpc RejectLoan(RejectLoanRequest) returns (RejectLoanResponse);
+  rpc RejectLoan(RejectLoanRequest) returns (RejectLoanResponse) {
+    option (google.api.http) = {post: "/api/v1/loans/reject" body: "*"};
+  }
 
   // DisburseLoan disburses approved loan funds to the member.
-  rpc DisburseLoan(DisburseLoanRequest) returns (DisburseLoanResponse);
+  rpc DisburseLoan(DisburseLoanRequest) returns (DisburseLoanResponse) {
+    option (google.api.http) = {post: "/api/v1/loans/disburse" body: "*"};
+  }
 
   // GetLoan retrieves loan details by ID.
-  rpc GetLoan(GetLoanRequest) returns (GetLoanResponse);
+  rpc GetLoan(GetLoanRequest) returns (GetLoanResponse) {
+    option (google.api.http) = {post: "/api/v1/loans/get" body: "*"};
+  }
 
   // ListLoans lists loans with cursor-based pagination. Supports optional filtering by status and member.
-  rpc ListLoans(ListLoansRequest) returns (ListLoansResponse);
+  rpc ListLoans(ListLoansRequest) returns (ListLoansResponse) {
+    option (google.api.http) = {post: "/api/v1/loans/list" body: "*"};
+  }
 
   // GetLoanStatus retrieves the current status of a loan.
-  rpc GetLoanStatus(GetLoanStatusRequest) returns (GetLoanStatusResponse);
+  rpc GetLoanStatus(GetLoanStatusRequest) returns (GetLoanStatusResponse) {
+    option (google.api.http) = {post: "/api/v1/loans/status" body: "*"};
+  }
 
   // AddGuarantor adds a guarantor to a loan application.
-  rpc AddGuarantor(AddGuarantorRequest) returns (AddGuarantorResponse);
+  rpc AddGuarantor(AddGuarantorRequest) returns (AddGuarantorResponse) {
+    option (google.api.http) = {post: "/api/v1/loans/add-guarantor" body: "*"};
+  }
 
   // RemoveGuarantor removes a guarantor from a loan application.
-  rpc RemoveGuarantor(RemoveGuarantorRequest) returns (RemoveGuarantorResponse);
+  rpc RemoveGuarantor(RemoveGuarantorRequest) returns (RemoveGuarantorResponse) {
+    option (google.api.http) = {post: "/api/v1/loans/remove-guarantor" body: "*"};
+  }
 
   // ApproveGuarantor approves a pending guarantor for a loan.
-  rpc ApproveGuarantor(ApproveGuarantorRequest) returns (ApproveGuarantorResponse);
+  rpc ApproveGuarantor(ApproveGuarantorRequest) returns (ApproveGuarantorResponse) {
+    option (google.api.http) = {post: "/api/v1/loans/approve-guarantor" body: "*"};
+  }
 
   // ListGuarantors lists all guarantors for a specific loan.
-  rpc ListGuarantors(ListGuarantorsRequest) returns (ListGuarantorsResponse);
+  rpc ListGuarantors(ListGuarantorsRequest) returns (ListGuarantorsResponse) {
+    option (google.api.http) = {post: "/api/v1/loans/list-guarantors" body: "*"};
+  }
 }
 
 // LoanStatus represents the lifecycle states of a loan.

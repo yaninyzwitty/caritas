@@ -23,6 +23,20 @@ go build ./cmd/server
 ./server
 ```
 
+The server exposes gRPC on the configured gRPC port and generated HTTP/JSON
+routes on the configured HTTP port. Better Auth JWTs are accepted through an
+`Authorization: Bearer <token>` header on either transport.
+
+Generated HTTP routes use `/api/v1/<group>/<operation>`. For example:
+
+```http
+POST /api/v1/members/get
+Authorization: Bearer <access_token>
+Content-Type: application/json
+
+{"member_id":"00000000-0000-0000-0000-000000000000"}
+```
+
 ## Project Structure
 
 - `cmd/` - Main applications

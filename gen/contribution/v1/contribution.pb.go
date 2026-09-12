@@ -8,6 +8,7 @@ package contributionv1
 
 import (
 	v1 "github.com/yaninyzwitty/caritas-backend/gen/member/v1"
+	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -1266,7 +1267,7 @@ var File_contribution_v1_contribution_proto protoreflect.FileDescriptor
 
 const file_contribution_v1_contribution_proto_rawDesc = "" +
 	"\n" +
-	"\"contribution/v1/contribution.proto\x12\x0fcontribution.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16member/v1/member.proto\"\xa5\x01\n" +
+	"\"contribution/v1/contribution.proto\x12\x0fcontribution.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16member/v1/member.proto\"\xa5\x01\n" +
 	"\x1bContributionAllocationInput\x12?\n" +
 	"\x04type\x18\x01 \x01(\x0e2+.contribution.v1.ContributionAllocationTypeR\x04type\x12\x1b\n" +
 	"\ttarget_id\x18\x02 \x01(\tR\btargetId\x12(\n" +
@@ -1370,15 +1371,15 @@ const file_contribution_v1_contribution_proto_rawDesc = "" +
 	"*CONTRIBUTION_ALLOCATION_TYPE_LOAN_INTEREST\x10\x05\x12(\n" +
 	"$CONTRIBUTION_ALLOCATION_TYPE_PENALTY\x10\x06\x12-\n" +
 	")CONTRIBUTION_ALLOCATION_TYPE_OTHER_CHARGE\x10\a\x123\n" +
-	"/CONTRIBUTION_ALLOCATION_TYPE_OVERPAYMENT_CREDIT\x10\b2\xc9\x06\n" +
-	"\x13ContributionService\x12\x8e\x01\n" +
-	"\x1dInitiateDarajaSTKContribution\x125.contribution.v1.InitiateDarajaSTKContributionRequest\x1a6.contribution.v1.InitiateDarajaSTKContributionResponse\x12m\n" +
-	"\x12OpenCashierSession\x12*.contribution.v1.OpenCashierSessionRequest\x1a+.contribution.v1.OpenCashierSessionResponse\x12y\n" +
-	"\x16CreateCashContribution\x12..contribution.v1.CreateCashContributionRequest\x1a/.contribution.v1.CreateCashContributionResponse\x12p\n" +
-	"\x13CloseCashierSession\x12+.contribution.v1.CloseCashierSessionRequest\x1a,.contribution.v1.CloseCashierSessionResponse\x12m\n" +
-	"\x12AcceptCashHandover\x12*.contribution.v1.AcceptCashHandoverRequest\x1a+.contribution.v1.AcceptCashHandoverResponse\x12j\n" +
-	"\x11RecordCashDeposit\x12).contribution.v1.RecordCashDepositRequest\x1a*.contribution.v1.RecordCashDepositResponse\x12j\n" +
-	"\x11VerifyCashDeposit\x12).contribution.v1.VerifyCashDepositRequest\x1a*.contribution.v1.VerifyCashDepositResponseB\xd1\x01\n" +
+	"/CONTRIBUTION_ALLOCATION_TYPE_OVERPAYMENT_CREDIT\x10\b2\xc5\t\n" +
+	"\x13ContributionService\x12\xc4\x01\n" +
+	"\x1dInitiateDarajaSTKContribution\x125.contribution.v1.InitiateDarajaSTKContributionRequest\x1a6.contribution.v1.InitiateDarajaSTKContributionResponse\"4\x82\xd3\xe4\x93\x02.:\x01*\")/api/v1/contributions/initiate-daraja-stk\x12\xa4\x01\n" +
+	"\x12OpenCashierSession\x12*.contribution.v1.OpenCashierSessionRequest\x1a+.contribution.v1.OpenCashierSessionResponse\"5\x82\xd3\xe4\x93\x02/:\x01*\"*/api/v1/contributions/open-cashier-session\x12\xa7\x01\n" +
+	"\x16CreateCashContribution\x12..contribution.v1.CreateCashContributionRequest\x1a/.contribution.v1.CreateCashContributionResponse\",\x82\xd3\xe4\x93\x02&:\x01*\"!/api/v1/contributions/create-cash\x12\xa8\x01\n" +
+	"\x13CloseCashierSession\x12+.contribution.v1.CloseCashierSessionRequest\x1a,.contribution.v1.CloseCashierSessionResponse\"6\x82\xd3\xe4\x93\x020:\x01*\"+/api/v1/contributions/close-cashier-session\x12\xa4\x01\n" +
+	"\x12AcceptCashHandover\x12*.contribution.v1.AcceptCashHandoverRequest\x1a+.contribution.v1.AcceptCashHandoverResponse\"5\x82\xd3\xe4\x93\x02/:\x01*\"*/api/v1/contributions/accept-cash-handover\x12\xa0\x01\n" +
+	"\x11RecordCashDeposit\x12).contribution.v1.RecordCashDepositRequest\x1a*.contribution.v1.RecordCashDepositResponse\"4\x82\xd3\xe4\x93\x02.:\x01*\")/api/v1/contributions/record-cash-deposit\x12\xa0\x01\n" +
+	"\x11VerifyCashDeposit\x12).contribution.v1.VerifyCashDepositRequest\x1a*.contribution.v1.VerifyCashDepositResponse\"4\x82\xd3\xe4\x93\x02.:\x01*\")/api/v1/contributions/verify-cash-depositB\xd1\x01\n" +
 	"\x13com.contribution.v1B\x11ContributionProtoP\x01ZJgithub.com/yaninyzwitty/caritas-backend/gen/contribution/v1;contributionv1\xa2\x02\x03CXX\xaa\x02\x0fContribution.V1\xca\x02\x0fContribution\\V1\xe2\x02\x1bContribution\\V1\\GPBMetadata\xea\x02\x10Contribution::V1b\x06proto3"
 
 var (

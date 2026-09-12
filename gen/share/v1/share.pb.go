@@ -8,6 +8,7 @@ package sharev1
 
 import (
 	v1 "github.com/yaninyzwitty/caritas-backend/gen/member/v1"
+	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -1691,7 +1692,7 @@ var File_share_v1_share_proto protoreflect.FileDescriptor
 
 const file_share_v1_share_proto_rawDesc = "" +
 	"\n" +
-	"\x14share/v1/share.proto\x12\bshare.v1\x1a\x16member/v1/member.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xbd\x02\n" +
+	"\x14share/v1/share.proto\x12\bshare.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16member/v1/member.proto\"\xbd\x02\n" +
 	"\fShareAccount\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tmember_id\x18\x02 \x01(\tR\bmemberId\x12\x1b\n" +
@@ -1825,19 +1826,19 @@ const file_share_v1_share_proto_rawDesc = "" +
 	"!SHARE_TRANSACTION_TYPE_WITHDRAWAL\x10\x02\x12#\n" +
 	"\x1fSHARE_TRANSACTION_TYPE_DIVIDEND\x10\x03\x12#\n" +
 	"\x1fSHARE_TRANSACTION_TYPE_REVERSAL\x10\x04\x12%\n" +
-	"!SHARE_TRANSACTION_TYPE_ADJUSTMENT\x10\x052\xa7\b\n" +
-	"\fShareService\x12Y\n" +
-	"\x10OpenShareAccount\x12!.share.v1.OpenShareAccountRequest\x1a\".share.v1.OpenShareAccountResponse\x12V\n" +
-	"\x0fGetShareAccount\x12 .share.v1.GetShareAccountRequest\x1a!.share.v1.GetShareAccountResponse\x12\\\n" +
-	"\x11ListShareAccounts\x12\".share.v1.ListShareAccountsRequest\x1a#.share.v1.ListShareAccountsResponse\x12S\n" +
-	"\x0ePurchaseShares\x12\x1f.share.v1.PurchaseSharesRequest\x1a .share.v1.PurchaseSharesResponse\x12S\n" +
-	"\x0eWithdrawShares\x12\x1f.share.v1.WithdrawSharesRequest\x1a .share.v1.WithdrawSharesResponse\x12V\n" +
-	"\x0fGetShareBalance\x12 .share.v1.GetShareBalanceRequest\x1a!.share.v1.GetShareBalanceResponse\x12h\n" +
-	"\x15ListShareTransactions\x12&.share.v1.ListShareTransactionsRequest\x1a'.share.v1.ListShareTransactionsResponse\x12b\n" +
-	"\x13GetShareTransaction\x12$.share.v1.GetShareTransactionRequest\x1a%.share.v1.GetShareTransactionResponse\x12Y\n" +
-	"\x10CreateAdjustment\x12!.share.v1.CreateAdjustmentRequest\x1a\".share.v1.CreateAdjustmentResponse\x12k\n" +
-	"\x16ApproveShareAdjustment\x12'.share.v1.ApproveShareAdjustmentRequest\x1a(.share.v1.ApproveShareAdjustmentResponse\x12n\n" +
-	"\x17ReverseShareTransaction\x12(.share.v1.ReverseShareTransactionRequest\x1a).share.v1.ReverseShareTransactionResponseB\x99\x01\n" +
+	"!SHARE_TRANSACTION_TYPE_ADJUSTMENT\x10\x052\xf3\v\n" +
+	"\fShareService\x12\x81\x01\n" +
+	"\x10OpenShareAccount\x12!.share.v1.OpenShareAccountRequest\x1a\".share.v1.OpenShareAccountResponse\"&\x82\xd3\xe4\x93\x02 :\x01*\"\x1b/api/v1/shares/open-account\x12}\n" +
+	"\x0fGetShareAccount\x12 .share.v1.GetShareAccountRequest\x1a!.share.v1.GetShareAccountResponse\"%\x82\xd3\xe4\x93\x02\x1f:\x01*\"\x1a/api/v1/shares/get-account\x12\x85\x01\n" +
+	"\x11ListShareAccounts\x12\".share.v1.ListShareAccountsRequest\x1a#.share.v1.ListShareAccountsResponse\"'\x82\xd3\xe4\x93\x02!:\x01*\"\x1c/api/v1/shares/list-accounts\x12w\n" +
+	"\x0ePurchaseShares\x12\x1f.share.v1.PurchaseSharesRequest\x1a .share.v1.PurchaseSharesResponse\"\"\x82\xd3\xe4\x93\x02\x1c:\x01*\"\x17/api/v1/shares/purchase\x12w\n" +
+	"\x0eWithdrawShares\x12\x1f.share.v1.WithdrawSharesRequest\x1a .share.v1.WithdrawSharesResponse\"\"\x82\xd3\xe4\x93\x02\x1c:\x01*\"\x17/api/v1/shares/withdraw\x12y\n" +
+	"\x0fGetShareBalance\x12 .share.v1.GetShareBalanceRequest\x1a!.share.v1.GetShareBalanceResponse\"!\x82\xd3\xe4\x93\x02\x1b:\x01*\"\x16/api/v1/shares/balance\x12\x95\x01\n" +
+	"\x15ListShareTransactions\x12&.share.v1.ListShareTransactionsRequest\x1a'.share.v1.ListShareTransactionsResponse\"+\x82\xd3\xe4\x93\x02%:\x01*\" /api/v1/shares/list-transactions\x12\x8d\x01\n" +
+	"\x13GetShareTransaction\x12$.share.v1.GetShareTransactionRequest\x1a%.share.v1.GetShareTransactionResponse\")\x82\xd3\xe4\x93\x02#:\x01*\"\x1e/api/v1/shares/get-transaction\x12\x86\x01\n" +
+	"\x10CreateAdjustment\x12!.share.v1.CreateAdjustmentRequest\x1a\".share.v1.CreateAdjustmentResponse\"+\x82\xd3\xe4\x93\x02%:\x01*\" /api/v1/shares/create-adjustment\x12\x99\x01\n" +
+	"\x16ApproveShareAdjustment\x12'.share.v1.ApproveShareAdjustmentRequest\x1a(.share.v1.ApproveShareAdjustmentResponse\",\x82\xd3\xe4\x93\x02&:\x01*\"!/api/v1/shares/approve-adjustment\x12\x9d\x01\n" +
+	"\x17ReverseShareTransaction\x12(.share.v1.ReverseShareTransactionRequest\x1a).share.v1.ReverseShareTransactionResponse\"-\x82\xd3\xe4\x93\x02':\x01*\"\"/api/v1/shares/reverse-transactionB\x99\x01\n" +
 	"\fcom.share.v1B\n" +
 	"ShareProtoP\x01Z<github.com/yaninyzwitty/caritas-backend/gen/share/v1;sharev1\xa2\x02\x03SXX\xaa\x02\bShare.V1\xca\x02\bShare\\V1\xe2\x02\x14Share\\V1\\GPBMetadata\xea\x02\tShare::V1b\x06proto3"
 

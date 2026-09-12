@@ -8,6 +8,7 @@ package loanv1
 
 import (
 	v1 "github.com/yaninyzwitty/caritas-backend/gen/member/v1"
+	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -1849,7 +1850,7 @@ var File_loan_v1_loan_proto protoreflect.FileDescriptor
 
 const file_loan_v1_loan_proto_rawDesc = "" +
 	"\n" +
-	"\x12loan/v1/loan.proto\x12\aloan.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16member/v1/member.proto\"\xf5\x03\n" +
+	"\x12loan/v1/loan.proto\x12\aloan.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16member/v1/member.proto\"\xf5\x03\n" +
 	"\x04Loan\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tmember_id\x18\x02 \x01(\tR\bmemberId\x12\x1b\n" +
@@ -2009,20 +2010,20 @@ const file_loan_v1_loan_proto_rawDesc = "" +
 	"\x19CREDIT_STATUS_UNSPECIFIED\x10\x00\x12\x1b\n" +
 	"\x17CREDIT_STATUS_AVAILABLE\x10\x01\x12\x18\n" +
 	"\x14CREDIT_STATUS_FROZEN\x10\x02\x12\x1b\n" +
-	"\x17CREDIT_STATUS_WITHDRAWN\x10\x032\xd9\x06\n" +
-	"\vLoanService\x12K\n" +
-	"\fApplyForLoan\x12\x1c.loan.v1.ApplyForLoanRequest\x1a\x1d.loan.v1.ApplyForLoanResponse\x12H\n" +
-	"\vApproveLoan\x12\x1b.loan.v1.ApproveLoanRequest\x1a\x1c.loan.v1.ApproveLoanResponse\x12E\n" +
+	"\x17CREDIT_STATUS_WITHDRAWN\x10\x032\xe7\t\n" +
+	"\vLoanService\x12k\n" +
+	"\fApplyForLoan\x12\x1c.loan.v1.ApplyForLoanRequest\x1a\x1d.loan.v1.ApplyForLoanResponse\"\x1e\x82\xd3\xe4\x93\x02\x18:\x01*\"\x13/api/v1/loans/apply\x12j\n" +
+	"\vApproveLoan\x12\x1b.loan.v1.ApproveLoanRequest\x1a\x1c.loan.v1.ApproveLoanResponse\" \x82\xd3\xe4\x93\x02\x1a:\x01*\"\x15/api/v1/loans/approve\x12f\n" +
 	"\n" +
-	"RejectLoan\x12\x1a.loan.v1.RejectLoanRequest\x1a\x1b.loan.v1.RejectLoanResponse\x12K\n" +
-	"\fDisburseLoan\x12\x1c.loan.v1.DisburseLoanRequest\x1a\x1d.loan.v1.DisburseLoanResponse\x12<\n" +
-	"\aGetLoan\x12\x17.loan.v1.GetLoanRequest\x1a\x18.loan.v1.GetLoanResponse\x12B\n" +
-	"\tListLoans\x12\x19.loan.v1.ListLoansRequest\x1a\x1a.loan.v1.ListLoansResponse\x12N\n" +
-	"\rGetLoanStatus\x12\x1d.loan.v1.GetLoanStatusRequest\x1a\x1e.loan.v1.GetLoanStatusResponse\x12K\n" +
-	"\fAddGuarantor\x12\x1c.loan.v1.AddGuarantorRequest\x1a\x1d.loan.v1.AddGuarantorResponse\x12T\n" +
-	"\x0fRemoveGuarantor\x12\x1f.loan.v1.RemoveGuarantorRequest\x1a .loan.v1.RemoveGuarantorResponse\x12W\n" +
-	"\x10ApproveGuarantor\x12 .loan.v1.ApproveGuarantorRequest\x1a!.loan.v1.ApproveGuarantorResponse\x12Q\n" +
-	"\x0eListGuarantors\x12\x1e.loan.v1.ListGuarantorsRequest\x1a\x1f.loan.v1.ListGuarantorsResponseB\x91\x01\n" +
+	"RejectLoan\x12\x1a.loan.v1.RejectLoanRequest\x1a\x1b.loan.v1.RejectLoanResponse\"\x1f\x82\xd3\xe4\x93\x02\x19:\x01*\"\x14/api/v1/loans/reject\x12n\n" +
+	"\fDisburseLoan\x12\x1c.loan.v1.DisburseLoanRequest\x1a\x1d.loan.v1.DisburseLoanResponse\"!\x82\xd3\xe4\x93\x02\x1b:\x01*\"\x16/api/v1/loans/disburse\x12Z\n" +
+	"\aGetLoan\x12\x17.loan.v1.GetLoanRequest\x1a\x18.loan.v1.GetLoanResponse\"\x1c\x82\xd3\xe4\x93\x02\x16:\x01*\"\x11/api/v1/loans/get\x12a\n" +
+	"\tListLoans\x12\x19.loan.v1.ListLoansRequest\x1a\x1a.loan.v1.ListLoansResponse\"\x1d\x82\xd3\xe4\x93\x02\x17:\x01*\"\x12/api/v1/loans/list\x12o\n" +
+	"\rGetLoanStatus\x12\x1d.loan.v1.GetLoanStatusRequest\x1a\x1e.loan.v1.GetLoanStatusResponse\"\x1f\x82\xd3\xe4\x93\x02\x19:\x01*\"\x14/api/v1/loans/status\x12s\n" +
+	"\fAddGuarantor\x12\x1c.loan.v1.AddGuarantorRequest\x1a\x1d.loan.v1.AddGuarantorResponse\"&\x82\xd3\xe4\x93\x02 :\x01*\"\x1b/api/v1/loans/add-guarantor\x12\x7f\n" +
+	"\x0fRemoveGuarantor\x12\x1f.loan.v1.RemoveGuarantorRequest\x1a .loan.v1.RemoveGuarantorResponse\")\x82\xd3\xe4\x93\x02#:\x01*\"\x1e/api/v1/loans/remove-guarantor\x12\x83\x01\n" +
+	"\x10ApproveGuarantor\x12 .loan.v1.ApproveGuarantorRequest\x1a!.loan.v1.ApproveGuarantorResponse\"*\x82\xd3\xe4\x93\x02$:\x01*\"\x1f/api/v1/loans/approve-guarantor\x12{\n" +
+	"\x0eListGuarantors\x12\x1e.loan.v1.ListGuarantorsRequest\x1a\x1f.loan.v1.ListGuarantorsResponse\"(\x82\xd3\xe4\x93\x02\":\x01*\"\x1d/api/v1/loans/list-guarantorsB\x91\x01\n" +
 	"\vcom.loan.v1B\tLoanProtoP\x01Z:github.com/yaninyzwitty/caritas-backend/gen/loan/v1;loanv1\xa2\x02\x03LXX\xaa\x02\aLoan.V1\xca\x02\aLoan\\V1\xe2\x02\x13Loan\\V1\\GPBMetadata\xea\x02\bLoan::V1b\x06proto3"
 
 var (

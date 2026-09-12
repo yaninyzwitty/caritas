@@ -2,17 +2,32 @@ syntax = "proto3";
 
 package contribution.v1;
 
+import "google/api/annotations.proto";
 import "google/protobuf/timestamp.proto";
 import "member/v1/member.proto";
 
 service ContributionService {
-  rpc InitiateDarajaSTKContribution(InitiateDarajaSTKContributionRequest) returns (InitiateDarajaSTKContributionResponse);
-  rpc OpenCashierSession(OpenCashierSessionRequest) returns (OpenCashierSessionResponse);
-  rpc CreateCashContribution(CreateCashContributionRequest) returns (CreateCashContributionResponse);
-  rpc CloseCashierSession(CloseCashierSessionRequest) returns (CloseCashierSessionResponse);
-  rpc AcceptCashHandover(AcceptCashHandoverRequest) returns (AcceptCashHandoverResponse);
-  rpc RecordCashDeposit(RecordCashDepositRequest) returns (RecordCashDepositResponse);
-  rpc VerifyCashDeposit(VerifyCashDepositRequest) returns (VerifyCashDepositResponse);
+  rpc InitiateDarajaSTKContribution(InitiateDarajaSTKContributionRequest) returns (InitiateDarajaSTKContributionResponse) {
+    option (google.api.http) = {post: "/api/v1/contributions/initiate-daraja-stk" body: "*"};
+  }
+  rpc OpenCashierSession(OpenCashierSessionRequest) returns (OpenCashierSessionResponse) {
+    option (google.api.http) = {post: "/api/v1/contributions/open-cashier-session" body: "*"};
+  }
+  rpc CreateCashContribution(CreateCashContributionRequest) returns (CreateCashContributionResponse) {
+    option (google.api.http) = {post: "/api/v1/contributions/create-cash" body: "*"};
+  }
+  rpc CloseCashierSession(CloseCashierSessionRequest) returns (CloseCashierSessionResponse) {
+    option (google.api.http) = {post: "/api/v1/contributions/close-cashier-session" body: "*"};
+  }
+  rpc AcceptCashHandover(AcceptCashHandoverRequest) returns (AcceptCashHandoverResponse) {
+    option (google.api.http) = {post: "/api/v1/contributions/accept-cash-handover" body: "*"};
+  }
+  rpc RecordCashDeposit(RecordCashDepositRequest) returns (RecordCashDepositResponse) {
+    option (google.api.http) = {post: "/api/v1/contributions/record-cash-deposit" body: "*"};
+  }
+  rpc VerifyCashDeposit(VerifyCashDepositRequest) returns (VerifyCashDepositResponse) {
+    option (google.api.http) = {post: "/api/v1/contributions/verify-cash-deposit" body: "*"};
+  }
 }
 
 enum ContributionPaymentRequestStatus {

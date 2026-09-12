@@ -9,9 +9,11 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/yaninyzwitty/caritas-backend/config"
 	authv1 "github.com/yaninyzwitty/caritas-backend/gen/auth/v1"
@@ -25,6 +27,7 @@ import (
 	"github.com/yaninyzwitty/caritas-backend/internal/member"
 	"github.com/yaninyzwitty/caritas-backend/internal/share"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 func main() {
@@ -61,6 +64,7 @@ func main() {
 	pool, err := pgxpool.NewWithConfig(ctx, poolConfig)
 	exitOnError("failed to create database pool", err)
 	defer pool.Close()
+
 	// retry on startup to prevent: context timeout deadline or whatever
 	backoff := time.Second
 
@@ -106,14 +110,27 @@ func main() {
 	darajaHandlers := contribution.NewDarajaHandlers(ctx, contributionService)
 	authStore := auth.NewStore(pool)
 	authServer := auth.NewHandlers(authStore, authTokenSecret)
+	verifier, err := auth.NewVerifier(
+		ctx,
+		authStore,
+		envOrDefault("JWKS_URL", "http://localhost:3000/api/auth/jwks"),
+		envOrDefault("JWT_ISSUER", "http://localhost:3000"),
+		envOrDefault("JWT_AUDIENCE", "go-api"),
+	)
+	exitOnError("failed to initialize authentication", err)
+	defer func() {
+		closeCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := verifier.Close(closeCtx); err != nil {
+			slog.Error("failed to close JWKS verifier", slog.Any("error", err))
+		}
+	}()
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.GRPC.Port))
 	exitOnError("failed to listen for gRPC", err)
 
 	s := grpc.NewServer(
-		grpc.UnaryInterceptor(
-			auth.UnaryInterceptor(authStore, authTokenSecret),
-		),
+		grpc.UnaryInterceptor(verifier.UnaryServerInterceptor),
 	)
 	authv1.RegisterAuthServiceServer(s, authServer)
 	memberv1.RegisterMemberServiceServer(s, server)
@@ -123,7 +140,41 @@ func main() {
 	loanv1.RegisterCreditServiceServer(s, loanServer)
 	contributionv1.RegisterContributionServiceServer(s, contributionServer)
 
+	gatewayConnection, err := grpc.NewClient(
+		fmt.Sprintf("127.0.0.1:%d", cfg.GRPC.Port),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	exitOnError("failed to create gateway connection", err)
+	defer gatewayConnection.Close()
+
+	gateway := runtime.NewServeMux(
+		runtime.WithIncomingHeaderMatcher(func(header string) (string, bool) {
+			switch strings.ToLower(header) {
+			case "authorization", "x-request-id", "idempotency-key":
+				return strings.ToLower(header), true
+			default:
+				return runtime.DefaultHeaderMatcher(header)
+			}
+		}),
+		runtime.WithOutgoingHeaderMatcher(func(header string) (string, bool) {
+			if strings.EqualFold(header, "x-request-id") {
+				return "X-Request-ID", true
+			}
+			return runtime.DefaultHeaderMatcher(header)
+		}),
+	)
+	exitOnError("failed to register auth gateway", authv1.RegisterAuthServiceHandler(ctx, gateway, gatewayConnection))
+	exitOnError("failed to register member gateway", memberv1.RegisterMemberServiceHandler(ctx, gateway, gatewayConnection))
+	exitOnError("failed to register share gateway", sharev1.RegisterShareServiceHandler(ctx, gateway, gatewayConnection))
+	exitOnError("failed to register loan gateway", loanv1.RegisterLoanServiceHandler(ctx, gateway, gatewayConnection))
+	exitOnError("failed to register repayment gateway", loanv1.RegisterRepaymentServiceHandler(ctx, gateway, gatewayConnection))
+	exitOnError("failed to register credit gateway", loanv1.RegisterCreditServiceHandler(ctx, gateway, gatewayConnection))
+	exitOnError("failed to register contribution gateway", contributionv1.RegisterContributionServiceHandler(ctx, gateway, gatewayConnection))
+
 	mux := http.NewServeMux()
+	// Limit gateway request bodies because generated decoders otherwise accept an
+	// unbounded body, allowing a small public request to exhaust server memory.
+	mux.Handle("/api/v1/", http.MaxBytesHandler(gateway, 1<<20))
 	darajaHandlers.RegisterDarajaRoutes(mux)
 	httpServer := &http.Server{
 		Addr:              fmt.Sprintf(":%d", cfg.HTTP.Port),
@@ -168,4 +219,13 @@ func main() {
 		slog.Warn("shutdown timeout, forcing exit")
 		s.Stop()
 	}
+}
+
+// envOrDefault keeps local JWT endpoints usable while allowing deployment
+// overrides. Without it, local startup would require three redundant variables.
+func envOrDefault(name, fallback string) string {
+	if value := os.Getenv(name); value != "" {
+		return value
+	}
+	return fallback
 }

@@ -26,7 +26,7 @@ const createStaffUser = `-- name: CreateStaffUser :one
 INSERT INTO staff_users (name, branch_id, email, password_hash, role)
 VALUES ($1, $2, lower($3), $4, $5)
 ON CONFLICT (email) DO NOTHING
-RETURNING id, branch_id, email, password_hash, role, is_active, created_at, updated_at, name
+RETURNING id, branch_id, email, password_hash, role, is_active, created_at, updated_at, name, auth_user_id
 `
 
 type CreateStaffUserParams struct {
@@ -56,6 +56,7 @@ func (q *Queries) CreateStaffUser(ctx context.Context, arg CreateStaffUserParams
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Name,
+		&i.AuthUserID,
 	)
 	return i, err
 }
@@ -66,7 +67,7 @@ SET is_active = FALSE,
     updated_at = NOW()
 WHERE id = $1
   AND is_active = TRUE
-RETURNING id, branch_id, email, password_hash, role, is_active, created_at, updated_at, name
+RETURNING id, branch_id, email, password_hash, role, is_active, created_at, updated_at, name, auth_user_id
 `
 
 func (q *Queries) DeactivateStaffUser(ctx context.Context, id pgtype.UUID) (StaffUser, error) {
@@ -82,12 +83,38 @@ func (q *Queries) DeactivateStaffUser(ctx context.Context, id pgtype.UUID) (Staf
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Name,
+		&i.AuthUserID,
+	)
+	return i, err
+}
+
+const getActiveStaffByAuthUserID = `-- name: GetActiveStaffByAuthUserID :one
+SELECT id, branch_id, email, password_hash, role, is_active, created_at, updated_at, name, auth_user_id
+FROM staff_users
+WHERE auth_user_id = $1
+  AND is_active = TRUE
+`
+
+func (q *Queries) GetActiveStaffByAuthUserID(ctx context.Context, authUserID pgtype.Text) (StaffUser, error) {
+	row := q.db.QueryRow(ctx, getActiveStaffByAuthUserID, authUserID)
+	var i StaffUser
+	err := row.Scan(
+		&i.ID,
+		&i.BranchID,
+		&i.Email,
+		&i.PasswordHash,
+		&i.Role,
+		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Name,
+		&i.AuthUserID,
 	)
 	return i, err
 }
 
 const getActiveStaffByEmail = `-- name: GetActiveStaffByEmail :one
-SELECT id, branch_id, email, password_hash, role, is_active, created_at, updated_at, name
+SELECT id, branch_id, email, password_hash, role, is_active, created_at, updated_at, name, auth_user_id
 FROM staff_users
 WHERE lower(email) = lower($1) AND is_active = TRUE
 `
@@ -105,12 +132,13 @@ func (q *Queries) GetActiveStaffByEmail(ctx context.Context, email string) (Staf
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Name,
+		&i.AuthUserID,
 	)
 	return i, err
 }
 
 const getActiveStaffByID = `-- name: GetActiveStaffByID :one
-SELECT id, branch_id, email, password_hash, role, is_active, created_at, updated_at, name
+SELECT id, branch_id, email, password_hash, role, is_active, created_at, updated_at, name, auth_user_id
 FROM staff_users
 WHERE id = $1 AND is_active = TRUE
 `
@@ -128,6 +156,7 @@ func (q *Queries) GetActiveStaffByID(ctx context.Context, id pgtype.UUID) (Staff
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Name,
+		&i.AuthUserID,
 	)
 	return i, err
 }

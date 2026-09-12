@@ -2,31 +2,66 @@ syntax = "proto3";
 
 package member.v1;
 
-
+import "google/api/annotations.proto";
 import "google/protobuf/timestamp.proto";
 
 // MemberService manages SACCO member lifecycle operations within a branch.
 service MemberService {
-  rpc RegisterMember(RegisterMemberRequest) returns (RegisterMemberResponse);
+  rpc RegisterMember(RegisterMemberRequest) returns (RegisterMemberResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/members/register"
+      body: "*"
+    };
+  }
 
   // GetMember retrieves member details by ID or national ID within a branch.
-  rpc GetMember(GetMemberRequest) returns (GetMemberResponse);
+  rpc GetMember(GetMemberRequest) returns (GetMemberResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/members/get"
+      body: "*"
+    };
+  }
 
   // ListMembers lists members within a branch with cursor-based pagination.
   // Supports optional filtering by status.
-  rpc ListMembers(ListMembersRequest) returns (ListMembersResponse);
+  rpc ListMembers(ListMembersRequest) returns (ListMembersResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/members/list"
+      body: "*"
+    };
+  }
 
   // UpdateMemberProfile updates a member's profile information.
-  rpc UpdateMemberProfile(UpdateMemberProfileRequest) returns (UpdateMemberProfileResponse);
+  rpc UpdateMemberProfile(UpdateMemberProfileRequest) returns (UpdateMemberProfileResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/members/update-profile"
+      body: "*"
+    };
+  }
 
   // UpdateMemberStatus changes a member's status with an audit reason.
-  rpc UpdateMemberStatus(UpdateMemberStatusRequest) returns (UpdateMemberStatusResponse);
+  rpc UpdateMemberStatus(UpdateMemberStatusRequest) returns (UpdateMemberStatusResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/members/update-status"
+      body: "*"
+    };
+  }
 
   // CloseMember permanently deactivates a member account.
-  rpc CloseMember(CloseMemberRequest) returns (CloseMemberResponse);
+  rpc CloseMember(CloseMemberRequest) returns (CloseMemberResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/members/close"
+      body: "*"
+    };
+  }
 
   // GetMemberStatusHistory retrieves the chronological history of member status changes.
-  rpc GetMemberStatusHistory(GetMemberStatusHistoryRequest) returns (GetMemberStatusHistoryResponse);
+  rpc GetMemberStatusHistory(GetMemberStatusHistoryRequest) returns (GetMemberStatusHistoryResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/members/status-history"
+      body: "*"
+    };
+  }
 }
 
 // MemberStatus represents the lifecycle states of a SACCO member.

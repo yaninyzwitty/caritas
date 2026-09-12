@@ -106,8 +106,12 @@ func (h *Handlers) DeactivateStaffUser(ctx context.Context, req *authv1.Deactiva
 }
 
 func validRole(role string) bool {
-	_, ok := rolePermissions[role]
-	return ok
+	switch role {
+	case roleSystemAdmin, roleManager, roleLoanOfficer, roleCashier, roleAuditor, roleChairperson, roleSecretary:
+		return true
+	default:
+		return false
+	}
 }
 
 func staffUserToProto(staff authsqlc.StaffUser) *authv1.StaffUser {

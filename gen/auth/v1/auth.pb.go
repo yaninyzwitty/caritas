@@ -7,6 +7,7 @@
 package authv1
 
 import (
+	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -438,7 +439,7 @@ var File_auth_v1_auth_proto protoreflect.FileDescriptor
 
 const file_auth_v1_auth_proto_rawDesc = "" +
 	"\n" +
-	"\x12auth/v1/auth.proto\x12\aauth.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"@\n" +
+	"\x12auth/v1/auth.proto\x12\aauth.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"@\n" +
 	"\fLoginRequest\x12\x14\n" +
 	"\x05email\x18\x01 \x01(\tR\x05email\x12\x1a\n" +
 	"\bpassword\x18\x02 \x01(\tR\bpassword\"`\n" +
@@ -469,11 +470,11 @@ const file_auth_v1_auth_proto_rawDesc = "" +
 	"\rstaff_user_id\x18\x01 \x01(\tR\vstaffUserId\"P\n" +
 	"\x1bDeactivateStaffUserResponse\x121\n" +
 	"\n" +
-	"staff_user\x18\x01 \x01(\v2\x12.auth.v1.StaffUserR\tstaffUser2\xfd\x01\n" +
+	"staff_user\x18\x01 \x01(\v2\x12.auth.v1.StaffUserR\tstaffUser2\xd8\x02\n" +
 	"\vAuthService\x126\n" +
-	"\x05Login\x12\x15.auth.v1.LoginRequest\x1a\x16.auth.v1.LoginResponse\x12T\n" +
-	"\x0fCreateStaffUser\x12\x1f.auth.v1.CreateStaffUserRequest\x1a .auth.v1.CreateStaffUserResponse\x12`\n" +
-	"\x13DeactivateStaffUser\x12#.auth.v1.DeactivateStaffUserRequest\x1a$.auth.v1.DeactivateStaffUserResponseB\x91\x01\n" +
+	"\x05Login\x12\x15.auth.v1.LoginRequest\x1a\x16.auth.v1.LoginResponse\x12\x7f\n" +
+	"\x0fCreateStaffUser\x12\x1f.auth.v1.CreateStaffUserRequest\x1a .auth.v1.CreateStaffUserResponse\")\x82\xd3\xe4\x93\x02#:\x01*\"\x1e/api/v1/auth/create-staff-user\x12\x8f\x01\n" +
+	"\x13DeactivateStaffUser\x12#.auth.v1.DeactivateStaffUserRequest\x1a$.auth.v1.DeactivateStaffUserResponse\"-\x82\xd3\xe4\x93\x02':\x01*\"\"/api/v1/auth/deactivate-staff-userB\x91\x01\n" +
 	"\vcom.auth.v1B\tAuthProtoP\x01Z:github.com/yaninyzwitty/caritas-backend/gen/auth/v1;authv1\xa2\x02\x03AXX\xaa\x02\aAuth.V1\xca\x02\aAuth\\V1\xe2\x02\x13Auth\\V1\\GPBMetadata\xea\x02\bAuth::V1b\x06proto3"
 
 var (

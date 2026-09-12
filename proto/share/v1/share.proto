@@ -2,21 +2,44 @@ syntax = "proto3";
 
 package share.v1;
 
-import "member/v1/member.proto";
+import "google/api/annotations.proto";
 import "google/protobuf/timestamp.proto";
+import "member/v1/member.proto";
 
 service ShareService {
-  rpc OpenShareAccount(OpenShareAccountRequest) returns (OpenShareAccountResponse);
-  rpc GetShareAccount(GetShareAccountRequest) returns (GetShareAccountResponse);
-  rpc ListShareAccounts(ListShareAccountsRequest) returns (ListShareAccountsResponse);
-  rpc PurchaseShares(PurchaseSharesRequest) returns (PurchaseSharesResponse);
-  rpc WithdrawShares(WithdrawSharesRequest) returns (WithdrawSharesResponse);
-  rpc GetShareBalance(GetShareBalanceRequest) returns (GetShareBalanceResponse);
-  rpc ListShareTransactions(ListShareTransactionsRequest) returns (ListShareTransactionsResponse);
-  rpc GetShareTransaction(GetShareTransactionRequest) returns (GetShareTransactionResponse);
-  rpc CreateAdjustment(CreateAdjustmentRequest) returns (CreateAdjustmentResponse);
-  rpc ApproveShareAdjustment(ApproveShareAdjustmentRequest) returns (ApproveShareAdjustmentResponse);
-  rpc ReverseShareTransaction(ReverseShareTransactionRequest) returns (ReverseShareTransactionResponse);
+  rpc OpenShareAccount(OpenShareAccountRequest) returns (OpenShareAccountResponse) {
+    option (google.api.http) = {post: "/api/v1/shares/open-account" body: "*"};
+  }
+  rpc GetShareAccount(GetShareAccountRequest) returns (GetShareAccountResponse) {
+    option (google.api.http) = {post: "/api/v1/shares/get-account" body: "*"};
+  }
+  rpc ListShareAccounts(ListShareAccountsRequest) returns (ListShareAccountsResponse) {
+    option (google.api.http) = {post: "/api/v1/shares/list-accounts" body: "*"};
+  }
+  rpc PurchaseShares(PurchaseSharesRequest) returns (PurchaseSharesResponse) {
+    option (google.api.http) = {post: "/api/v1/shares/purchase" body: "*"};
+  }
+  rpc WithdrawShares(WithdrawSharesRequest) returns (WithdrawSharesResponse) {
+    option (google.api.http) = {post: "/api/v1/shares/withdraw" body: "*"};
+  }
+  rpc GetShareBalance(GetShareBalanceRequest) returns (GetShareBalanceResponse) {
+    option (google.api.http) = {post: "/api/v1/shares/balance" body: "*"};
+  }
+  rpc ListShareTransactions(ListShareTransactionsRequest) returns (ListShareTransactionsResponse) {
+    option (google.api.http) = {post: "/api/v1/shares/list-transactions" body: "*"};
+  }
+  rpc GetShareTransaction(GetShareTransactionRequest) returns (GetShareTransactionResponse) {
+    option (google.api.http) = {post: "/api/v1/shares/get-transaction" body: "*"};
+  }
+  rpc CreateAdjustment(CreateAdjustmentRequest) returns (CreateAdjustmentResponse) {
+    option (google.api.http) = {post: "/api/v1/shares/create-adjustment" body: "*"};
+  }
+  rpc ApproveShareAdjustment(ApproveShareAdjustmentRequest) returns (ApproveShareAdjustmentResponse) {
+    option (google.api.http) = {post: "/api/v1/shares/approve-adjustment" body: "*"};
+  }
+  rpc ReverseShareTransaction(ReverseShareTransactionRequest) returns (ReverseShareTransactionResponse) {
+    option (google.api.http) = {post: "/api/v1/shares/reverse-transaction" body: "*"};
+  }
 }
 
 enum ShareAccountStatus {
