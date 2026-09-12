@@ -18,4 +18,5 @@ type StaffUser struct {
 	CreatedAt    pgtype.Timestamptz `json:"createdAt"`
 	UpdatedAt    pgtype.Timestamptz `json:"updatedAt"`
 	Name         string             `json:"name"`
+	AuthUserID   pgtype.Text        `json:"authUserId"`
 }

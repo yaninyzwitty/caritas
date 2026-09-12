@@ -20,6 +20,12 @@ SELECT *
 FROM staff_users
 WHERE lower(email) = lower(sqlc.arg(email)) AND is_active = TRUE;
 
+-- name: GetActiveStaffByAuthUserID :one
+SELECT *
+FROM staff_users
+WHERE auth_user_id = sqlc.arg(auth_user_id)
+  AND is_active = TRUE;
+
 -- name: GetActiveStaffByID :one
 SELECT *
 FROM staff_users

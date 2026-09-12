@@ -7,6 +7,7 @@
 package loanv1
 
 import (
+	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -839,7 +840,7 @@ var File_loan_v1_repayment_proto protoreflect.FileDescriptor
 
 const file_loan_v1_repayment_proto_rawDesc = "" +
 	"\n" +
-	"\x17loan/v1/repayment.proto\x12\aloan.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xeb\x01\n" +
+	"\x17loan/v1/repayment.proto\x12\aloan.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xeb\x01\n" +
 	"\x11RepaymentSchedule\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\aloan_id\x18\x02 \x01(\tR\x06loanId\x12%\n" +
@@ -909,12 +910,12 @@ const file_loan_v1_repayment_proto_rawDesc = "" +
 	"\x1aTRANSACTION_TYPE_REPAYMENT\x10\x02\x12\x1c\n" +
 	"\x18TRANSACTION_TYPE_PENALTY\x10\x03\x12\x1d\n" +
 	"\x19TRANSACTION_TYPE_REVERSAL\x10\x04\x12&\n" +
-	"\"TRANSACTION_TYPE_CREDIT_WITHDRAWAL\x10\x052\x91\x03\n" +
-	"\x10RepaymentService\x12T\n" +
-	"\x0fRecordRepayment\x12\x1f.loan.v1.RecordRepaymentRequest\x1a .loan.v1.RecordRepaymentResponse\x12c\n" +
-	"\x14GetRepaymentSchedule\x12$.loan.v1.GetRepaymentScheduleRequest\x1a%.loan.v1.GetRepaymentScheduleResponse\x12f\n" +
-	"\x15GetInstallmentDetails\x12%.loan.v1.GetInstallmentDetailsRequest\x1a&.loan.v1.GetInstallmentDetailsResponse\x12Z\n" +
-	"\x11GetPaymentHistory\x12!.loan.v1.GetPaymentHistoryRequest\x1a\".loan.v1.GetPaymentHistoryResponseB\x96\x01\n" +
+	"\"TRANSACTION_TYPE_CREDIT_WITHDRAWAL\x10\x052\xb4\x04\n" +
+	"\x10RepaymentService\x12z\n" +
+	"\x0fRecordRepayment\x12\x1f.loan.v1.RecordRepaymentRequest\x1a .loan.v1.RecordRepaymentResponse\"$\x82\xd3\xe4\x93\x02\x1e:\x01*\"\x19/api/v1/repayments/record\x12\x8b\x01\n" +
+	"\x14GetRepaymentSchedule\x12$.loan.v1.GetRepaymentScheduleRequest\x1a%.loan.v1.GetRepaymentScheduleResponse\"&\x82\xd3\xe4\x93\x02 :\x01*\"\x1b/api/v1/repayments/schedule\x12\x91\x01\n" +
+	"\x15GetInstallmentDetails\x12%.loan.v1.GetInstallmentDetailsRequest\x1a&.loan.v1.GetInstallmentDetailsResponse\")\x82\xd3\xe4\x93\x02#:\x01*\"\x1e/api/v1/repayments/installment\x12\x81\x01\n" +
+	"\x11GetPaymentHistory\x12!.loan.v1.GetPaymentHistoryRequest\x1a\".loan.v1.GetPaymentHistoryResponse\"%\x82\xd3\xe4\x93\x02\x1f:\x01*\"\x1a/api/v1/repayments/historyB\x96\x01\n" +
 	"\vcom.loan.v1B\x0eRepaymentProtoP\x01Z:github.com/yaninyzwitty/caritas-backend/gen/loan/v1;loanv1\xa2\x02\x03LXX\xaa\x02\aLoan.V1\xca\x02\aLoan\\V1\xe2\x02\x13Loan\\V1\\GPBMetadata\xea\x02\bLoan::V1b\x06proto3"
 
 var (

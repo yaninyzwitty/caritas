@@ -2,12 +2,23 @@ syntax = "proto3";
 
 package auth.v1;
 
+import "google/api/annotations.proto";
 import "google/protobuf/timestamp.proto";
 
 service AuthService {
   rpc Login(LoginRequest) returns (LoginResponse);
-  rpc CreateStaffUser(CreateStaffUserRequest) returns (CreateStaffUserResponse);
-  rpc DeactivateStaffUser(DeactivateStaffUserRequest) returns (DeactivateStaffUserResponse);
+  rpc CreateStaffUser(CreateStaffUserRequest) returns (CreateStaffUserResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/auth/create-staff-user"
+      body: "*"
+    };
+  }
+  rpc DeactivateStaffUser(DeactivateStaffUserRequest) returns (DeactivateStaffUserResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/auth/deactivate-staff-user"
+      body: "*"
+    };
+  }
 }
 
 message LoginRequest {

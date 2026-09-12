@@ -7,6 +7,7 @@
 package loanv1
 
 import (
+	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -254,7 +255,7 @@ var File_loan_v1_credit_proto protoreflect.FileDescriptor
 
 const file_loan_v1_credit_proto_rawDesc = "" +
 	"\n" +
-	"\x14loan/v1/credit.proto\x12\aloan.v1\x1a\x12loan/v1/loan.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"O\n" +
+	"\x14loan/v1/credit.proto\x12\aloan.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x12loan/v1/loan.proto\"O\n" +
 	"\x17GetCreditBalanceRequest\x12\x1b\n" +
 	"\tmember_id\x18\x01 \x01(\tR\bmemberId\x12\x17\n" +
 	"\aloan_id\x18\x02 \x01(\tR\x06loanId\"L\n" +
@@ -269,10 +270,10 @@ const file_loan_v1_credit_proto_rawDesc = "" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x1d\n" +
 	"\n" +
 	"request_id\x18\x02 \x01(\tR\trequestId\x12=\n" +
-	"\fsubmitted_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\vsubmittedAt2\xd6\x01\n" +
-	"\rCreditService\x12W\n" +
-	"\x10GetCreditBalance\x12 .loan.v1.GetCreditBalanceRequest\x1a!.loan.v1.GetCreditBalanceResponse\x12l\n" +
-	"\x17RequestCreditWithdrawal\x12'.loan.v1.RequestCreditWithdrawalRequest\x1a(.loan.v1.RequestCreditWithdrawalResponseB\x93\x01\n" +
+	"\fsubmitted_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\vsubmittedAt2\xaa\x02\n" +
+	"\rCreditService\x12{\n" +
+	"\x10GetCreditBalance\x12 .loan.v1.GetCreditBalanceRequest\x1a!.loan.v1.GetCreditBalanceResponse\"\"\x82\xd3\xe4\x93\x02\x1c:\x01*\"\x17/api/v1/credits/balance\x12\x9b\x01\n" +
+	"\x17RequestCreditWithdrawal\x12'.loan.v1.RequestCreditWithdrawalRequest\x1a(.loan.v1.RequestCreditWithdrawalResponse\"-\x82\xd3\xe4\x93\x02':\x01*\"\"/api/v1/credits/request-withdrawalB\x93\x01\n" +
 	"\vcom.loan.v1B\vCreditProtoP\x01Z:github.com/yaninyzwitty/caritas-backend/gen/loan/v1;loanv1\xa2\x02\x03LXX\xaa\x02\aLoan.V1\xca\x02\aLoan\\V1\xe2\x02\x13Loan\\V1\\GPBMetadata\xea\x02\bLoan::V1b\x06proto3"
 
 var (

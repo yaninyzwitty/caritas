@@ -7,6 +7,7 @@
 package memberv1
 
 import (
+	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -1503,7 +1504,7 @@ var File_member_v1_member_proto protoreflect.FileDescriptor
 
 const file_member_v1_member_proto_rawDesc = "" +
 	"\n" +
-	"\x16member/v1/member.proto\x12\tmember.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"<\n" +
+	"\x16member/v1/member.proto\x12\tmember.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"<\n" +
 	"\x0eIdentification\x12\x12\n" +
 	"\x04type\x18\x01 \x01(\tR\x04type\x12\x16\n" +
 	"\x06number\x18\x02 \x01(\tR\x06number\"\xb1\x01\n" +
@@ -1622,15 +1623,15 @@ const file_member_v1_member_proto_rawDesc = "" +
 	"\x18RELATIONSHIP_TYPE_PARENT\x10\x03\x12\x1d\n" +
 	"\x19RELATIONSHIP_TYPE_SIBLING\x10\x04\x12\x1c\n" +
 	"\x18RELATIONSHIP_TYPE_FRIEND\x10\x05\x12\x1b\n" +
-	"\x17RELATIONSHIP_TYPE_OTHER\x10\x062\x82\x05\n" +
-	"\rMemberService\x12U\n" +
-	"\x0eRegisterMember\x12 .member.v1.RegisterMemberRequest\x1a!.member.v1.RegisterMemberResponse\x12F\n" +
-	"\tGetMember\x12\x1b.member.v1.GetMemberRequest\x1a\x1c.member.v1.GetMemberResponse\x12L\n" +
-	"\vListMembers\x12\x1d.member.v1.ListMembersRequest\x1a\x1e.member.v1.ListMembersResponse\x12d\n" +
-	"\x13UpdateMemberProfile\x12%.member.v1.UpdateMemberProfileRequest\x1a&.member.v1.UpdateMemberProfileResponse\x12a\n" +
-	"\x12UpdateMemberStatus\x12$.member.v1.UpdateMemberStatusRequest\x1a%.member.v1.UpdateMemberStatusResponse\x12L\n" +
-	"\vCloseMember\x12\x1d.member.v1.CloseMemberRequest\x1a\x1e.member.v1.CloseMemberResponse\x12m\n" +
-	"\x16GetMemberStatusHistory\x12(.member.v1.GetMemberStatusHistoryRequest\x1a).member.v1.GetMemberStatusHistoryResponseB\xa1\x01\n" +
+	"\x17RELATIONSHIP_TYPE_OTHER\x10\x062\x8d\a\n" +
+	"\rMemberService\x12z\n" +
+	"\x0eRegisterMember\x12 .member.v1.RegisterMemberRequest\x1a!.member.v1.RegisterMemberResponse\"#\x82\xd3\xe4\x93\x02\x1d:\x01*\"\x18/api/v1/members/register\x12f\n" +
+	"\tGetMember\x12\x1b.member.v1.GetMemberRequest\x1a\x1c.member.v1.GetMemberResponse\"\x1e\x82\xd3\xe4\x93\x02\x18:\x01*\"\x13/api/v1/members/get\x12m\n" +
+	"\vListMembers\x12\x1d.member.v1.ListMembersRequest\x1a\x1e.member.v1.ListMembersResponse\"\x1f\x82\xd3\xe4\x93\x02\x19:\x01*\"\x14/api/v1/members/list\x12\x8f\x01\n" +
+	"\x13UpdateMemberProfile\x12%.member.v1.UpdateMemberProfileRequest\x1a&.member.v1.UpdateMemberProfileResponse\")\x82\xd3\xe4\x93\x02#:\x01*\"\x1e/api/v1/members/update-profile\x12\x8b\x01\n" +
+	"\x12UpdateMemberStatus\x12$.member.v1.UpdateMemberStatusRequest\x1a%.member.v1.UpdateMemberStatusResponse\"(\x82\xd3\xe4\x93\x02\":\x01*\"\x1d/api/v1/members/update-status\x12n\n" +
+	"\vCloseMember\x12\x1d.member.v1.CloseMemberRequest\x1a\x1e.member.v1.CloseMemberResponse\" \x82\xd3\xe4\x93\x02\x1a:\x01*\"\x15/api/v1/members/close\x12\x98\x01\n" +
+	"\x16GetMemberStatusHistory\x12(.member.v1.GetMemberStatusHistoryRequest\x1a).member.v1.GetMemberStatusHistoryResponse\")\x82\xd3\xe4\x93\x02#:\x01*\"\x1e/api/v1/members/status-historyB\xa1\x01\n" +
 	"\rcom.member.v1B\vMemberProtoP\x01Z>github.com/yaninyzwitty/caritas-backend/gen/member/v1;memberv1\xa2\x02\x03MXX\xaa\x02\tMember.V1\xca\x02\tMember\\V1\xe2\x02\x15Member\\V1\\GPBMetadata\xea\x02\n" +
 	"Member::V1b\x06proto3"
 
