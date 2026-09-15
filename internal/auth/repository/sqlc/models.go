@@ -12,7 +12,7 @@ type StaffUser struct {
 	ID           pgtype.UUID        `json:"id"`
 	BranchID     int64              `json:"branchId"`
 	Email        string             `json:"email"`
-	PasswordHash string             `json:"passwordHash"`
+	PasswordHash pgtype.Text        `json:"passwordHash"`
 	Role         string             `json:"role"`
 	IsActive     bool               `json:"isActive"`
 	CreatedAt    pgtype.Timestamptz `json:"createdAt"`

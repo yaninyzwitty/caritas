@@ -52,18 +52,6 @@ func main() {
 		}
 	}()
 
-	// auth := authv1.NewAuthServiceClient(conn)
-	// login, err := auth.Login(ctx, &authv1.LoginRequest{
-	// 	Email:    "brianjoseph13@gmail.com",
-	// 	Password: "1234567",
-	// })
-
-	// if err != nil {
-	// 	slog.Error("failed to login", "error", err)
-	// }
-
-	// slog.Info("login successful", "token", login.AccessToken)
-
 	shareClient := sharev1.NewShareServiceClient(conn)
 
 	withdrawSharesRes, err := shareClient.WithdrawShares(ctx, &sharev1.WithdrawSharesRequest{

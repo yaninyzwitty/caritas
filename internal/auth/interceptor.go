@@ -3,10 +3,12 @@ package auth
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/lestrrat-go/httprc/v3"
 	"github.com/lestrrat-go/jwx/v3/jwk"
 	"github.com/lestrrat-go/jwx/v3/jwt"
@@ -87,14 +89,36 @@ func (v *Verifier) UnaryServerInterceptor(ctx context.Context, req any, info *gr
 	if !ok {
 		return nil, status.Error(codes.Unauthenticated, "authentication required")
 	}
+	requestID := ""
+	if values := md.Get("x-request-id"); len(values) > 0 {
+		requestID = values[0]
+	}
+
+	if requestID == "" {
+		requestID = uuid.NewString()
+	}
+
+	slog.Info(
+		"incoming metadata",
+		"has_authorization", len(md.Get("authorization")) > 0,
+		"authorization_count", len(md.Get("authorization")),
+		"request_id", md.Get("x-request-id"),
+	)
+
+	slog.Info("request reaches this point")
 	authorization := md.Get("authorization")
 	if len(authorization) != 1 {
 		return nil, status.Error(codes.Unauthenticated, "authentication required")
 	}
+	slog.Info("request doesn't reach here brother")
+
+	slog.Info("authorization", "value", authorization[0])
 	parts := strings.Fields(authorization[0])
 	if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
 		return nil, status.Error(codes.Unauthenticated, "authentication required")
 	}
+
+	slog.Info("parts", "value", parts[0])
 
 	token, err := jwt.Parse(
 		[]byte(parts[1]),
@@ -106,15 +130,12 @@ func (v *Verifier) UnaryServerInterceptor(ctx context.Context, req any, info *gr
 	if err != nil {
 		return nil, status.Error(codes.Unauthenticated, "authentication required")
 	}
-	if subject, exists := token.Subject(); !exists || subject == "" {
-		return nil, status.Error(codes.Unauthenticated, "authentication required")
-	}
-	var email string
-	if err := token.Get("email", &email); err != nil || email == "" {
+	subject, exists := token.Subject()
+	if !exists || subject == "" {
 		return nil, status.Error(codes.Unauthenticated, "authentication required")
 	}
 
-	staff, err := v.store.GetActiveStaffByEmail(ctx, email)
+	staff, err := v.store.GetActiveStaffByAuthUserID(ctx, pgtype.Text{String: subject, Valid: true})
 	if err != nil {
 		return nil, status.Error(codes.Unauthenticated, "active staff account required")
 	}
@@ -123,7 +144,6 @@ func (v *Verifier) UnaryServerInterceptor(ctx context.Context, req any, info *gr
 		return nil, status.Error(codes.PermissionDenied, "permission denied")
 	}
 
-	requestID := ""
 	if values := md.Get("x-request-id"); len(values) > 0 {
 		requestID = values[0]
 	}
@@ -132,9 +152,10 @@ func (v *Verifier) UnaryServerInterceptor(ctx context.Context, req any, info *gr
 	}
 	_ = grpc.SetHeader(ctx, metadata.Pairs("x-request-id", requestID))
 	return handler(contextWithPrincipal(ctx, Principal{
-		ID:       staff.ID,
-		Role:     staff.Role,
-		BranchID: staff.BranchID,
+		ID:         staff.ID,
+		AuthUserID: subject,
+		Role:       staff.Role,
+		BranchID:   staff.BranchID,
 	}), req)
 }
 

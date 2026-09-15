@@ -3,13 +3,13 @@ package auth
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"strings"
-	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	authv1 "github.com/yaninyzwitty/caritas-backend/gen/auth/v1"
 	authsqlc "github.com/yaninyzwitty/caritas-backend/internal/auth/repository/sqlc"
-	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -17,69 +17,34 @@ import (
 
 type Handlers struct {
 	authv1.UnimplementedAuthServiceServer
-	store       *Store
-	tokenSecret string
+	store *Store
 }
 
-func NewHandlers(store *Store, tokenSecret string) *Handlers {
-	return &Handlers{store: store, tokenSecret: tokenSecret}
-}
-
-func (h *Handlers) Login(ctx context.Context, req *authv1.LoginRequest) (*authv1.LoginResponse, error) {
-
-	reqCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
-
-	email := strings.ToLower(strings.TrimSpace(req.GetEmail()))
-	if email == "" || req.GetPassword() == "" {
-		return nil, status.Error(codes.InvalidArgument, "email and password are required")
-	}
-
-	staff, err := h.store.GetActiveStaffByEmail(reqCtx, email)
-
-	if err != nil {
-
-		return nil, status.Error(codes.Unauthenticated, "invalid credentials")
-	}
-	if err := bcrypt.CompareHashAndPassword([]byte(staff.PasswordHash), []byte(req.GetPassword())); err != nil {
-		return nil, status.Error(codes.Unauthenticated, "invalid credentials")
-	}
-
-	token, err := createAccessToken(staff, h.tokenSecret, time.Now().UTC())
-	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to create access token")
-	}
-
-	return &authv1.LoginResponse{
-		AccessToken:      token,
-		ExpiresInSeconds: int64(tokenTTL.Seconds()),
-	}, nil
+func NewHandlers(store *Store) *Handlers {
+	return &Handlers{store: store}
 }
 
 func (h *Handlers) CreateStaffUser(ctx context.Context, req *authv1.CreateStaffUserRequest) (*authv1.CreateStaffUserResponse, error) {
+	slog.Info("received info", "val", "create staff user")
 
 	email := strings.ToLower(strings.TrimSpace(req.GetEmail()))
 	name := strings.TrimSpace(req.GetName())
 	role := strings.TrimSpace(req.GetRole())
+	authUserID := strings.TrimSpace(req.GetAuthUserId())
 
-	if req.GetBranchId() <= 0 || email == "" || name == "" || req.GetPassword() == "" || !validRole(role) {
-		return nil, status.Error(codes.InvalidArgument, "branch_id, email, name, password, and valid role are required")
-	}
-
-	hash, err := bcrypt.GenerateFromPassword([]byte(req.GetPassword()), bcrypt.DefaultCost)
-	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to hash password")
+	if req.GetBranchId() <= 0 || email == "" || name == "" || authUserID == "" || !validRole(role) {
+		return nil, status.Error(codes.InvalidArgument, "auth_user_id, branch_id, email, name, and valid role are required")
 	}
 
 	staff, err := h.store.CreateStaffUser(ctx, authsqlc.CreateStaffUserParams{
-		Name:         name,
-		BranchID:     req.GetBranchId(),
-		Email:        email,
-		PasswordHash: string(hash),
-		Role:         role,
+		AuthUserID: pgtype.Text{String: authUserID, Valid: true},
+		Name:       name,
+		BranchID:   req.GetBranchId(),
+		Email:      email,
+		Role:       role,
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, status.Error(codes.AlreadyExists, "staff email already exists")
+		return nil, status.Error(codes.AlreadyExists, "staff email or auth user already exists")
 	}
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to create staff user")
@@ -117,13 +82,14 @@ func validRole(role string) bool {
 func staffUserToProto(staff authsqlc.StaffUser) *authv1.StaffUser {
 	id, _ := uuidFromPG(staff.ID)
 	return &authv1.StaffUser{
-		Id:        id,
-		BranchId:  staff.BranchID,
-		Email:     staff.Email,
-		Role:      staff.Role,
-		IsActive:  staff.IsActive,
-		CreatedAt: timestamppb.New(staff.CreatedAt.Time),
-		UpdatedAt: timestamppb.New(staff.UpdatedAt.Time),
-		Name:      staff.Name,
+		Id:         id,
+		BranchId:   staff.BranchID,
+		Email:      staff.Email,
+		Role:       staff.Role,
+		IsActive:   staff.IsActive,
+		CreatedAt:  timestamppb.New(staff.CreatedAt.Time),
+		UpdatedAt:  timestamppb.New(staff.UpdatedAt.Time),
+		Name:       staff.Name,
+		AuthUserId: staff.AuthUserID.String,
 	}
 }

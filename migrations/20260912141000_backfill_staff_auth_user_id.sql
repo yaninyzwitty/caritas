@@ -1,4 +1,5 @@
 -- +goose Up
+-- +goose StatementBegin
 DO $$
 BEGIN
     IF EXISTS (
@@ -14,6 +15,7 @@ BEGIN
         RAISE EXCEPTION 'every active staff user must match exactly one Better Auth user by email';
     END IF;
 END $$;
+-- +goose StatementEnd
 
 UPDATE staff_users AS staff
 SET auth_user_id = auth_user.id,
