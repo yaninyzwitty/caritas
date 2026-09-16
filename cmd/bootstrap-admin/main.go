@@ -11,21 +11,21 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/yaninyzwitty/caritas-backend/config"
 	authsqlc "github.com/yaninyzwitty/caritas-backend/internal/auth/repository/sqlc"
-	"golang.org/x/crypto/bcrypt"
 )
 
 func main() {
 	email := flag.String("email", "", "system admin email")
 	name := flag.String("name", "", "system admin name")
-	password := flag.String("password", "", "system admin password")
+	authUserID := flag.String("auth-user-id", "", "Better Auth user id")
 	branchID := flag.Int64("branch-id", 0, "system admin branch id")
 	flag.Parse()
 
-	if *branchID <= 0 || strings.TrimSpace(*email) == "" || strings.TrimSpace(*name) == "" || *password == "" {
-		log.Fatal("branch-id, email, name, and password are required")
+	if *branchID <= 0 || strings.TrimSpace(*email) == "" || strings.TrimSpace(*name) == "" || strings.TrimSpace(*authUserID) == "" {
+		log.Fatal("auth-user-id, branch-id, email, and name are required")
 	}
 
 	dbURL, err := config.GetDatabaseURL()
@@ -51,20 +51,15 @@ func main() {
 		log.Fatal("staff users already exist")
 	}
 
-	hash, err := bcrypt.GenerateFromPassword([]byte(*password), bcrypt.DefaultCost)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	staff, err := q.CreateStaffUser(ctx, authsqlc.CreateStaffUserParams{
-		Name:         strings.TrimSpace(*name),
-		BranchID:     *branchID,
-		Email:        strings.ToLower(strings.TrimSpace(*email)),
-		PasswordHash: string(hash),
-		Role:         "system_admin",
+		AuthUserID: pgtype.Text{String: strings.TrimSpace(*authUserID), Valid: true},
+		Name:       strings.TrimSpace(*name),
+		BranchID:   *branchID,
+		Email:      strings.ToLower(strings.TrimSpace(*email)),
+		Role:       "system_admin",
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		log.Fatal("staff email already exists")
+		log.Fatal("staff email or auth user already exists")
 	}
 	if err != nil {
 		log.Fatal(err)

@@ -23,110 +23,6 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type LoginRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Email         string                 `protobuf:"bytes,1,opt,name=email,proto3" json:"email,omitempty"`
-	Password      string                 `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *LoginRequest) Reset() {
-	*x = LoginRequest{}
-	mi := &file_auth_v1_auth_proto_msgTypes[0]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *LoginRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*LoginRequest) ProtoMessage() {}
-
-func (x *LoginRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_auth_proto_msgTypes[0]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use LoginRequest.ProtoReflect.Descriptor instead.
-func (*LoginRequest) Descriptor() ([]byte, []int) {
-	return file_auth_v1_auth_proto_rawDescGZIP(), []int{0}
-}
-
-func (x *LoginRequest) GetEmail() string {
-	if x != nil {
-		return x.Email
-	}
-	return ""
-}
-
-func (x *LoginRequest) GetPassword() string {
-	if x != nil {
-		return x.Password
-	}
-	return ""
-}
-
-type LoginResponse struct {
-	state            protoimpl.MessageState `protogen:"open.v1"`
-	AccessToken      string                 `protobuf:"bytes,1,opt,name=access_token,json=accessToken,proto3" json:"access_token,omitempty"`
-	ExpiresInSeconds int64                  `protobuf:"varint,2,opt,name=expires_in_seconds,json=expiresInSeconds,proto3" json:"expires_in_seconds,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
-}
-
-func (x *LoginResponse) Reset() {
-	*x = LoginResponse{}
-	mi := &file_auth_v1_auth_proto_msgTypes[1]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *LoginResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*LoginResponse) ProtoMessage() {}
-
-func (x *LoginResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_auth_proto_msgTypes[1]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use LoginResponse.ProtoReflect.Descriptor instead.
-func (*LoginResponse) Descriptor() ([]byte, []int) {
-	return file_auth_v1_auth_proto_rawDescGZIP(), []int{1}
-}
-
-func (x *LoginResponse) GetAccessToken() string {
-	if x != nil {
-		return x.AccessToken
-	}
-	return ""
-}
-
-func (x *LoginResponse) GetExpiresInSeconds() int64 {
-	if x != nil {
-		return x.ExpiresInSeconds
-	}
-	return 0
-}
-
 type StaffUser struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -137,13 +33,14 @@ type StaffUser struct {
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	Name          string                 `protobuf:"bytes,8,opt,name=name,proto3" json:"name,omitempty"`
+	AuthUserId    string                 `protobuf:"bytes,9,opt,name=auth_user_id,json=authUserId,proto3" json:"auth_user_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *StaffUser) Reset() {
 	*x = StaffUser{}
-	mi := &file_auth_v1_auth_proto_msgTypes[2]
+	mi := &file_auth_v1_auth_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -155,7 +52,7 @@ func (x *StaffUser) String() string {
 func (*StaffUser) ProtoMessage() {}
 
 func (x *StaffUser) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_auth_proto_msgTypes[2]
+	mi := &file_auth_v1_auth_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -168,7 +65,7 @@ func (x *StaffUser) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StaffUser.ProtoReflect.Descriptor instead.
 func (*StaffUser) Descriptor() ([]byte, []int) {
-	return file_auth_v1_auth_proto_rawDescGZIP(), []int{2}
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *StaffUser) GetId() string {
@@ -227,20 +124,27 @@ func (x *StaffUser) GetName() string {
 	return ""
 }
 
+func (x *StaffUser) GetAuthUserId() string {
+	if x != nil {
+		return x.AuthUserId
+	}
+	return ""
+}
+
 type CreateStaffUserRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	BranchId      int64                  `protobuf:"varint,1,opt,name=branch_id,json=branchId,proto3" json:"branch_id,omitempty"`
 	Email         string                 `protobuf:"bytes,2,opt,name=email,proto3" json:"email,omitempty"`
-	Password      string                 `protobuf:"bytes,3,opt,name=password,proto3" json:"password,omitempty"`
 	Role          string                 `protobuf:"bytes,4,opt,name=role,proto3" json:"role,omitempty"`
 	Name          string                 `protobuf:"bytes,5,opt,name=name,proto3" json:"name,omitempty"`
+	AuthUserId    string                 `protobuf:"bytes,6,opt,name=auth_user_id,json=authUserId,proto3" json:"auth_user_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CreateStaffUserRequest) Reset() {
 	*x = CreateStaffUserRequest{}
-	mi := &file_auth_v1_auth_proto_msgTypes[3]
+	mi := &file_auth_v1_auth_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -252,7 +156,7 @@ func (x *CreateStaffUserRequest) String() string {
 func (*CreateStaffUserRequest) ProtoMessage() {}
 
 func (x *CreateStaffUserRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_auth_proto_msgTypes[3]
+	mi := &file_auth_v1_auth_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -265,7 +169,7 @@ func (x *CreateStaffUserRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateStaffUserRequest.ProtoReflect.Descriptor instead.
 func (*CreateStaffUserRequest) Descriptor() ([]byte, []int) {
-	return file_auth_v1_auth_proto_rawDescGZIP(), []int{3}
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *CreateStaffUserRequest) GetBranchId() int64 {
@@ -278,13 +182,6 @@ func (x *CreateStaffUserRequest) GetBranchId() int64 {
 func (x *CreateStaffUserRequest) GetEmail() string {
 	if x != nil {
 		return x.Email
-	}
-	return ""
-}
-
-func (x *CreateStaffUserRequest) GetPassword() string {
-	if x != nil {
-		return x.Password
 	}
 	return ""
 }
@@ -303,6 +200,13 @@ func (x *CreateStaffUserRequest) GetName() string {
 	return ""
 }
 
+func (x *CreateStaffUserRequest) GetAuthUserId() string {
+	if x != nil {
+		return x.AuthUserId
+	}
+	return ""
+}
+
 type CreateStaffUserResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	StaffUser     *StaffUser             `protobuf:"bytes,1,opt,name=staff_user,json=staffUser,proto3" json:"staff_user,omitempty"`
@@ -312,7 +216,7 @@ type CreateStaffUserResponse struct {
 
 func (x *CreateStaffUserResponse) Reset() {
 	*x = CreateStaffUserResponse{}
-	mi := &file_auth_v1_auth_proto_msgTypes[4]
+	mi := &file_auth_v1_auth_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -324,7 +228,7 @@ func (x *CreateStaffUserResponse) String() string {
 func (*CreateStaffUserResponse) ProtoMessage() {}
 
 func (x *CreateStaffUserResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_auth_proto_msgTypes[4]
+	mi := &file_auth_v1_auth_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -337,7 +241,7 @@ func (x *CreateStaffUserResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateStaffUserResponse.ProtoReflect.Descriptor instead.
 func (*CreateStaffUserResponse) Descriptor() ([]byte, []int) {
-	return file_auth_v1_auth_proto_rawDescGZIP(), []int{4}
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *CreateStaffUserResponse) GetStaffUser() *StaffUser {
@@ -356,7 +260,7 @@ type DeactivateStaffUserRequest struct {
 
 func (x *DeactivateStaffUserRequest) Reset() {
 	*x = DeactivateStaffUserRequest{}
-	mi := &file_auth_v1_auth_proto_msgTypes[5]
+	mi := &file_auth_v1_auth_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -368,7 +272,7 @@ func (x *DeactivateStaffUserRequest) String() string {
 func (*DeactivateStaffUserRequest) ProtoMessage() {}
 
 func (x *DeactivateStaffUserRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_auth_proto_msgTypes[5]
+	mi := &file_auth_v1_auth_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -381,7 +285,7 @@ func (x *DeactivateStaffUserRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeactivateStaffUserRequest.ProtoReflect.Descriptor instead.
 func (*DeactivateStaffUserRequest) Descriptor() ([]byte, []int) {
-	return file_auth_v1_auth_proto_rawDescGZIP(), []int{5}
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *DeactivateStaffUserRequest) GetStaffUserId() string {
@@ -400,7 +304,7 @@ type DeactivateStaffUserResponse struct {
 
 func (x *DeactivateStaffUserResponse) Reset() {
 	*x = DeactivateStaffUserResponse{}
-	mi := &file_auth_v1_auth_proto_msgTypes[6]
+	mi := &file_auth_v1_auth_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -412,7 +316,7 @@ func (x *DeactivateStaffUserResponse) String() string {
 func (*DeactivateStaffUserResponse) ProtoMessage() {}
 
 func (x *DeactivateStaffUserResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_auth_proto_msgTypes[6]
+	mi := &file_auth_v1_auth_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -425,7 +329,7 @@ func (x *DeactivateStaffUserResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeactivateStaffUserResponse.ProtoReflect.Descriptor instead.
 func (*DeactivateStaffUserResponse) Descriptor() ([]byte, []int) {
-	return file_auth_v1_auth_proto_rawDescGZIP(), []int{6}
+	return file_auth_v1_auth_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *DeactivateStaffUserResponse) GetStaffUser() *StaffUser {
@@ -439,13 +343,7 @@ var File_auth_v1_auth_proto protoreflect.FileDescriptor
 
 const file_auth_v1_auth_proto_rawDesc = "" +
 	"\n" +
-	"\x12auth/v1/auth.proto\x12\aauth.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"@\n" +
-	"\fLoginRequest\x12\x14\n" +
-	"\x05email\x18\x01 \x01(\tR\x05email\x12\x1a\n" +
-	"\bpassword\x18\x02 \x01(\tR\bpassword\"`\n" +
-	"\rLoginResponse\x12!\n" +
-	"\faccess_token\x18\x01 \x01(\tR\vaccessToken\x12,\n" +
-	"\x12expires_in_seconds\x18\x02 \x01(\x03R\x10expiresInSeconds\"\x89\x02\n" +
+	"\x12auth/v1/auth.proto\x12\aauth.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xab\x02\n" +
 	"\tStaffUser\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tbranch_id\x18\x02 \x01(\x03R\bbranchId\x12\x14\n" +
@@ -456,13 +354,16 @@ const file_auth_v1_auth_proto_rawDesc = "" +
 	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x12\n" +
-	"\x04name\x18\b \x01(\tR\x04name\"\x8f\x01\n" +
+	"\x04name\x18\b \x01(\tR\x04name\x12 \n" +
+	"\fauth_user_id\x18\t \x01(\tR\n" +
+	"authUserId\"\xa5\x01\n" +
 	"\x16CreateStaffUserRequest\x12\x1b\n" +
 	"\tbranch_id\x18\x01 \x01(\x03R\bbranchId\x12\x14\n" +
-	"\x05email\x18\x02 \x01(\tR\x05email\x12\x1a\n" +
-	"\bpassword\x18\x03 \x01(\tR\bpassword\x12\x12\n" +
+	"\x05email\x18\x02 \x01(\tR\x05email\x12\x12\n" +
 	"\x04role\x18\x04 \x01(\tR\x04role\x12\x12\n" +
-	"\x04name\x18\x05 \x01(\tR\x04name\"L\n" +
+	"\x04name\x18\x05 \x01(\tR\x04name\x12 \n" +
+	"\fauth_user_id\x18\x06 \x01(\tR\n" +
+	"authUserIdJ\x04\b\x03\x10\x04R\bpassword\"L\n" +
 	"\x17CreateStaffUserResponse\x121\n" +
 	"\n" +
 	"staff_user\x18\x01 \x01(\v2\x12.auth.v1.StaffUserR\tstaffUser\"@\n" +
@@ -470,9 +371,8 @@ const file_auth_v1_auth_proto_rawDesc = "" +
 	"\rstaff_user_id\x18\x01 \x01(\tR\vstaffUserId\"P\n" +
 	"\x1bDeactivateStaffUserResponse\x121\n" +
 	"\n" +
-	"staff_user\x18\x01 \x01(\v2\x12.auth.v1.StaffUserR\tstaffUser2\xd8\x02\n" +
-	"\vAuthService\x126\n" +
-	"\x05Login\x12\x15.auth.v1.LoginRequest\x1a\x16.auth.v1.LoginResponse\x12\x7f\n" +
+	"staff_user\x18\x01 \x01(\v2\x12.auth.v1.StaffUserR\tstaffUser2\xa0\x02\n" +
+	"\vAuthService\x12\x7f\n" +
 	"\x0fCreateStaffUser\x12\x1f.auth.v1.CreateStaffUserRequest\x1a .auth.v1.CreateStaffUserResponse\")\x82\xd3\xe4\x93\x02#:\x01*\"\x1e/api/v1/auth/create-staff-user\x12\x8f\x01\n" +
 	"\x13DeactivateStaffUser\x12#.auth.v1.DeactivateStaffUserRequest\x1a$.auth.v1.DeactivateStaffUserResponse\"-\x82\xd3\xe4\x93\x02':\x01*\"\"/api/v1/auth/deactivate-staff-userB\x91\x01\n" +
 	"\vcom.auth.v1B\tAuthProtoP\x01Z:github.com/yaninyzwitty/caritas-backend/gen/auth/v1;authv1\xa2\x02\x03AXX\xaa\x02\aAuth.V1\xca\x02\aAuth\\V1\xe2\x02\x13Auth\\V1\\GPBMetadata\xea\x02\bAuth::V1b\x06proto3"
@@ -489,30 +389,26 @@ func file_auth_v1_auth_proto_rawDescGZIP() []byte {
 	return file_auth_v1_auth_proto_rawDescData
 }
 
-var file_auth_v1_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_auth_v1_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_auth_v1_auth_proto_goTypes = []any{
-	(*LoginRequest)(nil),                // 0: auth.v1.LoginRequest
-	(*LoginResponse)(nil),               // 1: auth.v1.LoginResponse
-	(*StaffUser)(nil),                   // 2: auth.v1.StaffUser
-	(*CreateStaffUserRequest)(nil),      // 3: auth.v1.CreateStaffUserRequest
-	(*CreateStaffUserResponse)(nil),     // 4: auth.v1.CreateStaffUserResponse
-	(*DeactivateStaffUserRequest)(nil),  // 5: auth.v1.DeactivateStaffUserRequest
-	(*DeactivateStaffUserResponse)(nil), // 6: auth.v1.DeactivateStaffUserResponse
-	(*timestamppb.Timestamp)(nil),       // 7: google.protobuf.Timestamp
+	(*StaffUser)(nil),                   // 0: auth.v1.StaffUser
+	(*CreateStaffUserRequest)(nil),      // 1: auth.v1.CreateStaffUserRequest
+	(*CreateStaffUserResponse)(nil),     // 2: auth.v1.CreateStaffUserResponse
+	(*DeactivateStaffUserRequest)(nil),  // 3: auth.v1.DeactivateStaffUserRequest
+	(*DeactivateStaffUserResponse)(nil), // 4: auth.v1.DeactivateStaffUserResponse
+	(*timestamppb.Timestamp)(nil),       // 5: google.protobuf.Timestamp
 }
 var file_auth_v1_auth_proto_depIdxs = []int32{
-	7, // 0: auth.v1.StaffUser.created_at:type_name -> google.protobuf.Timestamp
-	7, // 1: auth.v1.StaffUser.updated_at:type_name -> google.protobuf.Timestamp
-	2, // 2: auth.v1.CreateStaffUserResponse.staff_user:type_name -> auth.v1.StaffUser
-	2, // 3: auth.v1.DeactivateStaffUserResponse.staff_user:type_name -> auth.v1.StaffUser
-	0, // 4: auth.v1.AuthService.Login:input_type -> auth.v1.LoginRequest
-	3, // 5: auth.v1.AuthService.CreateStaffUser:input_type -> auth.v1.CreateStaffUserRequest
-	5, // 6: auth.v1.AuthService.DeactivateStaffUser:input_type -> auth.v1.DeactivateStaffUserRequest
-	1, // 7: auth.v1.AuthService.Login:output_type -> auth.v1.LoginResponse
-	4, // 8: auth.v1.AuthService.CreateStaffUser:output_type -> auth.v1.CreateStaffUserResponse
-	6, // 9: auth.v1.AuthService.DeactivateStaffUser:output_type -> auth.v1.DeactivateStaffUserResponse
-	7, // [7:10] is the sub-list for method output_type
-	4, // [4:7] is the sub-list for method input_type
+	5, // 0: auth.v1.StaffUser.created_at:type_name -> google.protobuf.Timestamp
+	5, // 1: auth.v1.StaffUser.updated_at:type_name -> google.protobuf.Timestamp
+	0, // 2: auth.v1.CreateStaffUserResponse.staff_user:type_name -> auth.v1.StaffUser
+	0, // 3: auth.v1.DeactivateStaffUserResponse.staff_user:type_name -> auth.v1.StaffUser
+	1, // 4: auth.v1.AuthService.CreateStaffUser:input_type -> auth.v1.CreateStaffUserRequest
+	3, // 5: auth.v1.AuthService.DeactivateStaffUser:input_type -> auth.v1.DeactivateStaffUserRequest
+	2, // 6: auth.v1.AuthService.CreateStaffUser:output_type -> auth.v1.CreateStaffUserResponse
+	4, // 7: auth.v1.AuthService.DeactivateStaffUser:output_type -> auth.v1.DeactivateStaffUserResponse
+	6, // [6:8] is the sub-list for method output_type
+	4, // [4:6] is the sub-list for method input_type
 	4, // [4:4] is the sub-list for extension type_name
 	4, // [4:4] is the sub-list for extension extendee
 	0, // [0:4] is the sub-list for field type_name
@@ -529,7 +425,7 @@ func file_auth_v1_auth_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_auth_v1_auth_proto_rawDesc), len(file_auth_v1_auth_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   7,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

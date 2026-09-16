@@ -6,7 +6,6 @@ import "google/api/annotations.proto";
 import "google/protobuf/timestamp.proto";
 
 service AuthService {
-  rpc Login(LoginRequest) returns (LoginResponse);
   rpc CreateStaffUser(CreateStaffUserRequest) returns (CreateStaffUserResponse) {
     option (google.api.http) = {
       post: "/api/v1/auth/create-staff-user"
@@ -21,16 +20,6 @@ service AuthService {
   }
 }
 
-message LoginRequest {
-  string email = 1;
-  string password = 2;
-}
-
-message LoginResponse {
-  string access_token = 1;
-  int64 expires_in_seconds = 2;
-}
-
 message StaffUser {
   string id = 1;
   int64 branch_id = 2;
@@ -40,14 +29,17 @@ message StaffUser {
   google.protobuf.Timestamp created_at = 6;
   google.protobuf.Timestamp updated_at = 7;
   string name = 8;
+  string auth_user_id = 9;
 }
 
 message CreateStaffUserRequest {
   int64 branch_id = 1;
   string email = 2;
-  string password = 3;
+  reserved 3;
+  reserved "password";
   string role = 4;
   string name = 5;
+  string auth_user_id = 6;
 }
 
 message CreateStaffUserResponse {

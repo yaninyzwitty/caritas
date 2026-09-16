@@ -114,11 +114,3 @@ func GetDatabaseURL() (string, error) {
 	}
 	return url, nil
 }
-
-func GetAuthTokenSecret() (string, error) {
-	secret := os.Getenv("AUTH_TOKEN_SECRET")
-	if secret == "" {
-		return "", fmt.Errorf("AUTH_TOKEN_SECRET environment variable is required")
-	}
-	return secret, nil
-}

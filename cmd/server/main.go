@@ -41,9 +41,6 @@ func main() {
 
 	dbURL, err := config.GetDatabaseURL()
 	exitOnError("failed to get database URL", err)
-	authTokenSecret, err := config.GetAuthTokenSecret()
-	exitOnError("failed to get auth token secret", err)
-
 	poolConfig, err := pgxpool.ParseConfig(dbURL)
 	exitOnError("failed to parse database URL", err)
 
@@ -109,7 +106,7 @@ func main() {
 	contributionServer := contribution.NewHandlers(contributionService, darajaClient)
 	darajaHandlers := contribution.NewDarajaHandlers(ctx, contributionService)
 	authStore := auth.NewStore(pool)
-	authServer := auth.NewHandlers(authStore, authTokenSecret)
+	authServer := auth.NewHandlers(authStore)
 	verifier, err := auth.NewVerifier(
 		ctx,
 		authStore,
@@ -150,7 +147,7 @@ func main() {
 	gateway := runtime.NewServeMux(
 		runtime.WithIncomingHeaderMatcher(func(header string) (string, bool) {
 			switch strings.ToLower(header) {
-			case "authorization", "x-request-id", "idempotency-key":
+			case "x-request-id", "idempotency-key":
 				return strings.ToLower(header), true
 			default:
 				return runtime.DefaultHeaderMatcher(header)

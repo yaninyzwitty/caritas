@@ -23,26 +23,26 @@ func (q *Queries) CountStaffUsers(ctx context.Context) (int64, error) {
 }
 
 const createStaffUser = `-- name: CreateStaffUser :one
-INSERT INTO staff_users (name, branch_id, email, password_hash, role)
-VALUES ($1, $2, lower($3), $4, $5)
-ON CONFLICT (email) DO NOTHING
+INSERT INTO staff_users (auth_user_id, name, branch_id, email, role)
+VALUES ($1, $2, $3, lower($4), $5)
+ON CONFLICT DO NOTHING
 RETURNING id, branch_id, email, password_hash, role, is_active, created_at, updated_at, name, auth_user_id
 `
 
 type CreateStaffUserParams struct {
-	Name         string `json:"name"`
-	BranchID     int64  `json:"branchId"`
-	Email        string `json:"email"`
-	PasswordHash string `json:"passwordHash"`
-	Role         string `json:"role"`
+	AuthUserID pgtype.Text `json:"authUserId"`
+	Name       string      `json:"name"`
+	BranchID   int64       `json:"branchId"`
+	Email      string      `json:"email"`
+	Role       string      `json:"role"`
 }
 
 func (q *Queries) CreateStaffUser(ctx context.Context, arg CreateStaffUserParams) (StaffUser, error) {
 	row := q.db.QueryRow(ctx, createStaffUser,
+		arg.AuthUserID,
 		arg.Name,
 		arg.BranchID,
 		arg.Email,
-		arg.PasswordHash,
 		arg.Role,
 	)
 	var i StaffUser
@@ -97,30 +97,6 @@ WHERE auth_user_id = $1
 
 func (q *Queries) GetActiveStaffByAuthUserID(ctx context.Context, authUserID pgtype.Text) (StaffUser, error) {
 	row := q.db.QueryRow(ctx, getActiveStaffByAuthUserID, authUserID)
-	var i StaffUser
-	err := row.Scan(
-		&i.ID,
-		&i.BranchID,
-		&i.Email,
-		&i.PasswordHash,
-		&i.Role,
-		&i.IsActive,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.Name,
-		&i.AuthUserID,
-	)
-	return i, err
-}
-
-const getActiveStaffByEmail = `-- name: GetActiveStaffByEmail :one
-SELECT id, branch_id, email, password_hash, role, is_active, created_at, updated_at, name, auth_user_id
-FROM staff_users
-WHERE lower(email) = lower($1) AND is_active = TRUE
-`
-
-func (q *Queries) GetActiveStaffByEmail(ctx context.Context, email string) (StaffUser, error) {
-	row := q.db.QueryRow(ctx, getActiveStaffByEmail, email)
 	var i StaffUser
 	err := row.Scan(
 		&i.ID,
