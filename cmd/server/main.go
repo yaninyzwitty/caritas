@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"log/slog"
 	"net"
@@ -33,10 +32,7 @@ import (
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	configPath := flag.String("config", "config.yaml", "the path to your config file")
-	flag.Parse()
-
-	cfg, err := config.Load(*configPath)
+	cfg, err := config.Load()
 	exitOnError("failed to load config", err)
 
 	dbURL, err := config.GetDatabaseURL()
