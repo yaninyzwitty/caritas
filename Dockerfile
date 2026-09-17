@@ -20,7 +20,7 @@ FROM alpine:3.22@sha256:14358309a308569c32bdc37e2e0e9694be33a9d99e68afb0f5ff33cc
 RUN apk add --no-cache ca-certificates tzdata wget && \
     wget -q -t3 \
     'https://packages.doppler.com/public/cli/rsa.8004D9FF50437357.key' \
-    -O /etc/apk/keys/doppler.asc && \
+    -O /etc/apk/keys/doppler.rsa.pub && \
     echo 'https://packages.doppler.com/public/cli/alpine/any-version/main' \
     >> /etc/apk/repositories && \
     apk add --no-cache doppler
