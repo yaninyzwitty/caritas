@@ -1,7 +1,5 @@
 FROM golang:1.26.1-alpine@sha256:d337ecb3075f0ec76d81652b3fa52af47c3eba6c8ba9f93b835752df7ce62946 AS builder
 
-RUN apk add --no-cache git gcc musl-dev make
-
 WORKDIR /app
 
 COPY go.mod go.sum ./
@@ -17,13 +15,10 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
 
 FROM alpine:3.22@sha256:14358309a308569c32bdc37e2e0e9694be33a9d99e68afb0f5ff33cc1f695dce
 
-RUN apk add --no-cache ca-certificates tzdata wget && \
-    wget -q -t3 \
-    'https://packages.doppler.com/public/cli/rsa.8004D9FF50437357.key' \
-    -O /etc/apk/keys/doppler.rsa.pub && \
-    echo 'https://packages.doppler.com/public/cli/alpine/any-version/main' \
-    >> /etc/apk/repositories && \
-    apk add --no-cache doppler
+# Doppler CLI and CA Certificates
+RUN wget -q -t3 'https://packages.doppler.com/public/cli/rsa.8004D9FF50437357.key' -O /etc/apk/keys/cli@doppler-8004D9FF50437357.rsa.pub && \
+    echo 'https://packages.doppler.com/public/cli/alpine/any-version/main' >> /etc/apk/repositories && \
+    apk add --no-cache ca-certificates doppler
 
 WORKDIR /app
 
