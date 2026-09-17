@@ -3,110 +3,143 @@ package config
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"time"
-
-	"gopkg.in/yaml.v3"
 )
 
 type Config struct {
-	HTTP     HTTPConfig     `yaml:"http"`
-	GRPC     GRPCConfig     `yaml:"grpc"`
-	Daraja   DarajaConfig   `yaml:"daraja"`
-	Temporal TemporalConfig `yaml:"temporal"`
-	Database DatabaseConfig `yaml:"database"`
-	Log      LogConfig      `yaml:"log"`
+	HTTP     HTTPConfig
+	GRPC     GRPCConfig
+	Daraja   DarajaConfig
+	Database DatabaseConfig
 }
 
-// HTTPConfig exists for public webhook ingress. Without it, Daraja would have
-// to share the gRPC listener even though callbacks are plain HTTP.
-type HTTPConfig struct {
-	Port int `yaml:"port"`
-}
-
+type HTTPConfig struct{ Port int }
 type GRPCConfig struct {
-	Port    int           `yaml:"port"`
-	Timeout time.Duration `yaml:"timeout"`
+	Port    int
+	Timeout time.Duration
 }
-
-// DarajaConfig carries provider settings from config/env into main. Without
-// this explicit config object, STK initiation would either use globals or bury
-// production credentials inside the contribution package.
 type DarajaConfig struct {
-	Enabled           bool   `yaml:"enabled"`
-	BaseURL           string `yaml:"base_url"`
-	BusinessShortCode string `yaml:"business_short_code"`
-	Passkey           string `yaml:"passkey"`
-	CallbackURL       string `yaml:"callback_url"`
-	AccountReference  string `yaml:"account_reference"`
-	TransactionDesc   string `yaml:"transaction_desc"`
-	ConsumerKeyEnv    string `yaml:"consumer_key_env"`
-	ConsumerSecretEnv string `yaml:"consumer_secret_env"`
-	ConsumerKey       string `yaml:"-"`
-	ConsumerSecret    string `yaml:"-"`
+	Enabled           bool
+	BaseURL           string
+	BusinessShortCode string
+	Passkey           string
+	CallbackURL       string
+	AccountReference  string
+	TransactionDesc   string
+	ConsumerKey       string
+	ConsumerSecret    string
 }
-
-type TemporalConfig struct {
-	Host                     string        `yaml:"host"`
-	Namespace                string        `yaml:"namespace"`
-	TaskQueue                string        `yaml:"task_queue"`
-	WorkflowExecutionTimeout time.Duration `yaml:"workflow_execution_timeout"`
-	ActivityTimeout          time.Duration `yaml:"activity_timeout"`
-}
-
 type DatabaseConfig struct {
-	MaxOpenConns    int           `yaml:"max_open_conns"`
-	MaxIdleConns    int           `yaml:"max_idle_conns"`
-	ConnMaxLifetime time.Duration `yaml:"conn_max_lifetime"`
-	ConnMaxIdleTime time.Duration `yaml:"conn_max_idle_time"`
+	MaxOpenConns    int
+	MaxIdleConns    int
+	ConnMaxLifetime time.Duration
+	ConnMaxIdleTime time.Duration
 }
 
-type LogConfig struct {
-	Level     string `yaml:"level"`
-	Format    string `yaml:"format"`
-	AddSource bool   `yaml:"add_source"`
+func Load() (*Config, error) {
+	cfg := &Config{
+		HTTP: HTTPConfig{Port: 8080},
+		GRPC: GRPCConfig{Port: 50051, Timeout: 30 * time.Second},
+		Daraja: DarajaConfig{
+			BaseURL:          "https://sandbox.safaricom.co.ke",
+			AccountReference: "CARITAS",
+			TransactionDesc:  "Caritas contribution",
+		},
+		Database: DatabaseConfig{
+			MaxOpenConns:    25,
+			MaxIdleConns:    5,
+			ConnMaxLifetime: 5 * time.Minute,
+			ConnMaxIdleTime: time.Minute,
+		},
+	}
+	var err error
+	if cfg.HTTP.Port, err = envInt("HTTP_PORT", cfg.HTTP.Port); err != nil {
+		return nil, err
+	}
+	if cfg.GRPC.Port, err = envInt("GRPC_PORT", cfg.GRPC.Port); err != nil {
+		return nil, err
+	}
+	if cfg.GRPC.Timeout, err = envDuration("GRPC_TIMEOUT", cfg.GRPC.Timeout); err != nil {
+		return nil, err
+	}
+	if cfg.Daraja.Enabled, err = envBool("DARAJA_ENABLED", false); err != nil {
+		return nil, err
+	}
+	cfg.Daraja.BaseURL = envString("DARAJA_BASE_URL", cfg.Daraja.BaseURL)
+	cfg.Daraja.BusinessShortCode = os.Getenv("DARAJA_BUSINESS_SHORTCODE")
+	cfg.Daraja.Passkey = os.Getenv("DARAJA_PASSKEY")
+	cfg.Daraja.CallbackURL = os.Getenv("DARAJA_CALLBACK_URL")
+	cfg.Daraja.AccountReference = envString("DARAJA_ACCOUNT_REFERENCE", cfg.Daraja.AccountReference)
+	cfg.Daraja.TransactionDesc = envString("DARAJA_TRANSACTION_DESC", cfg.Daraja.TransactionDesc)
+	cfg.Daraja.ConsumerKey = os.Getenv("DARAJA_CONSUMER_KEY")
+	cfg.Daraja.ConsumerSecret = os.Getenv("DARAJA_CONSUMER_SECRET")
+	if cfg.Daraja.Enabled && (cfg.Daraja.ConsumerKey == "" || cfg.Daraja.ConsumerSecret == "") {
+		return nil, fmt.Errorf("DARAJA_CONSUMER_KEY and DARAJA_CONSUMER_SECRET are required when DARAJA_ENABLED=true")
+	}
+	if cfg.Database.MaxOpenConns, err = envInt("DATABASE_MAX_OPEN_CONNS", cfg.Database.MaxOpenConns); err != nil {
+		return nil, err
+	}
+	if cfg.Database.MaxIdleConns, err = envInt("DATABASE_MAX_IDLE_CONNS", cfg.Database.MaxIdleConns); err != nil {
+		return nil, err
+	}
+	if cfg.Database.ConnMaxLifetime, err = envDuration("DATABASE_CONN_MAX_LIFETIME", cfg.Database.ConnMaxLifetime); err != nil {
+		return nil, err
+	}
+	if cfg.Database.ConnMaxIdleTime, err = envDuration("DATABASE_CONN_MAX_IDLE_TIME", cfg.Database.ConnMaxIdleTime); err != nil {
+		return nil, err
+	}
+	if cfg.HTTP.Port < 1 || cfg.HTTP.Port > 65535 || cfg.GRPC.Port < 1 || cfg.GRPC.Port > 65535 || cfg.HTTP.Port == cfg.GRPC.Port {
+		return nil, fmt.Errorf("HTTP_PORT and GRPC_PORT must be distinct ports between 1 and 65535")
+	}
+	if cfg.GRPC.Timeout <= 0 || cfg.Database.ConnMaxLifetime <= 0 || cfg.Database.ConnMaxIdleTime <= 0 {
+		return nil, fmt.Errorf("GRPC_TIMEOUT, DATABASE_CONN_MAX_LIFETIME and DATABASE_CONN_MAX_IDLE_TIME must be positive")
+	}
+	if cfg.Database.MaxOpenConns < 1 || cfg.Database.MaxOpenConns > 2147483647 || cfg.Database.MaxIdleConns < 0 || cfg.Database.MaxIdleConns > cfg.Database.MaxOpenConns {
+		return nil, fmt.Errorf("DATABASE_MAX_OPEN_CONNS must be between 1 and 2147483647 and DATABASE_MAX_IDLE_CONNS must be between 0 and DATABASE_MAX_OPEN_CONNS")
+	}
+	return cfg, nil
 }
 
-func Load(path string) (*Config, error) {
-	data, err := os.ReadFile(path)
+func envString(name, fallback string) string {
+	if value := os.Getenv(name); value != "" {
+		return value
+	}
+	return fallback
+}
+func envInt(name string, fallback int) (int, error) {
+	value := os.Getenv(name)
+	if value == "" {
+		return fallback, nil
+	}
+	parsed, err := strconv.Atoi(value)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read config file: %w", err)
+		return 0, fmt.Errorf("%s must be an integer: %w", name, err)
 	}
-
-	var cfg Config
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return nil, fmt.Errorf("failed to parse config: %w", err)
-	}
-	if cfg.Daraja.Enabled {
-		keyEnv := cfg.Daraja.ConsumerKeyEnv
-		if keyEnv == "" {
-			keyEnv = "DARAJA_CONSUMER_KEY"
-		}
-		secretEnv := cfg.Daraja.ConsumerSecretEnv
-		if secretEnv == "" {
-			secretEnv = "DARAJA_CONSUMER_SECRET"
-		}
-
-		businessShortCode := cfg.Daraja.BusinessShortCode
-		if businessShortCode == "" {
-			businessShortCode = os.Getenv("DARAJA_BUSINESS_SHORTCODE")
-		}
-
-		darajaPassKey := cfg.Daraja.Passkey
-
-		if darajaPassKey == "" {
-			darajaPassKey = os.Getenv("DARAJA_PASSKEY")
-		}
-
-		cfg.Daraja.ConsumerKey = os.Getenv(keyEnv)
-		cfg.Daraja.ConsumerSecret = os.Getenv(secretEnv)
-		if cfg.Daraja.ConsumerKey == "" || cfg.Daraja.ConsumerSecret == "" {
-			return nil, fmt.Errorf("%s and %s environment variables are required", keyEnv, secretEnv)
-		}
-	}
-
-	return &cfg, nil
+	return parsed, nil
 }
-
+func envDuration(name string, fallback time.Duration) (time.Duration, error) {
+	value := os.Getenv(name)
+	if value == "" {
+		return fallback, nil
+	}
+	parsed, err := time.ParseDuration(value)
+	if err != nil {
+		return 0, fmt.Errorf("%s must be a duration such as 30s or 5m: %w", name, err)
+	}
+	return parsed, nil
+}
+func envBool(name string, fallback bool) (bool, error) {
+	value := os.Getenv(name)
+	if value == "" {
+		return fallback, nil
+	}
+	parsed, err := strconv.ParseBool(value)
+	if err != nil {
+		return false, fmt.Errorf("%s must be a boolean: %w", name, err)
+	}
+	return parsed, nil
+}
 func GetDatabaseURL() (string, error) {
 	url := os.Getenv("DATABASE_URL")
 	if url == "" {
