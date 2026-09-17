@@ -14,13 +14,22 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
     -o /app/server \
     ./cmd/server
 
+
 FROM alpine:3.22@sha256:14358309a308569c32bdc37e2e0e9694be33a9d99e68afb0f5ff33cc1f695dce
 
-RUN apk add --no-cache ca-certificates tzdata
+RUN apk add --no-cache ca-certificates tzdata wget && \
+    wget -q -t3 \
+    'https://packages.doppler.com/public/cli/rsa.8004D9FF50437357.key' \
+    -O /etc/apk/keys/doppler.asc && \
+    echo 'https://packages.doppler.com/public/cli/alpine/any-version/main' \
+    >> /etc/apk/repositories && \
+    apk add --no-cache doppler
 
 WORKDIR /app
 
 COPY --from=builder /app/server ./server
+
 EXPOSE 8080 50051
 
-ENTRYPOINT ["./server"]
+ENTRYPOINT ["doppler", "run", "--"]
+CMD ["./server"]
