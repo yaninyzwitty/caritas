@@ -116,7 +116,7 @@ func TestRecordRepaymentOverpaymentClosesLoanAndCreatesCredit(t *testing.T) {
 
 	assertLoanStatus(t, ctx, pool, loanID, "closed")
 	assertScheduleStatuses(t, ctx, pool, loanID, []string{"paid"})
-	assertCreditAmount(t, ctx, pool, loanID, "10000.0000")
+	assertCreditAmount(t, ctx, pool, loanID, "10000")
 }
 
 func TestRecordRepaymentPartialPaymentMarksFirstUnpaidSchedulePartial(t *testing.T) {
@@ -314,6 +314,17 @@ func createRepaymentLoan(t *testing.T, ctx context.Context, pool *pgxpool.Pool, 
 	`, memberID, atomic.AddInt64(&repaymentMemberNumber, 1), memberID.String())
 	if err != nil {
 		t.Fatalf("insert member: %v", err)
+	}
+	_, err = pool.Exec(ctx, `
+		WITH account AS (
+			INSERT INTO share_accounts (member_id, branch_id, opened_at)
+			VALUES ($1, 1, NOW()) RETURNING id
+		)
+		INSERT INTO share_transactions (share_account_id, type, amount, balance_after, reference_id, originator_id)
+		SELECT id, 'purchase', 100000, 100000, $1, $1 FROM account
+	`, memberID)
+	if err != nil {
+		t.Fatalf("insert member shares: %v", err)
 	}
 
 	loan, err := q.CreateLoan(ctx, loansqlc.CreateLoanParams{
