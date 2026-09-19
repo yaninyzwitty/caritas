@@ -138,7 +138,12 @@ func main() {
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 	exitOnError("failed to create gateway connection", err)
-	defer gatewayConnection.Close()
+	defer func() {
+		if err := gatewayConnection.Close(); err != nil {
+			slog.Error("failed to close gateway connection", "error", err)
+
+		}
+	}()
 
 	gateway := runtime.NewServeMux(
 		runtime.WithIncomingHeaderMatcher(func(header string) (string, bool) {
