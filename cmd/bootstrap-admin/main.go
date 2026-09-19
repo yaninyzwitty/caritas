@@ -65,5 +65,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Fprintf(os.Stdout, "created system admin %s\n", staff.Email)
+	if _, err := fmt.Fprintf(os.Stdout, "created system admin %s\n", staff.Email); err != nil {
+		fmt.Fprintf(os.Stderr, "write output: %v\n", err)
+		os.Exit(1)
+	}
 }

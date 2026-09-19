@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -88,8 +89,11 @@ func (c *DarajaClient) InitiateSTK(ctx context.Context, request DarajaSTKInitiat
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
-
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			slog.Warn("failed to close response body", "error", err)
+		}
+	}()
 	var payload struct {
 		CheckoutRequestID string `json:"CheckoutRequestID"`
 		ResponseCode      string `json:"ResponseCode"`
@@ -122,8 +126,11 @@ func (c *DarajaClient) accessToken(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
-
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			slog.Warn("failed to close response body", "error", err)
+		}
+	}()
 	var payload struct {
 		AccessToken string `json:"access_token"`
 		ErrorCode   string `json:"errorCode"`
