@@ -274,6 +274,9 @@ func applyMigrations(ctx context.Context, pool *pgxpool.Pool) error {
 	if _, err := pool.Exec(ctx, "CREATE EXTENSION IF NOT EXISTS pgcrypto"); err != nil {
 		return err
 	}
+	if _, err := pool.Exec(ctx, `CREATE TABLE "user" (id TEXT PRIMARY KEY, email TEXT NOT NULL)`); err != nil {
+		return err
+	}
 
 	files, err := filepath.Glob(filepath.Join("..", "..", "migrations", "*.sql"))
 	if err != nil {
