@@ -54,6 +54,16 @@ Durations use Go syntax such as `30s`, `5m`, or `24h`.
 The HTTP server is a long-running process; deploy this image to a container
 service such as App Runner or ECS/Fargate. Lambda would need an HTTP adapter.
 
+Seed 10 fictional Kenyan member profiles and a September 2026 financial snapshot
+with share history, secured loans, repayments, cash and M-Pesa receipts:
+
+```bash
+go run ./scripts/seed
+```
+
+Seed identities and contact details are illustrative, not verified real people.
+Reruns are idempotent. Existing rows from the older seed are not removed or renamed.
+
 The server exposes gRPC on the configured gRPC port and generated HTTP/JSON
 routes on the configured HTTP port. Better Auth JWTs are accepted through an
 `Authorization: Bearer <token>` header on either transport.

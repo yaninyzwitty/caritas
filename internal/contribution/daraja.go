@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log/slog"
 	"math/big"
 	"strings"
 	"time"
@@ -175,10 +174,6 @@ func (s *Service) ProcessDarajaSTKPayment(ctx context.Context, payment DarajaSTK
 				return fmt.Errorf("mark payment request failed: %w", updateErr)
 			}
 			return nil
-		}
-
-		for _, allocation := range allocations {
-			slog.Info("allocation params", "Value", allocation.Amount, "allocationType", allocation.Type, "targetID", allocation.TargetID)
 		}
 
 		receivedAt := payment.ReceivedAt

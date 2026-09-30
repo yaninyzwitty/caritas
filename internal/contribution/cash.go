@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"math/big"
 	"strings"
 	"time"
@@ -90,8 +89,6 @@ func (s *Service) CreateCashReceipt(ctx context.Context, params contributionsqlc
 	if err != nil {
 		return CreatedReceipt{}, err
 	}
-
-	slog.Info("receiptID", "val", result.Receipt.ID, "receivedBy", params.ReceivedBy)
 
 	processed, processErr := s.ProcessReceipt(ctx, result.Receipt.ID, params.ReceivedBy)
 	if processErr != nil && processed.Receipt.ID.Valid {

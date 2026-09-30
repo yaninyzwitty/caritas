@@ -3,7 +3,6 @@ package auth
 import (
 	"context"
 	"errors"
-	"log/slog"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -25,8 +24,6 @@ func NewHandlers(store *Store) *Handlers {
 }
 
 func (h *Handlers) CreateStaffUser(ctx context.Context, req *authv1.CreateStaffUserRequest) (*authv1.CreateStaffUserResponse, error) {
-	slog.Info("received info", "val", "create staff user")
-
 	email := strings.ToLower(strings.TrimSpace(req.GetEmail()))
 	name := strings.TrimSpace(req.GetName())
 	role := strings.TrimSpace(req.GetRole())

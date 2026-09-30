@@ -3,7 +3,6 @@ package member
 import (
 	"context"
 	"fmt"
-	"log/slog"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/yaninyzwitty/caritas-backend/internal/repository/sqlc"
@@ -42,7 +41,6 @@ func (s *Service) RegisterMember(ctx context.Context, branchID int64, nationalID
 		if err != nil {
 			return fmt.Errorf("increment member number: %w", err)
 		}
-		slog.Info("member number", "val", memberNumber)
 
 		memberID, err := q.CreateMember(ctx, sqlc.CreateMemberParams{
 			BranchID:     branchID,
