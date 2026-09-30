@@ -3,7 +3,6 @@ package auth
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"strings"
 	"time"
 
@@ -19,6 +18,8 @@ import (
 )
 
 const (
+	jwksStartupTimeout = 20 * time.Second
+
 	roleSystemAdmin = "system_admin"
 	roleManager     = "manager"
 	roleLoanOfficer = "loan_officer"
@@ -59,9 +60,11 @@ func NewVerifier(ctx context.Context, store *Store, jwksURL, issuer, audience st
 	if err != nil {
 		return nil, fmt.Errorf("create JWKS cache: %w", err)
 	}
-	if err := cache.Register(ctx, jwksURL, jwk.WithConstantInterval(5*time.Minute), jwk.WithWaitReady(true)); err != nil {
+	readyCtx, cancel := context.WithTimeout(ctx, jwksStartupTimeout)
+	defer cancel()
+	if err := cache.Register(readyCtx, jwksURL, jwk.WithConstantInterval(5*time.Minute), jwk.WithWaitReady(true)); err != nil {
 		_ = cache.Shutdown(context.Background())
-		return nil, fmt.Errorf("register JWKS URL: %w", err)
+		return nil, fmt.Errorf("fetch JWKS from %q within %s: %w", jwksURL, jwksStartupTimeout, err)
 	}
 	keyset, err := cache.CachedSet(jwksURL)
 	if err != nil {
@@ -98,27 +101,15 @@ func (v *Verifier) UnaryServerInterceptor(ctx context.Context, req any, info *gr
 		requestID = uuid.NewString()
 	}
 
-	slog.Info(
-		"incoming metadata",
-		"has_authorization", len(md.Get("authorization")) > 0,
-		"authorization_count", len(md.Get("authorization")),
-		"request_id", md.Get("x-request-id"),
-	)
-
-	slog.Info("request reaches this point")
 	authorization := md.Get("authorization")
 	if len(authorization) != 1 {
 		return nil, status.Error(codes.Unauthenticated, "authentication required")
 	}
-	slog.Info("request doesn't reach here brother")
 
-	slog.Info("authorization", "value", authorization[0])
 	parts := strings.Fields(authorization[0])
 	if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
 		return nil, status.Error(codes.Unauthenticated, "authentication required")
 	}
-
-	slog.Info("parts", "value", parts[0])
 
 	token, err := jwt.Parse(
 		[]byte(parts[1]),

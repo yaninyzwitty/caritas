@@ -40,7 +40,6 @@ func NewService(store *Store, memberService *member.Service) *Service {
 }
 
 func (s *Service) ApplyForLoan(ctx context.Context, params loansqlc.CreateLoanParams, sharePledge pgtype.Numeric, guarantors []ProposedGuarantor) (loansqlc.CreateLoanRow, error) {
-	slog.Info("ApplyForLoan", "params", params, "sharePledge", sharePledge, "guarantors", guarantors)
 	// increase timeout to prevent defer tx rollback errors, due to context time getting done
 	applyLoanCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
@@ -96,7 +95,6 @@ func (s *Service) ApplyForLoan(ctx context.Context, params loansqlc.CreateLoanPa
 			return ErrInsufficientCollateral
 		}
 
-		slog.Info("", "val", account.ID)
 		balance := new(big.Int)
 		latest, err := shares.GetLatestBalance(applyLoanCtx, account.ID)
 		switch {
@@ -122,8 +120,6 @@ func (s *Service) ApplyForLoan(ctx context.Context, params loansqlc.CreateLoanPa
 		if err != nil {
 			return fmt.Errorf("create loan: %w", err)
 		}
-
-		slog.Info("loan created", "loanID", loan.ID)
 
 		for _, guarantor := range guarantors {
 			if _, err := q.CreateLoanGuarantor(applyLoanCtx, loansqlc.CreateLoanGuarantorParams{

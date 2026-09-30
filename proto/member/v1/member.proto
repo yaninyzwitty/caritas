@@ -100,6 +100,7 @@ message PersonalInfo {
   string                    address       = 5;
 }
 
+// TODO-move money logic to a shared proto or its own proto file
 // Money represents a monetary amount with currency.
 message Money {
   string currency_code = 1;  // ISO 4217 currency code (e.g., "USD", "KES")
