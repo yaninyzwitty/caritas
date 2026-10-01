@@ -99,22 +99,22 @@ WHERE sa.is_deleted = FALSE
   AND sa.branch_id = $1
   AND ($2::share_account_status IS NULL OR sa.status = $2)
   AND (
-      $3::timestamptz IS NULL
-      OR (sa.created_at, sa.id) < (
-          $3::timestamptz,
+      $3::bigint IS NULL
+      OR (m.member_number, sa.id) > (
+          $3::bigint,
           $4::uuid
       )
   )
-ORDER BY sa.created_at DESC, sa.id DESC
+ORDER BY m.member_number ASC, sa.id ASC
 LIMIT $5
 `
 
 type ListShareAccountsParams struct {
-	BranchID        int64                  `json:"branchId"`
-	StatusFilter    NullShareAccountStatus `json:"statusFilter"`
-	CursorCreatedAt pgtype.Timestamptz     `json:"cursorCreatedAt"`
-	CursorID        pgtype.UUID            `json:"cursorId"`
-	FetchLimit      int32                  `json:"fetchLimit"`
+	BranchID           int64                  `json:"branchId"`
+	StatusFilter       NullShareAccountStatus `json:"statusFilter"`
+	CursorMemberNumber pgtype.Int8            `json:"cursorMemberNumber"`
+	CursorID           pgtype.UUID            `json:"cursorId"`
+	FetchLimit         int32                  `json:"fetchLimit"`
 }
 
 type ListShareAccountsRow struct {
@@ -133,7 +133,7 @@ func (q *Queries) ListShareAccounts(ctx context.Context, arg ListShareAccountsPa
 	rows, err := q.db.Query(ctx, listShareAccounts,
 		arg.BranchID,
 		arg.StatusFilter,
-		arg.CursorCreatedAt,
+		arg.CursorMemberNumber,
 		arg.CursorID,
 		arg.FetchLimit,
 	)
