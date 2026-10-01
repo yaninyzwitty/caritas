@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -159,9 +160,23 @@ func (h *Handlers) ListShareAccounts(ctx context.Context, req *sharev1.ListShare
 		limit = maxPageSize
 	}
 
-	cursorTS, cursorID, err := decodeCursor(req.GetPageToken())
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid page_token")
+	var cursorMemberNumber pgtype.Int8
+	var cursorID pgtype.UUID
+	if token := req.GetPageToken(); token != "" {
+		raw, err := base64.RawURLEncoding.DecodeString(token)
+		if err != nil {
+			return nil, status.Error(codes.InvalidArgument, "invalid page_token")
+		}
+		number, id, ok := strings.Cut(string(raw), "|")
+		memberNumber, err := strconv.ParseInt(number, 10, 64)
+		if !ok || err != nil {
+			return nil, status.Error(codes.InvalidArgument, "invalid page_token")
+		}
+		cursorID, err = stringToUUID(id)
+		if err != nil {
+			return nil, status.Error(codes.InvalidArgument, "invalid page_token")
+		}
+		cursorMemberNumber = pgtype.Int8{Int64: memberNumber, Valid: true}
 	}
 
 	var statusFilter sharesqlc.NullShareAccountStatus
@@ -173,11 +188,11 @@ func (h *Handlers) ListShareAccounts(ctx context.Context, req *sharev1.ListShare
 	}
 
 	accounts, err := h.store.ListShareAccounts(ctx, sharesqlc.ListShareAccountsParams{
-		BranchID:        resolveBranchID(req.GetBranchId()),
-		CursorCreatedAt: cursorTS,
-		CursorID:        cursorID,
-		StatusFilter:    statusFilter,
-		FetchLimit:      limit + 1, // fetch one extra to determine if there's a next page
+		BranchID:           resolveBranchID(req.GetBranchId()),
+		CursorMemberNumber: cursorMemberNumber,
+		CursorID:           cursorID,
+		StatusFilter:       statusFilter,
+		FetchLimit:         limit + 1, // fetch one extra to determine if there's a next page
 	})
 	if err != nil {
 		return nil, mapServiceError(err)
@@ -190,11 +205,11 @@ func (h *Handlers) ListShareAccounts(ctx context.Context, req *sharev1.ListShare
 		// the client receives only 'limit' rows
 		last := accounts[limit-1]
 
-		token, err := encodeCursor(last.CreatedAt, last.ID)
+		id, err := uuidToString(last.ID)
 		if err != nil {
 			return nil, status.Error(codes.Internal, "failed to encode next page token")
 		}
-		resp.NextPageToken = token
+		resp.NextPageToken = base64.RawURLEncoding.EncodeToString([]byte(strconv.FormatInt(last.MemberNumber, 10) + "|" + id))
 		// we then drop the look ahead row from the response
 		accounts = accounts[:limit]
 	}

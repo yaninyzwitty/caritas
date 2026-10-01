@@ -21,13 +21,13 @@ WHERE sa.is_deleted = FALSE
   AND sa.branch_id = sqlc.arg(branch_id)
   AND (sqlc.narg(status_filter)::share_account_status IS NULL OR sa.status = sqlc.narg(status_filter))
   AND (
-      sqlc.narg(cursor_created_at)::timestamptz IS NULL
-      OR (sa.created_at, sa.id) < (
-          sqlc.narg(cursor_created_at)::timestamptz,
+      sqlc.narg(cursor_member_number)::bigint IS NULL
+      OR (m.member_number, sa.id) > (
+          sqlc.narg(cursor_member_number)::bigint,
           sqlc.narg(cursor_id)::uuid
       )
   )
-ORDER BY sa.created_at DESC, sa.id DESC
+ORDER BY m.member_number ASC, sa.id ASC
 LIMIT sqlc.arg(fetch_limit);
 
 -- name: GetAccountByID :one
