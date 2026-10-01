@@ -172,12 +172,12 @@ func (h *Handlers) ListShareAccounts(ctx context.Context, req *sharev1.ListShare
 		}
 	}
 
-	accounts, err := h.store.ListAccounts(ctx, sharesqlc.ListAccountsParams{
-		BranchID:     resolveBranchID(req.GetBranchId()),
-		Column2:      cursorTS,
-		ID:           cursorID,
-		StatusFilter: statusFilter,
-		Limit:        limit + 1, // fetch one extra to determine if there's a next page
+	accounts, err := h.store.ListShareAccounts(ctx, sharesqlc.ListShareAccountsParams{
+		BranchID:        resolveBranchID(req.GetBranchId()),
+		CursorCreatedAt: cursorTS,
+		CursorID:        cursorID,
+		StatusFilter:    statusFilter,
+		FetchLimit:      limit + 1, // fetch one extra to determine if there's a next page
 	})
 	if err != nil {
 		return nil, mapServiceError(err)
@@ -202,7 +202,19 @@ func (h *Handlers) ListShareAccounts(ctx context.Context, req *sharev1.ListShare
 	resp.Accounts = make([]*sharev1.ShareAccount, 0, len(accounts))
 
 	for _, account := range accounts {
-		resp.Accounts = append(resp.Accounts, convertAccountToProto(account))
+		id, _ := uuidToString(account.ID)
+		memberID, _ := uuidToString(account.MemberID)
+		resp.Accounts = append(resp.Accounts, &sharev1.ShareAccount{
+			Id:           id,
+			MemberId:     memberID,
+			BranchId:     account.BranchID,
+			Status:       accountStatusToProto(account.Status),
+			OpenedAt:     timestampToProto(account.OpenedAt),
+			CreatedAt:    timestampToProto(account.CreatedAt),
+			UpdatedAt:    timestampToProto(account.UpdatedAt),
+			MemberNumber: account.MemberNumber,
+			MemberName:   account.MemberName.String,
+		})
 	}
 
 	return resp, nil
