@@ -32,7 +32,7 @@ func accountStatusToProto(s sharesqlc.ShareAccountStatus) sharev1.ShareAccountSt
 }
 
 // accountStatusFromProto is the inverse of accountStatusToProto, used to turn a
-// request's status_filter into the nullable DB enum the ListAccounts query
+// request's status_filter into the nullable DB enum the ListShareAccounts query
 // expects. UNSPECIFIED maps to an empty string so the caller can build a
 // NullShareAccountStatus with Valid=false and skip the filter.
 func accountStatusFromProto(s sharev1.ShareAccountStatus) sharesqlc.ShareAccountStatus {

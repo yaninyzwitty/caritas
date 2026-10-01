@@ -2,18 +2,37 @@
 SELECT id, member_id, branch_id, status, opened_at, is_deleted, created_at, updated_at FROM share_accounts
 WHERE member_id = $1 AND is_deleted = FALSE;
 
+-- name: ListShareAccounts :many
+SELECT
+    sa.id,
+    sa.member_id,
+    sa.branch_id,
+    sa.status,
+    sa.opened_at,
+    sa.created_at,
+    sa.updated_at,
+    m.member_number,
+    mp.full_name AS member_name
+FROM share_accounts AS sa
+JOIN members AS m ON m.id = sa.member_id
+LEFT JOIN member_profiles AS mp ON mp.member_id = m.id
+WHERE sa.is_deleted = FALSE
+  AND m.is_deleted = FALSE
+  AND sa.branch_id = sqlc.arg(branch_id)
+  AND (sqlc.narg(status_filter)::share_account_status IS NULL OR sa.status = sqlc.narg(status_filter))
+  AND (
+      sqlc.narg(cursor_created_at)::timestamptz IS NULL
+      OR (sa.created_at, sa.id) < (
+          sqlc.narg(cursor_created_at)::timestamptz,
+          sqlc.narg(cursor_id)::uuid
+      )
+  )
+ORDER BY sa.created_at DESC, sa.id DESC
+LIMIT sqlc.arg(fetch_limit);
+
 -- name: GetAccountByID :one
 SELECT id, member_id, branch_id, status, opened_at, is_deleted, created_at, updated_at FROM share_accounts
 WHERE id = $1 AND is_deleted = FALSE;
-
--- name: ListAccounts :many
-SELECT id, member_id, branch_id, status, opened_at, is_deleted, created_at, updated_at FROM share_accounts
-WHERE is_deleted = FALSE
-  AND branch_id = $1
-  AND ($2::timestamptz IS NULL OR created_at < $2 OR (created_at = $2 AND id < $3))
-  AND (sqlc.narg('status_filter')::share_account_status IS NULL OR status = sqlc.narg('status_filter'))
-ORDER BY created_at DESC, id DESC
-LIMIT $4;
 
 -- name: CreateShareAccount :one
 INSERT INTO share_accounts (member_id, branch_id, status, opened_at)

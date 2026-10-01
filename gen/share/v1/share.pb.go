@@ -135,14 +135,17 @@ func (ShareTransactionType) EnumDescriptor() ([]byte, []int) {
 }
 
 type ShareAccount struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	MemberId      string                 `protobuf:"bytes,2,opt,name=member_id,json=memberId,proto3" json:"member_id,omitempty"`
-	BranchId      int64                  `protobuf:"varint,3,opt,name=branch_id,json=branchId,proto3" json:"branch_id,omitempty"`
-	Status        ShareAccountStatus     `protobuf:"varint,4,opt,name=status,proto3,enum=share.v1.ShareAccountStatus" json:"status,omitempty"`
-	OpenedAt      *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=opened_at,json=openedAt,proto3" json:"opened_at,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	Id        string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	MemberId  string                 `protobuf:"bytes,2,opt,name=member_id,json=memberId,proto3" json:"member_id,omitempty"`
+	BranchId  int64                  `protobuf:"varint,3,opt,name=branch_id,json=branchId,proto3" json:"branch_id,omitempty"`
+	Status    ShareAccountStatus     `protobuf:"varint,4,opt,name=status,proto3,enum=share.v1.ShareAccountStatus" json:"status,omitempty"`
+	OpenedAt  *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=opened_at,json=openedAt,proto3" json:"opened_at,omitempty"`
+	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	// Member display fields populated by ListShareAccounts.
+	MemberNumber  int64  `protobuf:"varint,8,opt,name=member_number,json=memberNumber,proto3" json:"member_number,omitempty"`
+	MemberName    string `protobuf:"bytes,9,opt,name=member_name,json=memberName,proto3" json:"member_name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -224,6 +227,20 @@ func (x *ShareAccount) GetUpdatedAt() *timestamppb.Timestamp {
 		return x.UpdatedAt
 	}
 	return nil
+}
+
+func (x *ShareAccount) GetMemberNumber() int64 {
+	if x != nil {
+		return x.MemberNumber
+	}
+	return 0
+}
+
+func (x *ShareAccount) GetMemberName() string {
+	if x != nil {
+		return x.MemberName
+	}
+	return ""
 }
 
 type ShareTransaction struct {
@@ -1692,7 +1709,7 @@ var File_share_v1_share_proto protoreflect.FileDescriptor
 
 const file_share_v1_share_proto_rawDesc = "" +
 	"\n" +
-	"\x14share/v1/share.proto\x12\bshare.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16member/v1/member.proto\"\xbd\x02\n" +
+	"\x14share/v1/share.proto\x12\bshare.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16member/v1/member.proto\"\x83\x03\n" +
 	"\fShareAccount\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tmember_id\x18\x02 \x01(\tR\bmemberId\x12\x1b\n" +
@@ -1702,7 +1719,10 @@ const file_share_v1_share_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\x9d\x03\n" +
+	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12#\n" +
+	"\rmember_number\x18\b \x01(\x03R\fmemberNumber\x12\x1f\n" +
+	"\vmember_name\x18\t \x01(\tR\n" +
+	"memberName\"\x9d\x03\n" +
 	"\x10ShareTransaction\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12(\n" +
 	"\x10share_account_id\x18\x02 \x01(\tR\x0eshareAccountId\x122\n" +

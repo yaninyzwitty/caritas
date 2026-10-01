@@ -66,6 +66,9 @@ message ShareAccount {
   google.protobuf.Timestamp opened_at  = 5;
   google.protobuf.Timestamp created_at = 6;
   google.protobuf.Timestamp updated_at = 7;
+  // Member display fields populated by ListShareAccounts.
+  int64                     member_number = 8;
+  string                    member_name   = 9;
 }
 
 message ShareTransaction {
