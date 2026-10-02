@@ -107,6 +107,8 @@ message GetShareAccountRequest {
   oneof identifier {
     string account_id = 1;
     string member_id  = 2;
+    int64 member_number = 4;
+    string national_id = 5;
   }
   int64 branch_id = 3;
 }

@@ -553,6 +553,8 @@ type GetShareAccountRequest struct {
 	//
 	//	*GetShareAccountRequest_AccountId
 	//	*GetShareAccountRequest_MemberId
+	//	*GetShareAccountRequest_MemberNumber
+	//	*GetShareAccountRequest_NationalId
 	Identifier    isGetShareAccountRequest_Identifier `protobuf_oneof:"identifier"`
 	BranchId      int64                               `protobuf:"varint,3,opt,name=branch_id,json=branchId,proto3" json:"branch_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -614,6 +616,24 @@ func (x *GetShareAccountRequest) GetMemberId() string {
 	return ""
 }
 
+func (x *GetShareAccountRequest) GetMemberNumber() int64 {
+	if x != nil {
+		if x, ok := x.Identifier.(*GetShareAccountRequest_MemberNumber); ok {
+			return x.MemberNumber
+		}
+	}
+	return 0
+}
+
+func (x *GetShareAccountRequest) GetNationalId() string {
+	if x != nil {
+		if x, ok := x.Identifier.(*GetShareAccountRequest_NationalId); ok {
+			return x.NationalId
+		}
+	}
+	return ""
+}
+
 func (x *GetShareAccountRequest) GetBranchId() int64 {
 	if x != nil {
 		return x.BranchId
@@ -633,9 +653,21 @@ type GetShareAccountRequest_MemberId struct {
 	MemberId string `protobuf:"bytes,2,opt,name=member_id,json=memberId,proto3,oneof"`
 }
 
+type GetShareAccountRequest_MemberNumber struct {
+	MemberNumber int64 `protobuf:"varint,4,opt,name=member_number,json=memberNumber,proto3,oneof"`
+}
+
+type GetShareAccountRequest_NationalId struct {
+	NationalId string `protobuf:"bytes,5,opt,name=national_id,json=nationalId,proto3,oneof"`
+}
+
 func (*GetShareAccountRequest_AccountId) isGetShareAccountRequest_Identifier() {}
 
 func (*GetShareAccountRequest_MemberId) isGetShareAccountRequest_Identifier() {}
+
+func (*GetShareAccountRequest_MemberNumber) isGetShareAccountRequest_Identifier() {}
+
+func (*GetShareAccountRequest_NationalId) isGetShareAccountRequest_Identifier() {}
 
 type GetShareAccountResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -1752,11 +1784,14 @@ const file_share_v1_share_proto_rawDesc = "" +
 	"\x18OpenShareAccountResponse\x12\x1d\n" +
 	"\n" +
 	"account_id\x18\x01 \x01(\tR\taccountId\x124\n" +
-	"\x06status\x18\x02 \x01(\x0e2\x1c.share.v1.ShareAccountStatusR\x06status\"\x83\x01\n" +
+	"\x06status\x18\x02 \x01(\x0e2\x1c.share.v1.ShareAccountStatusR\x06status\"\xcd\x01\n" +
 	"\x16GetShareAccountRequest\x12\x1f\n" +
 	"\n" +
 	"account_id\x18\x01 \x01(\tH\x00R\taccountId\x12\x1d\n" +
-	"\tmember_id\x18\x02 \x01(\tH\x00R\bmemberId\x12\x1b\n" +
+	"\tmember_id\x18\x02 \x01(\tH\x00R\bmemberId\x12%\n" +
+	"\rmember_number\x18\x04 \x01(\x03H\x00R\fmemberNumber\x12!\n" +
+	"\vnational_id\x18\x05 \x01(\tH\x00R\n" +
+	"nationalId\x12\x1b\n" +
 	"\tbranch_id\x18\x03 \x01(\x03R\bbranchIdB\f\n" +
 	"\n" +
 	"identifier\"K\n" +
@@ -1967,6 +2002,8 @@ func file_share_v1_share_proto_init() {
 	file_share_v1_share_proto_msgTypes[5].OneofWrappers = []any{
 		(*GetShareAccountRequest_AccountId)(nil),
 		(*GetShareAccountRequest_MemberId)(nil),
+		(*GetShareAccountRequest_MemberNumber)(nil),
+		(*GetShareAccountRequest_NationalId)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{

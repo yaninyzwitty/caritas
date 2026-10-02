@@ -196,7 +196,7 @@ func (s *Service) CreateAdjustment(
 		}
 		return sharesqlc.ShareAdjustment{}, fmt.Errorf("get account: %w", err)
 	}
-	if account.Status != sharesqlc.ShareAccountStatusActive {
+	if account.ShareAccount.Status != sharesqlc.ShareAccountStatusActive {
 		return sharesqlc.ShareAdjustment{}, ErrAccountNotActive
 	}
 	if numericToNanos(amount).Sign() == 0 {
