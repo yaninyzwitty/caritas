@@ -19,6 +19,7 @@ var (
 	ErrInsufficientCollateral   = errors.New("offered collateral does not cover principal")
 	ErrPaymentNotAllowed        = errors.New("loan status does not allow repayment")
 	ErrRepaymentScheduleMissing = errors.New("loan has no active repayment schedule")
+	ErrRepaymentAmountConflict  = errors.New("payment reference was already used with a different amount")
 	ErrGatewayTransactionID     = errors.New("payment gateway transaction id is required")
 	ErrUnsupportedLoanOperation = errors.New("loan operation is not supported by current schema")
 )

@@ -673,6 +673,9 @@ func (s *Service) RecordRepayment(
 		})
 		switch {
 		case err == nil:
+			if numericToScale(tx.Amount, -9).Cmp(numericToScale(amount, -9)) != 0 {
+				return ErrRepaymentAmountConflict
+			}
 			return nil
 		case !errors.Is(err, pgx.ErrNoRows):
 			return fmt.Errorf("check existing repayment: %w", err)
