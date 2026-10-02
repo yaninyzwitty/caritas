@@ -83,6 +83,9 @@ func (s *Service) postTransaction(
 
 		switch {
 		case err == nil:
+			if numericToNanos(result.Amount).Cmp(numericToNanos(amount)) != 0 {
+				return fmt.Errorf("%w: amount differs from the original transaction", ErrDuplicateReference)
+			}
 			return nil // Idempotent retry.
 
 		case !errors.Is(err, pgx.ErrNoRows):
@@ -142,6 +145,9 @@ func (s *Service) postTransaction(
 			})
 			if err != nil {
 				return fmt.Errorf("read existing transaction: %w", err)
+			}
+			if numericToNanos(result.Amount).Cmp(numericToNanos(amount)) != 0 {
+				return fmt.Errorf("%w: amount differs from the original transaction", ErrDuplicateReference)
 			}
 			return nil
 
@@ -222,6 +228,9 @@ func (s *Service) CreateAdjustment(
 	})
 	if err != nil {
 		return sharesqlc.ShareAdjustment{}, fmt.Errorf("get adjustment by reference: %w", err)
+	}
+	if numericToNanos(adjustment.Amount).Cmp(numericToNanos(amount)) != 0 {
+		return sharesqlc.ShareAdjustment{}, fmt.Errorf("%w: amount differs from the original adjustment", ErrDuplicateReference)
 	}
 	return adjustment, nil
 }

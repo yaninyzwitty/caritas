@@ -44,6 +44,8 @@ const defaultBranchID = 1
 // to clients as Internal/Unknown and cannot be handled safely.
 func mapServiceError(err error) error {
 	switch {
+	case errors.Is(err, ErrRepaymentAmountConflict):
+		return status.Error(codes.AlreadyExists, err.Error())
 	case errors.Is(err, ErrLoanNotFound), errors.Is(err, ErrGuarantorNotFound):
 		return status.Error(codes.NotFound, err.Error())
 	case errors.Is(err, pgx.ErrNoRows):
