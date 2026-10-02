@@ -109,7 +109,7 @@ func (h *Handlers) OpenShareAccount(ctx context.Context, req *sharev1.OpenShareA
 	}, nil
 }
 
-// GetShareAccount handles account lookup by account_id or member_id. Without it
+// GetShareAccount handles account lookup by internal ID or branch-scoped member identifier. Without it
 // callers cannot inspect an account's status or identifiers.
 func (h *Handlers) GetShareAccount(ctx context.Context, req *sharev1.GetShareAccountRequest) (*sharev1.GetShareAccountResponse, error) {
 	var account sharesqlc.ShareAccount
@@ -121,10 +121,14 @@ func (h *Handlers) GetShareAccount(ctx context.Context, req *sharev1.GetShareAcc
 			return nil, status.Error(codes.InvalidArgument, "invalid account_id")
 		}
 
-		account, err = h.store.GetAccountByID(ctx, accountID)
+		row, err := h.store.GetAccountByID(ctx, accountID)
 		if err != nil {
 			return nil, mapServiceError(err)
 		}
+		result := convertAccountToProto(row.ShareAccount)
+		result.MemberNumber = row.MemberNumber
+		result.MemberName = row.MemberName.String
+		return &sharev1.GetShareAccountResponse{Account: result}, nil
 	case *sharev1.GetShareAccountRequest_MemberId:
 		memberID, err := stringToUUID(id.MemberId)
 		if err != nil {
@@ -135,6 +139,23 @@ func (h *Handlers) GetShareAccount(ctx context.Context, req *sharev1.GetShareAcc
 		if err != nil {
 			return nil, mapServiceError(err)
 		}
+	case *sharev1.GetShareAccountRequest_MemberNumber, *sharev1.GetShareAccountRequest_NationalId:
+		memberNumber, nationalID := req.GetMemberNumber(), strings.TrimSpace(req.GetNationalId())
+		if memberNumber <= 0 && nationalID == "" {
+			return nil, status.Error(codes.InvalidArgument, "provide a positive member_number or a non-empty national_id")
+		}
+		row, err := h.store.GetAccountByMemberIdentifier(ctx, sharesqlc.GetAccountByMemberIdentifierParams{
+			BranchID:     resolveBranchID(req.GetBranchId()),
+			MemberNumber: pgtype.Int8{Int64: memberNumber, Valid: memberNumber > 0},
+			NationalID:   pgtype.Text{String: nationalID, Valid: nationalID != ""},
+		})
+		if err != nil {
+			return nil, mapServiceError(err)
+		}
+		result := convertAccountToProto(row.ShareAccount)
+		result.MemberNumber = row.MemberNumber
+		result.MemberName = row.MemberName.String
+		return &sharev1.GetShareAccountResponse{Account: result}, nil
 	default:
 		return nil, status.Errorf(codes.InvalidArgument, "identifier is required")
 

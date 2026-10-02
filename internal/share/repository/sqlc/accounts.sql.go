@@ -39,22 +39,33 @@ func (q *Queries) CreateShareAccount(ctx context.Context, arg CreateShareAccount
 }
 
 const getAccountByID = `-- name: GetAccountByID :one
-SELECT id, member_id, branch_id, status, opened_at, is_deleted, created_at, updated_at FROM share_accounts
-WHERE id = $1 AND is_deleted = FALSE
+SELECT sa.id, sa.member_id, sa.branch_id, sa.status, sa.opened_at, sa.is_deleted, sa.created_at, sa.updated_at, m.member_number, mp.full_name AS member_name
+FROM share_accounts AS sa
+JOIN members AS m ON m.id = sa.member_id
+LEFT JOIN member_profiles AS mp ON mp.member_id = m.id
+WHERE sa.id = $1 AND sa.is_deleted = FALSE
 `
 
-func (q *Queries) GetAccountByID(ctx context.Context, id pgtype.UUID) (ShareAccount, error) {
+type GetAccountByIDRow struct {
+	ShareAccount ShareAccount `json:"shareAccount"`
+	MemberNumber int64        `json:"memberNumber"`
+	MemberName   pgtype.Text  `json:"memberName"`
+}
+
+func (q *Queries) GetAccountByID(ctx context.Context, id pgtype.UUID) (GetAccountByIDRow, error) {
 	row := q.db.QueryRow(ctx, getAccountByID, id)
-	var i ShareAccount
+	var i GetAccountByIDRow
 	err := row.Scan(
-		&i.ID,
-		&i.MemberID,
-		&i.BranchID,
-		&i.Status,
-		&i.OpenedAt,
-		&i.IsDeleted,
-		&i.CreatedAt,
-		&i.UpdatedAt,
+		&i.ShareAccount.ID,
+		&i.ShareAccount.MemberID,
+		&i.ShareAccount.BranchID,
+		&i.ShareAccount.Status,
+		&i.ShareAccount.OpenedAt,
+		&i.ShareAccount.IsDeleted,
+		&i.ShareAccount.CreatedAt,
+		&i.ShareAccount.UpdatedAt,
+		&i.MemberNumber,
+		&i.MemberName,
 	)
 	return i, err
 }
@@ -76,6 +87,49 @@ func (q *Queries) GetAccountByMemberID(ctx context.Context, memberID pgtype.UUID
 		&i.IsDeleted,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getAccountByMemberIdentifier = `-- name: GetAccountByMemberIdentifier :one
+SELECT sa.id, sa.member_id, sa.branch_id, sa.status, sa.opened_at, sa.is_deleted, sa.created_at, sa.updated_at, m.member_number, mp.full_name AS member_name
+FROM share_accounts AS sa
+JOIN members AS m ON m.id = sa.member_id
+LEFT JOIN member_profiles AS mp ON mp.member_id = m.id
+WHERE sa.is_deleted = FALSE
+  AND m.is_deleted = FALSE
+  AND sa.branch_id = $1
+  AND m.branch_id = $1
+  AND (m.member_number = $2::bigint
+       OR m.national_id = $3::text)
+`
+
+type GetAccountByMemberIdentifierParams struct {
+	BranchID     int64       `json:"branchId"`
+	MemberNumber pgtype.Int8 `json:"memberNumber"`
+	NationalID   pgtype.Text `json:"nationalId"`
+}
+
+type GetAccountByMemberIdentifierRow struct {
+	ShareAccount ShareAccount `json:"shareAccount"`
+	MemberNumber int64        `json:"memberNumber"`
+	MemberName   pgtype.Text  `json:"memberName"`
+}
+
+func (q *Queries) GetAccountByMemberIdentifier(ctx context.Context, arg GetAccountByMemberIdentifierParams) (GetAccountByMemberIdentifierRow, error) {
+	row := q.db.QueryRow(ctx, getAccountByMemberIdentifier, arg.BranchID, arg.MemberNumber, arg.NationalID)
+	var i GetAccountByMemberIdentifierRow
+	err := row.Scan(
+		&i.ShareAccount.ID,
+		&i.ShareAccount.MemberID,
+		&i.ShareAccount.BranchID,
+		&i.ShareAccount.Status,
+		&i.ShareAccount.OpenedAt,
+		&i.ShareAccount.IsDeleted,
+		&i.ShareAccount.CreatedAt,
+		&i.ShareAccount.UpdatedAt,
+		&i.MemberNumber,
+		&i.MemberName,
 	)
 	return i, err
 }
