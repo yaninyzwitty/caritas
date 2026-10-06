@@ -274,6 +274,7 @@ func (x *PersonalInfo) GetAddress() string {
 	return ""
 }
 
+// TODO-move money logic to a shared proto or its own proto file
 // Money represents a monetary amount with currency.
 type Money struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -756,6 +757,7 @@ type GetMemberRequest struct {
 	//
 	//	*GetMemberRequest_MemberId
 	//	*GetMemberRequest_NationalId
+	//	*GetMemberRequest_MemberNumber
 	Identifier    isGetMemberRequest_Identifier `protobuf_oneof:"identifier"`
 	BranchId      int64                         `protobuf:"varint,3,opt,name=branch_id,json=branchId,proto3" json:"branch_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -817,6 +819,15 @@ func (x *GetMemberRequest) GetNationalId() string {
 	return ""
 }
 
+func (x *GetMemberRequest) GetMemberNumber() int64 {
+	if x != nil {
+		if x, ok := x.Identifier.(*GetMemberRequest_MemberNumber); ok {
+			return x.MemberNumber
+		}
+	}
+	return 0
+}
+
 func (x *GetMemberRequest) GetBranchId() int64 {
 	if x != nil {
 		return x.BranchId
@@ -836,9 +847,15 @@ type GetMemberRequest_NationalId struct {
 	NationalId string `protobuf:"bytes,2,opt,name=national_id,json=nationalId,proto3,oneof"`
 }
 
+type GetMemberRequest_MemberNumber struct {
+	MemberNumber int64 `protobuf:"varint,4,opt,name=member_number,json=memberNumber,proto3,oneof"`
+}
+
 func (*GetMemberRequest_MemberId) isGetMemberRequest_Identifier() {}
 
 func (*GetMemberRequest_NationalId) isGetMemberRequest_Identifier() {}
+
+func (*GetMemberRequest_MemberNumber) isGetMemberRequest_Identifier() {}
 
 // GetMemberResponse returns the requested member.
 type GetMemberResponse struct {
@@ -1555,11 +1572,12 @@ const file_member_v1_member_proto_rawDesc = "" +
 	"\x16RegisterMemberResponse\x12\x1b\n" +
 	"\tmember_id\x18\x01 \x01(\tR\bmemberId\x12#\n" +
 	"\rmember_number\x18\x02 \x01(\x03R\fmemberNumber\x12/\n" +
-	"\x06status\x18\x03 \x01(\x0e2\x17.member.v1.MemberStatusR\x06status\"\x7f\n" +
+	"\x06status\x18\x03 \x01(\x0e2\x17.member.v1.MemberStatusR\x06status\"\xa6\x01\n" +
 	"\x10GetMemberRequest\x12\x1d\n" +
 	"\tmember_id\x18\x01 \x01(\tH\x00R\bmemberId\x12!\n" +
 	"\vnational_id\x18\x02 \x01(\tH\x00R\n" +
-	"nationalId\x12\x1b\n" +
+	"nationalId\x12%\n" +
+	"\rmember_number\x18\x04 \x01(\x03H\x00R\fmemberNumber\x12\x1b\n" +
 	"\tbranch_id\x18\x03 \x01(\x03R\bbranchIdB\f\n" +
 	"\n" +
 	"identifier\">\n" +
@@ -1729,6 +1747,7 @@ func file_member_v1_member_proto_init() {
 	file_member_v1_member_proto_msgTypes[9].OneofWrappers = []any{
 		(*GetMemberRequest_MemberId)(nil),
 		(*GetMemberRequest_NationalId)(nil),
+		(*GetMemberRequest_MemberNumber)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{

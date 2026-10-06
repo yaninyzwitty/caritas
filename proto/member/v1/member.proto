@@ -161,6 +161,7 @@ message GetMemberRequest {
   oneof identifier {
     string member_id   = 1;
     string national_id = 2;
+    int64 member_number = 4;
   }
   int64 branch_id = 3;
 }
