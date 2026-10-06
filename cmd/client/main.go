@@ -8,11 +8,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 	"github.com/yaninyzwitty/caritas-backend/config"
-	contributionv1 "github.com/yaninyzwitty/caritas-backend/gen/contribution/v1"
-	memberv1 "github.com/yaninyzwitty/caritas-backend/gen/member/v1"
+	loanv1 "github.com/yaninyzwitty/caritas-backend/gen/loan/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
@@ -48,51 +46,20 @@ func main() {
 		}
 	}()
 
-	contributions := contributionv1.NewContributionServiceClient(conn)
-	darajaContributionRes, err := contributions.InitiateDarajaSTKContribution(ctx, &contributionv1.InitiateDarajaSTKContributionRequest{
-		IdempotencyKey: uuid.NewString(),
-		MemberId:       "e4d3b882-24ed-438a-8c6f-c0364bf25b61",
-		BranchId:       1,
-		PhoneNumber:    "0768108321",
-		Amount: &memberv1.Money{
-			CurrencyCode: "KES",
-			Units:       195,
-			Nanos:        0,
-		},
-		ContributionPeriod: "2026-09-01",
-		Allocations: []*contributionv1.ContributionAllocationInput{
-			{
-				Type: contributionv1.ContributionAllocationType_CONTRIBUTION_ALLOCATION_TYPE_LGOM,
-				Amount: &memberv1.Money{
-					CurrencyCode: "KES",
-					Units:        30,
-					Nanos:        0,
-				},
-			},
-			{
-				Type: contributionv1.ContributionAllocationType_CONTRIBUTION_ALLOCATION_TYPE_COM,
-				Amount: &memberv1.Money{
-					CurrencyCode: "KES",
-					Units:        30,
-					Nanos:        0,
-				},
-			},
-			{
-				Type:     contributionv1.ContributionAllocationType_CONTRIBUTION_ALLOCATION_TYPE_SHARE_PURCHASE,
-				TargetId: "09ee704c-d1ff-42e4-85e7-bca75925c646", // every loan repayment and a share purchase must be accompanied by a target id
-				Amount: &memberv1.Money{
-					CurrencyCode: "KES",
-					Units:       135,
-					Nanos:        0,
-				},
-			},
-		},
+	loanCreditClient := loanv1.NewCreditServiceClient(conn)
+
+	creditWithDraw, err := loanCreditClient.RequestCreditWithdrawal(ctx, &loanv1.RequestCreditWithdrawalRequest{
+		CreditBalanceId: "f64c396d-9215-4200-a32b-90ed04f5d4b5",
+		Amount:          "60",
+		Reason:          "overpayment",
+		RequestedBy:     "b8feed9c-c0e0-4dfb-a71b-b3ff98669d4e",
 	})
+
 	if err != nil {
-		slog.Error("failed to start a daraja contribution", "error", err)
+		slog.Error("failed to request credit withdraw", "error", err)
 		os.Exit(1)
 	}
 
-	slog.Info("daraja contribution", "val", darajaContributionRes.CheckoutRequestId)
+	slog.Info("credit withdrawn", "val", creditWithDraw.Success)
 
 }

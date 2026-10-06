@@ -72,6 +72,15 @@ func (s *Service) GetMember(ctx context.Context, memberID pgtype.UUID) (sqlc.Get
 	return s.store.GetMemberByID(ctx, memberID)
 }
 
+// GetMemberByNumber reuses the branch-scoped query and the existing member response conversion.
+func (s *Service) GetMemberByNumber(ctx context.Context, branchID, memberNumber int64) (sqlc.GetMemberByIDRow, error) {
+	row, err := s.store.GetMemberByBranchAndNumber(ctx, sqlc.GetMemberByBranchAndNumberParams{
+		BranchID:     branchID,
+		MemberNumber: memberNumber,
+	})
+	return sqlc.GetMemberByIDRow(row), err
+}
+
 // RequireActiveMember centralizes the active-member rule so other domains do
 // not read or interpret member rows directly.
 func (s *Service) RequireActiveMember(ctx context.Context, memberID pgtype.UUID) error {

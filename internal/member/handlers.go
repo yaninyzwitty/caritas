@@ -97,43 +97,30 @@ func (h *Handlers) RegisterMember(ctx context.Context, req *memberv1.RegisterMem
 	}, nil
 }
 
-func (h *Handlers) GetMember(
-	ctx context.Context,
-	req *memberv1.GetMemberRequest,
-) (*memberv1.GetMemberResponse, error) {
+func (h *Handlers) GetMember(ctx context.Context, req *memberv1.GetMemberRequest) (*memberv1.GetMemberResponse, error) {
 	var member sqlc.GetMemberByIDRow
-
+	var err error
 	switch identifier := req.Identifier.(type) {
 	case *memberv1.GetMemberRequest_MemberId:
-		memberID, err := stringToUUID(identifier.MemberId)
-		if err != nil {
+		memberID, parseErr := stringToUUID(identifier.MemberId)
+		if parseErr != nil {
 			return nil, status.Error(codes.InvalidArgument, "invalid member_id")
 		}
-
 		member, err = h.memberService.GetMember(ctx, memberID)
-		if err != nil {
-			return nil, mapServiceError(err)
+	case *memberv1.GetMemberRequest_MemberNumber:
+		if identifier.MemberNumber <= 0 {
+			return nil, status.Error(codes.InvalidArgument, "member_number must be positive")
 		}
-
+		member, err = h.memberService.GetMemberByNumber(ctx, resolveBranchID(req.BranchId), identifier.MemberNumber)
 	case *memberv1.GetMemberRequest_NationalId:
-		var err error
-
-		member, err = h.memberService.GetMemberByNationalID(
-			ctx,
-			resolveBranchID(req.BranchId),
-			identifier.NationalId,
-		)
-		if err != nil {
-			return nil, mapServiceError(err)
-		}
-
+		member, err = h.memberService.GetMemberByNationalID(ctx, resolveBranchID(req.BranchId), identifier.NationalId)
 	default:
-		return nil, status.Error(codes.InvalidArgument, "must provide member_id or national_id")
+		return nil, status.Error(codes.InvalidArgument, "must provide member_id, member_number or national_id")
 	}
-
-	return &memberv1.GetMemberResponse{
-		Member: convertMemberFromRow(member),
-	}, nil
+	if err != nil {
+		return nil, mapServiceError(err)
+	}
+	return &memberv1.GetMemberResponse{Member: convertMemberFromRow(member)}, nil
 }
 
 func (h *Handlers) ListMembers(

@@ -12,17 +12,6 @@ import (
 func convertMemberFromRow(row sqlc.GetMemberByIDRow) *memberv1.Member {
 	id, _ := uuidToString(row.ID)
 
-	var units int64
-	var nanos int32
-
-	if row.MonthlyIncome.Int != nil && row.MonthlyIncome.Int.Sign() != 0 {
-		total := new(big.Int).Set(row.MonthlyIncome.Int)
-		unitsBig := new(big.Int).Div(total, big.NewInt(1_000_000_000))
-		nanosBig := new(big.Int).Mod(total, big.NewInt(1_000_000_000))
-		units = unitsBig.Int64()
-		nanos = int32(nanosBig.Int64())
-	}
-
 	return &memberv1.Member{
 		Id:           id,
 		BranchId:     row.BranchID,
@@ -38,13 +27,9 @@ func convertMemberFromRow(row sqlc.GetMemberByIDRow) *memberv1.Member {
 				Address:     row.Address.String,
 			},
 			Employment: &memberv1.Employment{
-				Occupation: row.Occupation.String,
-				Employer:   row.Employer.String,
-				MonthlyIncome: &memberv1.Money{
-					CurrencyCode: "KES",
-					Units:        units,
-					Nanos:        nanos,
-				},
+				Occupation:    row.Occupation.String,
+				Employer:      row.Employer.String,
+				MonthlyIncome: incomeToMoney(row.MonthlyIncome),
 			},
 			IdDocument: &memberv1.Identification{
 				Type:   row.IDDocumentType.String,
@@ -64,17 +49,6 @@ func convertMemberFromRow(row sqlc.GetMemberByIDRow) *memberv1.Member {
 func convertListMemberFromRow(row sqlc.ListMembersByBranchCursorRow) *memberv1.Member {
 	id, _ := uuidToString(row.ID)
 
-	var units int64
-	var nanos int32
-
-	if row.MonthlyIncome.Int != nil && row.MonthlyIncome.Int.Sign() != 0 {
-		total := new(big.Int).Set(row.MonthlyIncome.Int)
-		unitsBig := new(big.Int).Div(total, big.NewInt(1_000_000_000))
-		nanosBig := new(big.Int).Mod(total, big.NewInt(1_000_000_000))
-		units = unitsBig.Int64()
-		nanos = int32(nanosBig.Int64())
-	}
-
 	return &memberv1.Member{
 		Id:           id,
 		BranchId:     row.BranchID,
@@ -90,13 +64,9 @@ func convertListMemberFromRow(row sqlc.ListMembersByBranchCursorRow) *memberv1.M
 				Address:     row.Address.String,
 			},
 			Employment: &memberv1.Employment{
-				Occupation: row.Occupation.String,
-				Employer:   row.Employer.String,
-				MonthlyIncome: &memberv1.Money{
-					CurrencyCode: "KES",
-					Units:        units,
-					Nanos:        nanos,
-				},
+				Occupation:    row.Occupation.String,
+				Employer:      row.Employer.String,
+				MonthlyIncome: incomeToMoney(row.MonthlyIncome),
 			},
 			IdDocument: &memberv1.Identification{
 				Type:   row.IDDocumentType.String,
@@ -111,6 +81,23 @@ func convertListMemberFromRow(row sqlc.ListMembersByBranchCursorRow) *memberv1.M
 		RegisteredAt: timestampToProto(row.CreatedAt),
 		LastUpdated:  timestampToProto(row.UpdatedAt),
 	}
+}
+
+// incomeToMoney preserves the database decimal scale in both detail and list responses.
+func incomeToMoney(n pgtype.Numeric) *memberv1.Money {
+	if !n.Valid || n.Int == nil || n.NaN || n.InfinityModifier != pgtype.Finite {
+		return nil
+	}
+	total := new(big.Int).Set(n.Int)
+	shift := int64(n.Exp) + 9
+	if shift >= 0 {
+		total.Mul(total, new(big.Int).Exp(big.NewInt(10), big.NewInt(shift), nil))
+	} else {
+		total.Quo(total, new(big.Int).Exp(big.NewInt(10), big.NewInt(-shift), nil))
+	}
+	units, nanos := new(big.Int), new(big.Int)
+	units.QuoRem(total, big.NewInt(1_000_000_000), nanos)
+	return &memberv1.Money{CurrencyCode: "KES", Units: units.Int64(), Nanos: int32(nanos.Int64())}
 }
 
 func dateToProto(d pgtype.Date) *timestamppb.Timestamp {
