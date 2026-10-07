@@ -38,19 +38,22 @@ func (s *Service) CreateCashReceipt(ctx context.Context, params contributionsqlc
 	params.InternalReceiptReference = text("CASH-" + uuid.NewString())
 	params.ReceivedAt = pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true}
 
-	plan, err := buildAllocationPlan(allocations)
-	if err != nil {
-		return CreatedReceipt{}, err
-	}
-	params.AllocationPlan = plan
-	if err := validateReceipt(params, allocations); err != nil {
-		return CreatedReceipt{}, err
-	}
-
 	var result CreatedReceipt
-	err = s.store.ExecTx(ctx, func(q contributionsqlc.Querier) error {
+	err := s.store.ExecTx(ctx, func(q contributionsqlc.Querier) error {
+		session, err := q.LockCashierSession(ctx, params.CashierSessionID)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrCashierSessionNotFound
+		}
+		if err != nil {
+			return fmt.Errorf("lock cashier session: %w", err)
+		}
+
 		existing, err := q.GetContributionReceiptByIdempotencyKey(ctx, params.IdempotencyKey)
 		if err == nil {
+			allocations, err = allocationsForRetry(allocations, existing.AllocationPlan)
+			if err != nil {
+				return err
+			}
 			rows, err := q.ListContributionAllocationsByReceipt(ctx, existing.ID)
 			if err != nil {
 				return fmt.Errorf("list existing cash allocations: %w", err)
@@ -72,15 +75,23 @@ func (s *Service) CreateCashReceipt(ctx context.Context, params contributionsqlc
 			return fmt.Errorf("get cash receipt by idempotency key: %w", err)
 		}
 
-		session, err := q.LockCashierSession(ctx, params.CashierSessionID)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return ErrCashierSessionNotFound
-		}
-		if err != nil {
-			return fmt.Errorf("lock cashier session: %w", err)
-		}
 		if session.Status != contributionsqlc.CashierSessionStatusOpen || session.CashierID != params.ReceivedBy || session.BranchID != params.BranchID {
 			return ErrCashierSessionState
+		}
+		fees, err := monthlyFees(ctx, q, params.MemberID, params.ContributionPeriod, pgtype.UUID{})
+		if err != nil {
+			return err
+		}
+		allocations, err = calculatedAllocations(allocations, fees)
+		if err != nil {
+			return err
+		}
+		params.AllocationPlan, err = buildAllocationPlan(allocations)
+		if err != nil {
+			return err
+		}
+		if err := validateReceipt(params, allocations); err != nil {
+			return err
 		}
 		result, err = s.createReceipt(ctx, q, params, allocations)
 		return err

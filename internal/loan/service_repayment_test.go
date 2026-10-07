@@ -107,7 +107,7 @@ func TestRecordRepaymentOverpaymentClosesLoanAndCreatesCredit(t *testing.T) {
 	service := NewService(store, nil)
 
 	loanID := createRepaymentLoan(t, ctx, pool, loansqlc.LoanStatusActive)
-	createSchedule(t, ctx, pool, loanID, 1, "150000")
+	createSchedule(t, ctx, pool, loanID, 1, "100000")
 	createdBy := testUUID("00000000-0000-0000-0000-000000000011")
 
 	if _, err := service.RecordRepayment(ctx, loanID, mustNumeric(t, "160000"), "overpay-1", createdBy); err != nil {
@@ -116,7 +116,7 @@ func TestRecordRepaymentOverpaymentClosesLoanAndCreatesCredit(t *testing.T) {
 
 	assertLoanStatus(t, ctx, pool, loanID, "closed")
 	assertScheduleStatuses(t, ctx, pool, loanID, []string{"paid"})
-	assertCreditAmount(t, ctx, pool, loanID, "10000")
+	assertCreditAmount(t, ctx, pool, loanID, "60000")
 }
 
 func TestRecordRepaymentPartialPaymentMarksFirstUnpaidSchedulePartial(t *testing.T) {
@@ -196,7 +196,7 @@ func TestAllocateRepaymentExactPayment(t *testing.T) {
 		{AmountDue: mustNumeric(t, "50000")},
 	}
 
-	allocation := allocateRepayment(mustNumeric(t, "100000"), mustNumeric(t, "0"), schedules)
+	allocation := allocateRepayment(mustNumeric(t, "100000"), mustNumeric(t, "0"), numericFromScale(sumScheduleAmountDue(schedules)), mustNumeric(t, "0"))
 
 	if allocation.Principal != "100000" || allocation.Credit != "0" || !allocation.loanClosed {
 		t.Fatalf("allocation = %+v", allocation)
@@ -208,7 +208,7 @@ func TestAllocateRepaymentOverpayment(t *testing.T) {
 		{AmountDue: mustNumeric(t, "150000")},
 	}
 
-	allocation := allocateRepayment(mustNumeric(t, "160000"), mustNumeric(t, "0"), schedules)
+	allocation := allocateRepayment(mustNumeric(t, "160000"), mustNumeric(t, "0"), numericFromScale(sumScheduleAmountDue(schedules)), mustNumeric(t, "0"))
 
 	if allocation.Principal != "150000" || allocation.Credit != "10000" || !allocation.loanClosed {
 		t.Fatalf("allocation = %+v", allocation)
@@ -221,7 +221,7 @@ func TestAllocateRepaymentPartialPayment(t *testing.T) {
 		{AmountDue: mustNumeric(t, "50000")},
 	}
 
-	allocation := allocateRepayment(mustNumeric(t, "70000"), mustNumeric(t, "0"), schedules)
+	allocation := allocateRepayment(mustNumeric(t, "70000"), mustNumeric(t, "0"), numericFromScale(sumScheduleAmountDue(schedules)), mustNumeric(t, "0"))
 
 	if allocation.Principal != "70000" || allocation.Credit != "0" || allocation.loanClosed {
 		t.Fatalf("allocation = %+v", allocation)

@@ -143,6 +143,10 @@ func (ContributionAllocationType) EnumDescriptor() ([]byte, []int) {
 	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{1}
 }
 
+// COM/LGOM may be omitted: the server supplies unpaid monthly fees. Supplied
+// fee amounts must match. The receipt total includes these fees in addition to
+// the requested share/loan amounts. Loan principal and interest inputs for the
+// same loan are combined; Loans determines the actual interest/balance split.
 type ContributionAllocationInput struct {
 	state         protoimpl.MessageState     `protogen:"open.v1"`
 	Type          ContributionAllocationType `protobuf:"varint,1,opt,name=type,proto3,enum=contribution.v1.ContributionAllocationType" json:"type,omitempty"`

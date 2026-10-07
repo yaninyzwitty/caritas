@@ -446,7 +446,8 @@ func mapContributionError(err error) error {
 		return status.Error(codes.AlreadyExists, err.Error())
 	case errors.Is(err, ErrCashierSessionNotFound):
 		return status.Error(codes.NotFound, err.Error())
-	case errors.Is(err, ErrCashierSessionState),
+	case errors.Is(err, ErrMembershipFeeMismatch),
+		errors.Is(err, ErrCashierSessionState),
 		errors.Is(err, ErrCashSeparationOfDuties),
 		errors.Is(err, ErrCashDepositSelfVerify):
 		return status.Error(codes.FailedPrecondition, err.Error())

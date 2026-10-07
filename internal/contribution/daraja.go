@@ -49,15 +49,7 @@ func (s *Service) InitiateDarajaSTKPayment(ctx context.Context, params InitiateD
 		return contributionsqlc.ContributionPaymentRequest{}, ErrInvalidPayment
 	}
 
-	if err := validatePaymentRequestAmount(params.Amount, params.Allocations); err != nil {
-		return contributionsqlc.ContributionPaymentRequest{}, err
-	}
-	plan, err := buildAllocationPlan(params.Allocations)
-	if err != nil {
-		return contributionsqlc.ContributionPaymentRequest{}, err
-	}
-
-	request, created, err := s.createContributionPaymentRequest(ctx, params, plan)
+	request, created, err := s.createContributionPaymentRequest(ctx, params)
 	if err != nil || !created {
 		return request, err
 	}
@@ -90,31 +82,73 @@ func (s *Service) InitiateDarajaSTKPayment(ctx context.Context, params InitiateD
 // createContributionPaymentRequest gives STK initiation one sqlc-only
 // idempotent insert path. Without it, InitiateDarajaSTKPayment would duplicate
 // the pgx.ErrNoRows conflict handling needed to return an existing request.
-func (s *Service) createContributionPaymentRequest(ctx context.Context, params InitiateDarajaSTKPaymentParams, plan []byte) (contributionsqlc.ContributionPaymentRequest, bool, error) {
-	request, err := s.store.InsertContributionPaymentRequest(ctx, contributionsqlc.InsertContributionPaymentRequestParams{
-		IdempotencyKey:     params.IdempotencyKey,
-		CheckoutRequestID:  pgtype.Text{},
-		MemberID:           params.MemberID,
-		BranchID:           params.BranchID,
-		ContributionPeriod: params.ContributionPeriod,
-		ExpectedAmount:     params.Amount,
-		AllocationPlan:     plan,
-		RequestedBy:        params.RequestedBy,
+func (s *Service) createContributionPaymentRequest(ctx context.Context, params InitiateDarajaSTKPaymentParams) (contributionsqlc.ContributionPaymentRequest, bool, error) {
+	var request contributionsqlc.ContributionPaymentRequest
+	created := false
+	err := s.store.ExecTx(ctx, func(q contributionsqlc.Querier) error {
+		existing, err := q.GetContributionPaymentRequestByIdempotencyKey(ctx, params.IdempotencyKey)
+		if err == nil {
+			allocations, err := allocationsForRetry(params.Allocations, existing.AllocationPlan)
+			if err != nil {
+				return err
+			}
+			plan, err := buildAllocationPlan(allocations)
+			if err != nil {
+				return err
+			}
+			stored, err := parseAllocationPlan(existing.AllocationPlan)
+			if err != nil {
+				return err
+			}
+			storedPlan, err := buildAllocationPlan(stored)
+			if err != nil {
+				return err
+			}
+			if existing.MemberID != params.MemberID || existing.BranchID != params.BranchID ||
+				existing.ContributionPeriod != params.ContributionPeriod ||
+				numericToScale(existing.ExpectedAmount, -4).Cmp(numericToScale(params.Amount, -4)) != 0 ||
+				string(plan) != string(storedPlan) {
+				return ErrInconsistentReceipt
+			}
+			request = existing
+			if !request.CheckoutRequestID.Valid {
+				return ErrPaymentRequestInProgress
+			}
+			return nil
+		}
+		if !errors.Is(err, pgx.ErrNoRows) {
+			return err
+		}
+		fees, err := monthlyFees(ctx, q, params.MemberID, params.ContributionPeriod, pgtype.UUID{})
+		if err != nil {
+			return err
+		}
+		allocations, err := calculatedAllocations(params.Allocations, fees)
+		if err != nil {
+			return err
+		}
+		if err := validatePaymentRequestAmount(params.Amount, allocations); err != nil {
+			return err
+		}
+		if _, err := darajaWholeAmount(params.Amount); err != nil {
+			return err
+		}
+		plan, err := buildAllocationPlan(allocations)
+		if err != nil {
+			return err
+		}
+		request, err = q.InsertContributionPaymentRequest(ctx, contributionsqlc.InsertContributionPaymentRequestParams{
+			IdempotencyKey: params.IdempotencyKey, MemberID: params.MemberID, BranchID: params.BranchID,
+			ContributionPeriod: params.ContributionPeriod, ExpectedAmount: params.Amount,
+			AllocationPlan: plan, RequestedBy: params.RequestedBy,
+		})
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrPaymentRequestInProgress
+		}
+		created = err == nil
+		return err
 	})
-	if err == nil {
-		return request, true, nil
-	}
-	if !errors.Is(err, pgx.ErrNoRows) {
-		return contributionsqlc.ContributionPaymentRequest{}, false, fmt.Errorf("insert payment request: %w", err)
-	}
-	request, err = s.store.GetContributionPaymentRequestByIdempotencyKey(ctx, params.IdempotencyKey)
-	if err != nil {
-		return contributionsqlc.ContributionPaymentRequest{}, false, fmt.Errorf("get payment request by idempotency key: %w", err)
-	}
-	if !request.CheckoutRequestID.Valid || strings.TrimSpace(request.CheckoutRequestID.String) == "" {
-		return request, false, ErrPaymentRequestInProgress
-	}
-	return request, false, nil
+	return request, created, err
 }
 
 // ProcessDarajaSTKPayment turns one successful Daraja STK callback into one

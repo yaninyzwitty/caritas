@@ -33,6 +33,6 @@ FROM loan_transactions
 WHERE loan_id = $1 AND type = $2;
 
 -- name: SumLoanAppliedRepayments :one
-SELECT COALESCE(SUM(amount - COALESCE((allocation_breakdown->>'credit')::numeric, 0)), 0)::numeric AS total
+SELECT COALESCE(SUM(COALESCE((allocation_breakdown->>'principal')::numeric, amount - COALESCE((allocation_breakdown->>'credit')::numeric, 0))), 0)::numeric AS total
 FROM loan_transactions
 WHERE loan_id = $1 AND type = 'repayment';

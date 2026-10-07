@@ -296,15 +296,6 @@ func (h *Handlers) ListLoans(ctx context.Context, req *loanv1.ListLoansRequest) 
 		maxPageSize     = 1000
 	)
 
-	if req.MemberId == "" {
-		return nil, status.Error(codes.InvalidArgument, "member id is required")
-	}
-
-	memberID, err := stringToUUID(req.GetMemberId())
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid member_id")
-	}
-
 	limit := req.GetPageSize()
 
 	switch {
@@ -319,8 +310,8 @@ func (h *Handlers) ListLoans(ctx context.Context, req *loanv1.ListLoansRequest) 
 		return nil, status.Error(codes.InvalidArgument, "invalid page_token")
 	}
 
-	loans, err := h.store.ListLoansByMember(ctx, loansqlc.ListLoansByMemberParams{
-		MemberID: memberID,
+	loans, err := h.store.ListLoansByBranch(ctx, loansqlc.ListLoansByBranchParams{
+		BranchID: defaultBranchID,
 		Limit:    limit + 1,
 		Column2:  cursorTS,
 		ID:       cursorID,
