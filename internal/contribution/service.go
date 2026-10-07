@@ -49,12 +49,28 @@ func (s *Service) CreateReceipt(
 	params contributionsqlc.InsertContributionReceiptParams,
 	allocations []AllocationInput,
 ) (CreatedReceipt, error) {
-	if err := validateReceipt(params, allocations); err != nil {
-		return CreatedReceipt{}, err
-	}
-
 	var result CreatedReceipt
 	err := s.store.ExecTx(ctx, func(q contributionsqlc.Querier) error {
+		existing, err := existingReceipt(ctx, q, params)
+		if err == nil {
+			allocations, err = allocationsForRetry(allocations, existing.AllocationPlan)
+		} else if errors.Is(err, ErrReceiptNotFound) {
+			var fees []AllocationInput
+			fees, err = monthlyFees(ctx, q, params.MemberID, params.ContributionPeriod, pgtype.UUID{})
+			if err == nil {
+				allocations, err = calculatedAllocations(allocations, fees)
+			}
+		}
+		if err != nil {
+			return err
+		}
+		params.AllocationPlan, err = buildAllocationPlan(allocations)
+		if err != nil {
+			return err
+		}
+		if err := validateReceipt(params, allocations); err != nil {
+			return err
+		}
 		created, err := s.createReceipt(ctx, q, params, allocations)
 		result = created
 		return err
@@ -193,6 +209,24 @@ func (s *Service) ProcessReceipt(ctx context.Context, receiptID, processedBy pgt
 			return failReceipt(ctx, q, receipt.ID, receiptFailureStatus(receipt), processErr, &result)
 		}
 
+		// Validate both fees before any owning service commits a payment.
+		// Excluding this receipt makes a retry safe after a partial posting.
+		fees, err := monthlyFees(ctx, q, receipt.MemberID, receipt.ContributionPeriod, receipt.ID)
+		if err != nil {
+			return err
+		}
+		input := make([]AllocationInput, 0, len(allocations))
+		for _, item := range allocations {
+			input = append(input, AllocationInput{Type: item.Type, TargetID: item.TargetID, Amount: item.Amount})
+		}
+		expected, err := calculatedAllocations(input, fees)
+		if err == nil {
+			err = verifyAllocationsMatch(expected, allocations)
+		}
+		if err != nil {
+			processErr = fmt.Errorf("%w: %v", ErrMembershipFeeMismatch, err)
+			return failReceipt(ctx, q, receipt.ID, receiptFailureStatus(receipt), processErr, &result)
+		}
 		result.Allocations = result.Allocations[:0]
 		for _, allocation := range allocations {
 			switch allocation.Status {
@@ -284,7 +318,7 @@ func (s *Service) processAllocation(
 		if s.loanService == nil {
 			return pgtype.UUID{}, pgtype.Text{}, ErrOwningServiceMissing
 		}
-		tx, err := s.loanService.RecordRepayment(ctx, allocation.TargetID, allocation.Amount, allocation.ID.String(), processedBy)
+		tx, err := s.loanService.RecordRepaymentForPeriod(ctx, allocation.TargetID, allocation.Amount, allocation.ID.String(), processedBy, receipt.ContributionPeriod)
 		if err != nil {
 			return pgtype.UUID{}, pgtype.Text{}, err
 		}

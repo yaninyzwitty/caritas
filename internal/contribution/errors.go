@@ -3,6 +3,7 @@ package contribution
 import "errors"
 
 var (
+	ErrMembershipFeeMismatch    = errors.New("COM/LGOM allocations do not match the unpaid monthly fees")
 	ErrInvalidReceiptAmount     = errors.New("contribution receipt amount must be positive")
 	ErrInvalidAllocationPlan    = errors.New("allocation plan is invalid")
 	ErrAllocationRequired       = errors.New("at least one allocation is required")

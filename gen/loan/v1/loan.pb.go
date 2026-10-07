@@ -1183,8 +1183,7 @@ type ListLoansRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	PageSize      int32                  `protobuf:"varint,1,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
 	PageToken     string                 `protobuf:"bytes,2,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
-	StatusFilter  LoanStatus             `protobuf:"varint,3,opt,name=status_filter,json=statusFilter,proto3,enum=loan.v1.LoanStatus" json:"status_filter,omitempty"`
-	MemberId      string                 `protobuf:"bytes,4,opt,name=member_id,json=memberId,proto3" json:"member_id,omitempty"` // Optional: filter by member
+	StatusFilter  LoanStatus             `protobuf:"varint,3,opt,name=status_filter,json=statusFilter,proto3,enum=loan.v1.LoanStatus" json:"status_filter,omitempty"` // string     member_id     = 4;  // Optional: filter by member
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1238,13 +1237,6 @@ func (x *ListLoansRequest) GetStatusFilter() LoanStatus {
 		return x.StatusFilter
 	}
 	return LoanStatus_LOAN_STATUS_UNSPECIFIED
-}
-
-func (x *ListLoansRequest) GetMemberId() string {
-	if x != nil {
-		return x.MemberId
-	}
-	return ""
 }
 
 // ListLoansResponse returns a paginated list of loans.
@@ -1938,13 +1930,12 @@ const file_loan_v1_loan_proto_rawDesc = "" +
 	"\x0eGetLoanRequest\x12\x17\n" +
 	"\aloan_id\x18\x01 \x01(\tR\x06loanId\"4\n" +
 	"\x0fGetLoanResponse\x12!\n" +
-	"\x04loan\x18\x01 \x01(\v2\r.loan.v1.LoanR\x04loan\"\xa5\x01\n" +
+	"\x04loan\x18\x01 \x01(\v2\r.loan.v1.LoanR\x04loan\"\x88\x01\n" +
 	"\x10ListLoansRequest\x12\x1b\n" +
 	"\tpage_size\x18\x01 \x01(\x05R\bpageSize\x12\x1d\n" +
 	"\n" +
 	"page_token\x18\x02 \x01(\tR\tpageToken\x128\n" +
-	"\rstatus_filter\x18\x03 \x01(\x0e2\x13.loan.v1.LoanStatusR\fstatusFilter\x12\x1b\n" +
-	"\tmember_id\x18\x04 \x01(\tR\bmemberId\"`\n" +
+	"\rstatus_filter\x18\x03 \x01(\x0e2\x13.loan.v1.LoanStatusR\fstatusFilter\"`\n" +
 	"\x11ListLoansResponse\x12#\n" +
 	"\x05loans\x18\x01 \x03(\v2\r.loan.v1.LoanR\x05loans\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"/\n" +

@@ -632,6 +632,13 @@ func (s *Service) DisburseLoan(
 			}
 		}
 
+		disbursed := loan.DisbursedAt.Time.In(time.FixedZone("EAT", 3*60*60))
+		if err := q.AssessLoanInterest(ctx, loansqlc.AssessLoanInterestParams{
+			LoanID: loanID,
+			Period: pgtype.Date{Time: time.Date(disbursed.Year(), disbursed.Month(), 1, 0, 0, 0, 0, time.UTC), Valid: true},
+		}); err != nil {
+			return fmt.Errorf("assess initial interest: %w", err)
+		}
 		if err := insertStatusAudit(ctx, q, loanID, current.Status, loansqlc.LoanStatusActive, disbursedBy, reason); err != nil {
 			return err
 		}
@@ -650,6 +657,20 @@ func (s *Service) RecordRepayment(
 	gatewayTransactionID string,
 	createdBy pgtype.UUID,
 ) (loansqlc.LoanTransaction, error) {
+	return s.RecordRepaymentForPeriod(ctx, loanID, amount, gatewayTransactionID, createdBy,
+		pgtype.Date{Time: time.Now().In(time.FixedZone("EAT", 3*60*60)), Valid: true})
+}
+
+// RecordRepaymentForPeriod uses the contribution month, not the callback arrival month.
+func (s *Service) RecordRepaymentForPeriod(ctx context.Context, loanID pgtype.UUID, amount pgtype.Numeric, gatewayTransactionID string, createdBy pgtype.UUID, period pgtype.Date) (loansqlc.LoanTransaction, error) {
+	if !period.Valid || period.InfinityModifier != pgtype.Finite {
+		return loansqlc.LoanTransaction{}, ErrInvalidRepaymentPeriod
+	}
+	period.Time = time.Date(period.Time.Year(), period.Time.Month(), 1, 0, 0, 0, 0, time.UTC)
+	now := time.Now().In(time.FixedZone("EAT", 3*60*60))
+	if period.Time.After(time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)) {
+		return loansqlc.LoanTransaction{}, ErrInvalidRepaymentPeriod
+	}
 	if !positive(amount) {
 		return loansqlc.LoanTransaction{}, ErrInvalidLoanAmount
 	}
@@ -695,12 +716,50 @@ func (s *Service) RecordRepayment(
 			return ErrRepaymentScheduleMissing
 		}
 
-		priorApplied, err := q.SumLoanAppliedRepayments(ctx, loanID)
+		totals, err := q.GetLoanRepaymentTotals(ctx, loanID)
 		if err != nil {
-			return fmt.Errorf("sum applied repayments: %w", err)
+			return fmt.Errorf("sum repayments: %w", err)
 		}
-
-		allocation := allocateRepayment(amount, priorApplied, schedules)
+		latest, err := q.GetLoanInterestPeriod(ctx, loanID)
+		if err != nil {
+			return fmt.Errorf("get interest period: %w", err)
+		}
+		// Backdating would change an opening balance already used for interest.
+		if (latest.Valid && latest.Time.After(period.Time)) ||
+			(totals.LatestPeriod.Valid && totals.LatestPeriod.Time.After(period.Time)) {
+			return ErrInvalidRepaymentPeriod
+		}
+		if current.DisbursedAt.Valid {
+			disbursed := current.DisbursedAt.Time.In(time.FixedZone("EAT", 3*60*60))
+			if period.Time.Before(time.Date(disbursed.Year(), disbursed.Month(), 1, 0, 0, 0, 0, time.UTC)) {
+				return ErrInvalidRepaymentPeriod
+			}
+		}
+		// Start assessment at the first collected period; do not retrospectively
+		// charge legacy loans. Thereafter catch up missed months without compounding.
+		first := period.Time
+		if latest.Valid {
+			first = latest.Time.AddDate(0, 1, 0)
+		}
+		for month := first; !month.After(period.Time); month = month.AddDate(0, 1, 0) {
+			if err := q.AssessLoanInterest(ctx, loansqlc.AssessLoanInterestParams{
+				LoanID: loanID, Period: pgtype.Date{Time: month, Valid: true},
+			}); err != nil {
+				return fmt.Errorf("assess monthly interest: %w", err)
+			}
+		}
+		assessed, err := q.SumLoanInterestDue(ctx, loanID)
+		if err != nil {
+			return fmt.Errorf("sum interest: %w", err)
+		}
+		interestDue := numericToScale(assessed, -4)
+		interestDue.Sub(interestDue, numericToScale(totals.Interest, -4))
+		if interestDue.Sign() < 0 {
+			interestDue.SetInt64(0)
+		}
+		priorApplied := totals.Principal
+		allocation := allocateRepayment(amount, priorApplied, current.Principal, numericFromScale(interestDue))
+		allocation.Period = period.Time.Format("2006-01-02")
 		allocationJSON, err := json.Marshal(allocation)
 		if err != nil {
 			return fmt.Errorf("encode allocation: %w", err)
@@ -826,6 +885,7 @@ func (s *Service) ListCreditBalances(ctx context.Context, memberID pgtype.UUID, 
 }
 
 type repaymentAllocation struct {
+	Period    string `json:"period"`
 	Principal string `json:"principal"`
 	Interest  string `json:"interest"`
 	Penalty   string `json:"penalty"`
@@ -836,28 +896,30 @@ type repaymentAllocation struct {
 	loanClosed        bool
 }
 
-func allocateRepayment(amount, priorApplied pgtype.Numeric, schedules []loansqlc.RepaymentSchedule) repaymentAllocation {
+func allocateRepayment(amount, priorApplied, principal, interestDue pgtype.Numeric) repaymentAllocation {
 	payment := numericToScale(amount, -4)
 	prior := numericToScale(priorApplied, -4)
-	totalDue := sumScheduleAmountDue(schedules)
+	totalDue := numericToScale(principal, -4)
 
 	outstanding := new(big.Int).Sub(totalDue, prior)
 	if outstanding.Sign() < 0 {
 		outstanding.SetInt64(0)
 	}
 
+	interest := minBigInt(payment, numericToScale(interestDue, -4))
+	payment.Sub(payment, interest)
 	loanApplied := minBigInt(payment, outstanding)
 	credit := new(big.Int).Sub(payment, loanApplied)
 	totalApplied := new(big.Int).Add(prior, loanApplied)
 
 	return repaymentAllocation{
 		Principal:         decimalStringFromScale(loanApplied, -4),
-		Interest:          "0",
+		Interest:          decimalStringFromScale(interest, -4),
 		Penalty:           "0",
 		Credit:            decimalStringFromScale(credit, -4),
 		loanAppliedAmount: loanApplied,
 		creditAmount:      credit,
-		loanClosed:        totalApplied.Cmp(totalDue) >= 0,
+		loanClosed:        totalApplied.Cmp(totalDue) >= 0 && interest.Cmp(numericToScale(interestDue, -4)) >= 0,
 	}
 }
 

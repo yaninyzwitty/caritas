@@ -214,7 +214,7 @@ message ListLoansRequest {
   int32      page_size     = 1;
   string     page_token    = 2;
   LoanStatus status_filter = 3;
-  string     member_id     = 4;  // Optional: filter by member
+  // string     member_id     = 4;  // Optional: filter by member
 }
 
 // ListLoansResponse returns a paginated list of loans.
