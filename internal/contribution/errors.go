@@ -3,6 +3,9 @@ package contribution
 import "errors"
 
 var (
+	ErrInvalidCharge            = errors.New("charge is invalid, missing, or belongs to another member or branch")
+	ErrChargeConflict           = errors.New("charge idempotency key was used with different details")
+	ErrChargeOverpayment        = errors.New("charge payment exceeds the outstanding amount")
 	ErrMembershipFeeMismatch    = errors.New("COM/LGOM allocations do not match the unpaid monthly fees")
 	ErrInvalidReceiptAmount     = errors.New("contribution receipt amount must be positive")
 	ErrInvalidAllocationPlan    = errors.New("allocation plan is invalid")

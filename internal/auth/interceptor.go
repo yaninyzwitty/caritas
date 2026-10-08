@@ -173,7 +173,7 @@ func permissionForMethod(method string) string {
 		return permissionRepaymentRecord
 	case "/loan.v1.CreditService/RequestCreditWithdrawal":
 		return permissionCreditWithdraw
-	case "/contribution.v1.ContributionService/OpenCashierSession", "/contribution.v1.ContributionService/CreateCashContribution", "/contribution.v1.ContributionService/CloseCashierSession":
+	case "/contribution.v1.ContributionService/CreateContributionCharge", "/contribution.v1.ContributionService/OpenCashierSession", "/contribution.v1.ContributionService/CreateCashContribution", "/contribution.v1.ContributionService/CloseCashierSession":
 		return permissionCashRecord
 	case "/contribution.v1.ContributionService/AcceptCashHandover", "/contribution.v1.ContributionService/RecordCashDeposit", "/contribution.v1.ContributionService/VerifyCashDeposit":
 		return permissionCashApprove

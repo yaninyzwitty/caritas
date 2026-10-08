@@ -148,10 +148,11 @@ func (ContributionAllocationType) EnumDescriptor() ([]byte, []int) {
 // the requested share/loan amounts. Loan principal and interest inputs for the
 // same loan are combined; Loans determines the actual interest/balance split.
 type ContributionAllocationInput struct {
-	state         protoimpl.MessageState     `protogen:"open.v1"`
-	Type          ContributionAllocationType `protobuf:"varint,1,opt,name=type,proto3,enum=contribution.v1.ContributionAllocationType" json:"type,omitempty"`
-	TargetId      string                     `protobuf:"bytes,2,opt,name=target_id,json=targetId,proto3" json:"target_id,omitempty"`
-	Amount        *v1.Money                  `protobuf:"bytes,3,opt,name=amount,proto3" json:"amount,omitempty"`
+	state protoimpl.MessageState     `protogen:"open.v1"`
+	Type  ContributionAllocationType `protobuf:"varint,1,opt,name=type,proto3,enum=contribution.v1.ContributionAllocationType" json:"type,omitempty"`
+	// OTHER_CHARGE/PENALTY target a contribution charge UUID, never a loan UUID.
+	TargetId      string    `protobuf:"bytes,2,opt,name=target_id,json=targetId,proto3" json:"target_id,omitempty"`
+	Amount        *v1.Money `protobuf:"bytes,3,opt,name=amount,proto3" json:"amount,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1267,6 +1268,349 @@ func (x *VerifyCashDepositResponse) GetDeposit() *CashDeposit {
 	return nil
 }
 
+// ContributionCharge preserves the obligation and its category for CEEP.
+// Without it, partial payments cannot be distinguished from the amount owed.
+type ContributionCharge struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	MemberId      string                 `protobuf:"bytes,2,opt,name=member_id,json=memberId,proto3" json:"member_id,omitempty"`
+	Category      string                 `protobuf:"bytes,3,opt,name=category,proto3" json:"category,omitempty"`
+	Amount        *v1.Money              `protobuf:"bytes,4,opt,name=amount,proto3" json:"amount,omitempty"`
+	Paid          *v1.Money              `protobuf:"bytes,5,opt,name=paid,proto3" json:"paid,omitempty"`
+	Outstanding   *v1.Money              `protobuf:"bytes,6,opt,name=outstanding,proto3" json:"outstanding,omitempty"`
+	Reason        string                 `protobuf:"bytes,7,opt,name=reason,proto3" json:"reason,omitempty"`
+	CreatedBy     string                 `protobuf:"bytes,8,opt,name=created_by,json=createdBy,proto3" json:"created_by,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ContributionCharge) Reset() {
+	*x = ContributionCharge{}
+	mi := &file_contribution_v1_contribution_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ContributionCharge) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ContributionCharge) ProtoMessage() {}
+
+func (x *ContributionCharge) ProtoReflect() protoreflect.Message {
+	mi := &file_contribution_v1_contribution_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ContributionCharge.ProtoReflect.Descriptor instead.
+func (*ContributionCharge) Descriptor() ([]byte, []int) {
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *ContributionCharge) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ContributionCharge) GetMemberId() string {
+	if x != nil {
+		return x.MemberId
+	}
+	return ""
+}
+
+func (x *ContributionCharge) GetCategory() string {
+	if x != nil {
+		return x.Category
+	}
+	return ""
+}
+
+func (x *ContributionCharge) GetAmount() *v1.Money {
+	if x != nil {
+		return x.Amount
+	}
+	return nil
+}
+
+func (x *ContributionCharge) GetPaid() *v1.Money {
+	if x != nil {
+		return x.Paid
+	}
+	return nil
+}
+
+func (x *ContributionCharge) GetOutstanding() *v1.Money {
+	if x != nil {
+		return x.Outstanding
+	}
+	return nil
+}
+
+func (x *ContributionCharge) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+func (x *ContributionCharge) GetCreatedBy() string {
+	if x != nil {
+		return x.CreatedBy
+	}
+	return ""
+}
+
+func (x *ContributionCharge) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+type CreateContributionChargeRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	IdempotencyKey string                 `protobuf:"bytes,1,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	MemberId       string                 `protobuf:"bytes,2,opt,name=member_id,json=memberId,proto3" json:"member_id,omitempty"`
+	// literature, caritas_registration, lsf, laptop, penalty (non-loan), or other.
+	Category      string    `protobuf:"bytes,3,opt,name=category,proto3" json:"category,omitempty"`
+	Amount        *v1.Money `protobuf:"bytes,4,opt,name=amount,proto3" json:"amount,omitempty"`
+	Reason        string    `protobuf:"bytes,5,opt,name=reason,proto3" json:"reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateContributionChargeRequest) Reset() {
+	*x = CreateContributionChargeRequest{}
+	mi := &file_contribution_v1_contribution_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateContributionChargeRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateContributionChargeRequest) ProtoMessage() {}
+
+func (x *CreateContributionChargeRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_contribution_v1_contribution_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateContributionChargeRequest.ProtoReflect.Descriptor instead.
+func (*CreateContributionChargeRequest) Descriptor() ([]byte, []int) {
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *CreateContributionChargeRequest) GetIdempotencyKey() string {
+	if x != nil {
+		return x.IdempotencyKey
+	}
+	return ""
+}
+
+func (x *CreateContributionChargeRequest) GetMemberId() string {
+	if x != nil {
+		return x.MemberId
+	}
+	return ""
+}
+
+func (x *CreateContributionChargeRequest) GetCategory() string {
+	if x != nil {
+		return x.Category
+	}
+	return ""
+}
+
+func (x *CreateContributionChargeRequest) GetAmount() *v1.Money {
+	if x != nil {
+		return x.Amount
+	}
+	return nil
+}
+
+func (x *CreateContributionChargeRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+type CreateContributionChargeResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Charge        *ContributionCharge    `protobuf:"bytes,1,opt,name=charge,proto3" json:"charge,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateContributionChargeResponse) Reset() {
+	*x = CreateContributionChargeResponse{}
+	mi := &file_contribution_v1_contribution_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateContributionChargeResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateContributionChargeResponse) ProtoMessage() {}
+
+func (x *CreateContributionChargeResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_contribution_v1_contribution_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateContributionChargeResponse.ProtoReflect.Descriptor instead.
+func (*CreateContributionChargeResponse) Descriptor() ([]byte, []int) {
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *CreateContributionChargeResponse) GetCharge() *ContributionCharge {
+	if x != nil {
+		return x.Charge
+	}
+	return nil
+}
+
+type ListContributionChargesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	MemberId      string                 `protobuf:"bytes,1,opt,name=member_id,json=memberId,proto3" json:"member_id,omitempty"`
+	PageSize      int32                  `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	PageToken     string                 `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListContributionChargesRequest) Reset() {
+	*x = ListContributionChargesRequest{}
+	mi := &file_contribution_v1_contribution_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListContributionChargesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListContributionChargesRequest) ProtoMessage() {}
+
+func (x *ListContributionChargesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_contribution_v1_contribution_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListContributionChargesRequest.ProtoReflect.Descriptor instead.
+func (*ListContributionChargesRequest) Descriptor() ([]byte, []int) {
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *ListContributionChargesRequest) GetMemberId() string {
+	if x != nil {
+		return x.MemberId
+	}
+	return ""
+}
+
+func (x *ListContributionChargesRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListContributionChargesRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
+type ListContributionChargesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Charges       []*ContributionCharge  `protobuf:"bytes,1,rep,name=charges,proto3" json:"charges,omitempty"`
+	NextPageToken string                 `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListContributionChargesResponse) Reset() {
+	*x = ListContributionChargesResponse{}
+	mi := &file_contribution_v1_contribution_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListContributionChargesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListContributionChargesResponse) ProtoMessage() {}
+
+func (x *ListContributionChargesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_contribution_v1_contribution_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListContributionChargesResponse.ProtoReflect.Descriptor instead.
+func (*ListContributionChargesResponse) Descriptor() ([]byte, []int) {
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *ListContributionChargesResponse) GetCharges() []*ContributionCharge {
+	if x != nil {
+		return x.Charges
+	}
+	return nil
+}
+
+func (x *ListContributionChargesResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
+}
+
 var File_contribution_v1_contribution_proto protoreflect.FileDescriptor
 
 const file_contribution_v1_contribution_proto_rawDesc = "" +
@@ -1360,7 +1704,35 @@ const file_contribution_v1_contribution_proto_rawDesc = "" +
 	"\n" +
 	"deposit_id\x18\x01 \x01(\tR\tdepositId\"S\n" +
 	"\x19VerifyCashDepositResponse\x126\n" +
-	"\adeposit\x18\x01 \x01(\v2\x1c.contribution.v1.CashDepositR\adeposit*\xeb\x01\n" +
+	"\adeposit\x18\x01 \x01(\v2\x1c.contribution.v1.CashDepositR\adeposit\"\xd3\x02\n" +
+	"\x12ContributionCharge\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
+	"\tmember_id\x18\x02 \x01(\tR\bmemberId\x12\x1a\n" +
+	"\bcategory\x18\x03 \x01(\tR\bcategory\x12(\n" +
+	"\x06amount\x18\x04 \x01(\v2\x10.member.v1.MoneyR\x06amount\x12$\n" +
+	"\x04paid\x18\x05 \x01(\v2\x10.member.v1.MoneyR\x04paid\x122\n" +
+	"\voutstanding\x18\x06 \x01(\v2\x10.member.v1.MoneyR\voutstanding\x12\x16\n" +
+	"\x06reason\x18\a \x01(\tR\x06reason\x12\x1d\n" +
+	"\n" +
+	"created_by\x18\b \x01(\tR\tcreatedBy\x129\n" +
+	"\n" +
+	"created_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"\xc5\x01\n" +
+	"\x1fCreateContributionChargeRequest\x12'\n" +
+	"\x0fidempotency_key\x18\x01 \x01(\tR\x0eidempotencyKey\x12\x1b\n" +
+	"\tmember_id\x18\x02 \x01(\tR\bmemberId\x12\x1a\n" +
+	"\bcategory\x18\x03 \x01(\tR\bcategory\x12(\n" +
+	"\x06amount\x18\x04 \x01(\v2\x10.member.v1.MoneyR\x06amount\x12\x16\n" +
+	"\x06reason\x18\x05 \x01(\tR\x06reason\"_\n" +
+	" CreateContributionChargeResponse\x12;\n" +
+	"\x06charge\x18\x01 \x01(\v2#.contribution.v1.ContributionChargeR\x06charge\"y\n" +
+	"\x1eListContributionChargesRequest\x12\x1b\n" +
+	"\tmember_id\x18\x01 \x01(\tR\bmemberId\x12\x1b\n" +
+	"\tpage_size\x18\x02 \x01(\x05R\bpageSize\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x03 \x01(\tR\tpageToken\"\x88\x01\n" +
+	"\x1fListContributionChargesResponse\x12=\n" +
+	"\acharges\x18\x01 \x03(\v2#.contribution.v1.ContributionChargeR\acharges\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken*\xeb\x01\n" +
 	" ContributionPaymentRequestStatus\x123\n" +
 	"/CONTRIBUTION_PAYMENT_REQUEST_STATUS_UNSPECIFIED\x10\x00\x12/\n" +
 	"+CONTRIBUTION_PAYMENT_REQUEST_STATUS_PENDING\x10\x01\x121\n" +
@@ -1375,8 +1747,10 @@ const file_contribution_v1_contribution_proto_rawDesc = "" +
 	"*CONTRIBUTION_ALLOCATION_TYPE_LOAN_INTEREST\x10\x05\x12(\n" +
 	"$CONTRIBUTION_ALLOCATION_TYPE_PENALTY\x10\x06\x12-\n" +
 	")CONTRIBUTION_ALLOCATION_TYPE_OTHER_CHARGE\x10\a\x123\n" +
-	"/CONTRIBUTION_ALLOCATION_TYPE_OVERPAYMENT_CREDIT\x10\b2\xc5\t\n" +
-	"\x13ContributionService\x12\xc4\x01\n" +
+	"/CONTRIBUTION_ALLOCATION_TYPE_OVERPAYMENT_CREDIT\x10\b2\x97\f\n" +
+	"\x13ContributionService\x12\xa9\x01\n" +
+	"\x18CreateContributionCharge\x120.contribution.v1.CreateContributionChargeRequest\x1a1.contribution.v1.CreateContributionChargeResponse\"(\x82\xd3\xe4\x93\x02\":\x01*\"\x1d/api/v1/contributions/charges\x12\xa3\x01\n" +
+	"\x17ListContributionCharges\x12/.contribution.v1.ListContributionChargesRequest\x1a0.contribution.v1.ListContributionChargesResponse\"%\x82\xd3\xe4\x93\x02\x1f\x12\x1d/api/v1/contributions/charges\x12\xc4\x01\n" +
 	"\x1dInitiateDarajaSTKContribution\x125.contribution.v1.InitiateDarajaSTKContributionRequest\x1a6.contribution.v1.InitiateDarajaSTKContributionResponse\"4\x82\xd3\xe4\x93\x02.:\x01*\")/api/v1/contributions/initiate-daraja-stk\x12\xa4\x01\n" +
 	"\x12OpenCashierSession\x12*.contribution.v1.OpenCashierSessionRequest\x1a+.contribution.v1.OpenCashierSessionResponse\"5\x82\xd3\xe4\x93\x02/:\x01*\"*/api/v1/contributions/open-cashier-session\x12\xa7\x01\n" +
 	"\x16CreateCashContribution\x12..contribution.v1.CreateCashContributionRequest\x1a/.contribution.v1.CreateCashContributionResponse\",\x82\xd3\xe4\x93\x02&:\x01*\"!/api/v1/contributions/create-cash\x12\xa8\x01\n" +
@@ -1399,7 +1773,7 @@ func file_contribution_v1_contribution_proto_rawDescGZIP() []byte {
 }
 
 var file_contribution_v1_contribution_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_contribution_v1_contribution_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
+var file_contribution_v1_contribution_proto_msgTypes = make([]protoimpl.MessageInfo, 23)
 var file_contribution_v1_contribution_proto_goTypes = []any{
 	(ContributionPaymentRequestStatus)(0),         // 0: contribution.v1.ContributionPaymentRequestStatus
 	(ContributionAllocationType)(0),               // 1: contribution.v1.ContributionAllocationType
@@ -1421,57 +1795,73 @@ var file_contribution_v1_contribution_proto_goTypes = []any{
 	(*RecordCashDepositResponse)(nil),             // 17: contribution.v1.RecordCashDepositResponse
 	(*VerifyCashDepositRequest)(nil),              // 18: contribution.v1.VerifyCashDepositRequest
 	(*VerifyCashDepositResponse)(nil),             // 19: contribution.v1.VerifyCashDepositResponse
-	(*v1.Money)(nil),                              // 20: member.v1.Money
-	(*timestamppb.Timestamp)(nil),                 // 21: google.protobuf.Timestamp
+	(*ContributionCharge)(nil),                    // 20: contribution.v1.ContributionCharge
+	(*CreateContributionChargeRequest)(nil),       // 21: contribution.v1.CreateContributionChargeRequest
+	(*CreateContributionChargeResponse)(nil),      // 22: contribution.v1.CreateContributionChargeResponse
+	(*ListContributionChargesRequest)(nil),        // 23: contribution.v1.ListContributionChargesRequest
+	(*ListContributionChargesResponse)(nil),       // 24: contribution.v1.ListContributionChargesResponse
+	(*v1.Money)(nil),                              // 25: member.v1.Money
+	(*timestamppb.Timestamp)(nil),                 // 26: google.protobuf.Timestamp
 }
 var file_contribution_v1_contribution_proto_depIdxs = []int32{
 	1,  // 0: contribution.v1.ContributionAllocationInput.type:type_name -> contribution.v1.ContributionAllocationType
-	20, // 1: contribution.v1.ContributionAllocationInput.amount:type_name -> member.v1.Money
-	20, // 2: contribution.v1.InitiateDarajaSTKContributionRequest.amount:type_name -> member.v1.Money
+	25, // 1: contribution.v1.ContributionAllocationInput.amount:type_name -> member.v1.Money
+	25, // 2: contribution.v1.InitiateDarajaSTKContributionRequest.amount:type_name -> member.v1.Money
 	2,  // 3: contribution.v1.InitiateDarajaSTKContributionRequest.allocations:type_name -> contribution.v1.ContributionAllocationInput
 	0,  // 4: contribution.v1.InitiateDarajaSTKContributionResponse.status:type_name -> contribution.v1.ContributionPaymentRequestStatus
-	21, // 5: contribution.v1.InitiateDarajaSTKContributionResponse.created_at:type_name -> google.protobuf.Timestamp
+	26, // 5: contribution.v1.InitiateDarajaSTKContributionResponse.created_at:type_name -> google.protobuf.Timestamp
 	7,  // 6: contribution.v1.OpenCashierSessionResponse.session:type_name -> contribution.v1.CashierSession
-	20, // 7: contribution.v1.CashierSession.expected_amount:type_name -> member.v1.Money
-	20, // 8: contribution.v1.CashierSession.counted_amount:type_name -> member.v1.Money
-	20, // 9: contribution.v1.CashierSession.variance:type_name -> member.v1.Money
-	21, // 10: contribution.v1.CashierSession.opened_at:type_name -> google.protobuf.Timestamp
-	21, // 11: contribution.v1.CashierSession.closed_at:type_name -> google.protobuf.Timestamp
-	21, // 12: contribution.v1.CashierSession.handed_over_at:type_name -> google.protobuf.Timestamp
-	21, // 13: contribution.v1.CashierSession.deposited_at:type_name -> google.protobuf.Timestamp
-	20, // 14: contribution.v1.CreateCashContributionRequest.amount:type_name -> member.v1.Money
+	25, // 7: contribution.v1.CashierSession.expected_amount:type_name -> member.v1.Money
+	25, // 8: contribution.v1.CashierSession.counted_amount:type_name -> member.v1.Money
+	25, // 9: contribution.v1.CashierSession.variance:type_name -> member.v1.Money
+	26, // 10: contribution.v1.CashierSession.opened_at:type_name -> google.protobuf.Timestamp
+	26, // 11: contribution.v1.CashierSession.closed_at:type_name -> google.protobuf.Timestamp
+	26, // 12: contribution.v1.CashierSession.handed_over_at:type_name -> google.protobuf.Timestamp
+	26, // 13: contribution.v1.CashierSession.deposited_at:type_name -> google.protobuf.Timestamp
+	25, // 14: contribution.v1.CreateCashContributionRequest.amount:type_name -> member.v1.Money
 	2,  // 15: contribution.v1.CreateCashContributionRequest.allocations:type_name -> contribution.v1.ContributionAllocationInput
-	20, // 16: contribution.v1.CashContributionReceipt.amount:type_name -> member.v1.Money
-	21, // 17: contribution.v1.CashContributionReceipt.received_at:type_name -> google.protobuf.Timestamp
+	25, // 16: contribution.v1.CashContributionReceipt.amount:type_name -> member.v1.Money
+	26, // 17: contribution.v1.CashContributionReceipt.received_at:type_name -> google.protobuf.Timestamp
 	9,  // 18: contribution.v1.CreateCashContributionResponse.receipt:type_name -> contribution.v1.CashContributionReceipt
-	20, // 19: contribution.v1.CloseCashierSessionRequest.counted_amount:type_name -> member.v1.Money
+	25, // 19: contribution.v1.CloseCashierSessionRequest.counted_amount:type_name -> member.v1.Money
 	7,  // 20: contribution.v1.CloseCashierSessionResponse.session:type_name -> contribution.v1.CashierSession
 	7,  // 21: contribution.v1.AcceptCashHandoverResponse.session:type_name -> contribution.v1.CashierSession
-	20, // 22: contribution.v1.RecordCashDepositRequest.amount:type_name -> member.v1.Money
-	20, // 23: contribution.v1.CashDeposit.amount:type_name -> member.v1.Money
-	21, // 24: contribution.v1.CashDeposit.recorded_at:type_name -> google.protobuf.Timestamp
-	21, // 25: contribution.v1.CashDeposit.verified_at:type_name -> google.protobuf.Timestamp
+	25, // 22: contribution.v1.RecordCashDepositRequest.amount:type_name -> member.v1.Money
+	25, // 23: contribution.v1.CashDeposit.amount:type_name -> member.v1.Money
+	26, // 24: contribution.v1.CashDeposit.recorded_at:type_name -> google.protobuf.Timestamp
+	26, // 25: contribution.v1.CashDeposit.verified_at:type_name -> google.protobuf.Timestamp
 	16, // 26: contribution.v1.RecordCashDepositResponse.deposit:type_name -> contribution.v1.CashDeposit
 	16, // 27: contribution.v1.VerifyCashDepositResponse.deposit:type_name -> contribution.v1.CashDeposit
-	3,  // 28: contribution.v1.ContributionService.InitiateDarajaSTKContribution:input_type -> contribution.v1.InitiateDarajaSTKContributionRequest
-	5,  // 29: contribution.v1.ContributionService.OpenCashierSession:input_type -> contribution.v1.OpenCashierSessionRequest
-	8,  // 30: contribution.v1.ContributionService.CreateCashContribution:input_type -> contribution.v1.CreateCashContributionRequest
-	11, // 31: contribution.v1.ContributionService.CloseCashierSession:input_type -> contribution.v1.CloseCashierSessionRequest
-	13, // 32: contribution.v1.ContributionService.AcceptCashHandover:input_type -> contribution.v1.AcceptCashHandoverRequest
-	15, // 33: contribution.v1.ContributionService.RecordCashDeposit:input_type -> contribution.v1.RecordCashDepositRequest
-	18, // 34: contribution.v1.ContributionService.VerifyCashDeposit:input_type -> contribution.v1.VerifyCashDepositRequest
-	4,  // 35: contribution.v1.ContributionService.InitiateDarajaSTKContribution:output_type -> contribution.v1.InitiateDarajaSTKContributionResponse
-	6,  // 36: contribution.v1.ContributionService.OpenCashierSession:output_type -> contribution.v1.OpenCashierSessionResponse
-	10, // 37: contribution.v1.ContributionService.CreateCashContribution:output_type -> contribution.v1.CreateCashContributionResponse
-	12, // 38: contribution.v1.ContributionService.CloseCashierSession:output_type -> contribution.v1.CloseCashierSessionResponse
-	14, // 39: contribution.v1.ContributionService.AcceptCashHandover:output_type -> contribution.v1.AcceptCashHandoverResponse
-	17, // 40: contribution.v1.ContributionService.RecordCashDeposit:output_type -> contribution.v1.RecordCashDepositResponse
-	19, // 41: contribution.v1.ContributionService.VerifyCashDeposit:output_type -> contribution.v1.VerifyCashDepositResponse
-	35, // [35:42] is the sub-list for method output_type
-	28, // [28:35] is the sub-list for method input_type
-	28, // [28:28] is the sub-list for extension type_name
-	28, // [28:28] is the sub-list for extension extendee
-	0,  // [0:28] is the sub-list for field type_name
+	25, // 28: contribution.v1.ContributionCharge.amount:type_name -> member.v1.Money
+	25, // 29: contribution.v1.ContributionCharge.paid:type_name -> member.v1.Money
+	25, // 30: contribution.v1.ContributionCharge.outstanding:type_name -> member.v1.Money
+	26, // 31: contribution.v1.ContributionCharge.created_at:type_name -> google.protobuf.Timestamp
+	25, // 32: contribution.v1.CreateContributionChargeRequest.amount:type_name -> member.v1.Money
+	20, // 33: contribution.v1.CreateContributionChargeResponse.charge:type_name -> contribution.v1.ContributionCharge
+	20, // 34: contribution.v1.ListContributionChargesResponse.charges:type_name -> contribution.v1.ContributionCharge
+	21, // 35: contribution.v1.ContributionService.CreateContributionCharge:input_type -> contribution.v1.CreateContributionChargeRequest
+	23, // 36: contribution.v1.ContributionService.ListContributionCharges:input_type -> contribution.v1.ListContributionChargesRequest
+	3,  // 37: contribution.v1.ContributionService.InitiateDarajaSTKContribution:input_type -> contribution.v1.InitiateDarajaSTKContributionRequest
+	5,  // 38: contribution.v1.ContributionService.OpenCashierSession:input_type -> contribution.v1.OpenCashierSessionRequest
+	8,  // 39: contribution.v1.ContributionService.CreateCashContribution:input_type -> contribution.v1.CreateCashContributionRequest
+	11, // 40: contribution.v1.ContributionService.CloseCashierSession:input_type -> contribution.v1.CloseCashierSessionRequest
+	13, // 41: contribution.v1.ContributionService.AcceptCashHandover:input_type -> contribution.v1.AcceptCashHandoverRequest
+	15, // 42: contribution.v1.ContributionService.RecordCashDeposit:input_type -> contribution.v1.RecordCashDepositRequest
+	18, // 43: contribution.v1.ContributionService.VerifyCashDeposit:input_type -> contribution.v1.VerifyCashDepositRequest
+	22, // 44: contribution.v1.ContributionService.CreateContributionCharge:output_type -> contribution.v1.CreateContributionChargeResponse
+	24, // 45: contribution.v1.ContributionService.ListContributionCharges:output_type -> contribution.v1.ListContributionChargesResponse
+	4,  // 46: contribution.v1.ContributionService.InitiateDarajaSTKContribution:output_type -> contribution.v1.InitiateDarajaSTKContributionResponse
+	6,  // 47: contribution.v1.ContributionService.OpenCashierSession:output_type -> contribution.v1.OpenCashierSessionResponse
+	10, // 48: contribution.v1.ContributionService.CreateCashContribution:output_type -> contribution.v1.CreateCashContributionResponse
+	12, // 49: contribution.v1.ContributionService.CloseCashierSession:output_type -> contribution.v1.CloseCashierSessionResponse
+	14, // 50: contribution.v1.ContributionService.AcceptCashHandover:output_type -> contribution.v1.AcceptCashHandoverResponse
+	17, // 51: contribution.v1.ContributionService.RecordCashDeposit:output_type -> contribution.v1.RecordCashDepositResponse
+	19, // 52: contribution.v1.ContributionService.VerifyCashDeposit:output_type -> contribution.v1.VerifyCashDepositResponse
+	44, // [44:53] is the sub-list for method output_type
+	35, // [35:44] is the sub-list for method input_type
+	35, // [35:35] is the sub-list for extension type_name
+	35, // [35:35] is the sub-list for extension extendee
+	0,  // [0:35] is the sub-list for field type_name
 }
 
 func init() { file_contribution_v1_contribution_proto_init() }
@@ -1485,7 +1875,7 @@ func file_contribution_v1_contribution_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_contribution_v1_contribution_proto_rawDesc), len(file_contribution_v1_contribution_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   18,
+			NumMessages:   23,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

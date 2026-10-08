@@ -71,6 +71,11 @@ func (s *Service) CreateReceipt(
 		if err := validateReceipt(params, allocations); err != nil {
 			return err
 		}
+		if !existing.ID.Valid {
+			if err := validateChargeAllocations(ctx, q, params.MemberID, params.BranchID, allocations, pgtype.UUID{}); err != nil {
+				return err
+			}
+		}
 		created, err := s.createReceipt(ctx, q, params, allocations)
 		result = created
 		return err
@@ -227,6 +232,10 @@ func (s *Service) ProcessReceipt(ctx context.Context, receiptID, processedBy pgt
 			processErr = fmt.Errorf("%w: %v", ErrMembershipFeeMismatch, err)
 			return failReceipt(ctx, q, receipt.ID, receiptFailureStatus(receipt), processErr, &result)
 		}
+		if err := validateChargeAllocations(ctx, q, receipt.MemberID, receipt.BranchID, input, receipt.ID); err != nil {
+			processErr = err
+			return failReceipt(ctx, q, receipt.ID, receiptFailureStatus(receipt), processErr, &result)
+		}
 		result.Allocations = result.Allocations[:0]
 		for _, allocation := range allocations {
 			switch allocation.Status {
@@ -295,9 +304,12 @@ func (s *Service) processAllocation(
 	externalReference := receiptExternalReference(receipt)
 	switch allocation.Type {
 	case contributionsqlc.ContributionAllocationTypeCom,
-		contributionsqlc.ContributionAllocationTypeLgom,
-		contributionsqlc.ContributionAllocationTypeOtherCharge:
+		contributionsqlc.ContributionAllocationTypeLgom:
 		return allocation.ID, externalReference, nil
+	case contributionsqlc.ContributionAllocationTypeOtherCharge, contributionsqlc.ContributionAllocationTypePenalty:
+		// ProcessReceipt has locked and validated the charge. Completion of this
+		// allocation is the payment posting, atomic with its outstanding balance.
+		return allocation.TargetID, externalReference, nil
 	case contributionsqlc.ContributionAllocationTypeSharePurchase:
 		if s.shareService == nil {
 			return pgtype.UUID{}, pgtype.Text{}, ErrOwningServiceMissing
@@ -532,6 +544,7 @@ func validateReceipt(params contributionsqlc.InsertContributionReceiptParams, al
 			contributionsqlc.ContributionAllocationTypeLoanPrincipal,
 			contributionsqlc.ContributionAllocationTypeLoanInterest,
 			contributionsqlc.ContributionAllocationTypePenalty,
+			contributionsqlc.ContributionAllocationTypeOtherCharge,
 			contributionsqlc.ContributionAllocationTypeOverpaymentCredit:
 			// Owning-domain allocations must name the exact ledger target up
 			// front. Inferring it later from amount, member or phone number is

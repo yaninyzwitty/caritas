@@ -93,6 +93,9 @@ func (s *Service) CreateCashReceipt(ctx context.Context, params contributionsqlc
 		if err := validateReceipt(params, allocations); err != nil {
 			return err
 		}
+		if err := validateChargeAllocations(ctx, q, params.MemberID, params.BranchID, allocations, pgtype.UUID{}); err != nil {
+			return err
+		}
 		result, err = s.createReceipt(ctx, q, params, allocations)
 		return err
 

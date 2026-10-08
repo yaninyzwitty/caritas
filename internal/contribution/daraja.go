@@ -130,6 +130,9 @@ func (s *Service) createContributionPaymentRequest(ctx context.Context, params I
 		if err := validatePaymentRequestAmount(params.Amount, allocations); err != nil {
 			return err
 		}
+		if err := validateChargeAllocations(ctx, q, params.MemberID, params.BranchID, allocations, pgtype.UUID{}); err != nil {
+			return err
+		}
 		if _, err := darajaWholeAmount(params.Amount); err != nil {
 			return err
 		}
