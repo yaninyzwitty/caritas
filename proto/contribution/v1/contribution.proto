@@ -7,6 +7,12 @@ import "google/protobuf/timestamp.proto";
 import "member/v1/member.proto";
 
 service ContributionService {
+  rpc CreateContributionCharge(CreateContributionChargeRequest) returns (CreateContributionChargeResponse) {
+    option (google.api.http) = {post: "/api/v1/contributions/charges" body: "*"};
+  }
+  rpc ListContributionCharges(ListContributionChargesRequest) returns (ListContributionChargesResponse) {
+    option (google.api.http) = {get: "/api/v1/contributions/charges"};
+  }
   rpc InitiateDarajaSTKContribution(InitiateDarajaSTKContributionRequest) returns (InitiateDarajaSTKContributionResponse) {
     option (google.api.http) = {post: "/api/v1/contributions/initiate-daraja-stk" body: "*"};
   }
@@ -55,6 +61,7 @@ enum ContributionAllocationType {
 // same loan are combined; Loans determines the actual interest/balance split.
 message ContributionAllocationInput {
   ContributionAllocationType type = 1;
+  // OTHER_CHARGE/PENALTY target a contribution charge UUID, never a loan UUID.
   string target_id = 2;
   member.v1.Money amount = 3;
 }
@@ -163,4 +170,39 @@ message VerifyCashDepositRequest {
 
 message VerifyCashDepositResponse {
   CashDeposit deposit = 1;
+}
+
+// ContributionCharge preserves the obligation and its category for CEEP.
+// Without it, partial payments cannot be distinguished from the amount owed.
+message ContributionCharge {
+  string id = 1;
+  string member_id = 2;
+  string category = 3;
+  member.v1.Money amount = 4;
+  member.v1.Money paid = 5;
+  member.v1.Money outstanding = 6;
+  string reason = 7;
+  string created_by = 8;
+  google.protobuf.Timestamp created_at = 9;
+}
+
+message CreateContributionChargeRequest {
+  string idempotency_key = 1;
+  string member_id = 2;
+  // literature, caritas_registration, lsf, laptop, penalty (non-loan), or other.
+  string category = 3;
+  member.v1.Money amount = 4;
+  string reason = 5;
+}
+message CreateContributionChargeResponse {
+  ContributionCharge charge = 1;
+}
+message ListContributionChargesRequest {
+  string member_id = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+}
+message ListContributionChargesResponse {
+  repeated ContributionCharge charges = 1;
+  string next_page_token = 2;
 }

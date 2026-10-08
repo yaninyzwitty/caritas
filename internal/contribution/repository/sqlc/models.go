@@ -372,6 +372,18 @@ type ContributionAllocation struct {
 	UpdatedAt                pgtype.Timestamptz           `json:"updatedAt"`
 }
 
+type ContributionCharge struct {
+	ID             pgtype.UUID        `json:"id"`
+	IdempotencyKey string             `json:"idempotencyKey"`
+	MemberID       pgtype.UUID        `json:"memberId"`
+	BranchID       int64              `json:"branchId"`
+	Category       string             `json:"category"`
+	Amount         pgtype.Numeric     `json:"amount"`
+	Reason         string             `json:"reason"`
+	CreatedBy      pgtype.UUID        `json:"createdBy"`
+	CreatedAt      pgtype.Timestamptz `json:"createdAt"`
+}
+
 type ContributionMonthlyFee struct {
 	MemberID        pgtype.UUID                `json:"memberId"`
 	Period          pgtype.Date                `json:"period"`

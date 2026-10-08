@@ -19,6 +19,8 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
+	ContributionService_CreateContributionCharge_FullMethodName      = "/contribution.v1.ContributionService/CreateContributionCharge"
+	ContributionService_ListContributionCharges_FullMethodName       = "/contribution.v1.ContributionService/ListContributionCharges"
 	ContributionService_InitiateDarajaSTKContribution_FullMethodName = "/contribution.v1.ContributionService/InitiateDarajaSTKContribution"
 	ContributionService_OpenCashierSession_FullMethodName            = "/contribution.v1.ContributionService/OpenCashierSession"
 	ContributionService_CreateCashContribution_FullMethodName        = "/contribution.v1.ContributionService/CreateCashContribution"
@@ -32,6 +34,8 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ContributionServiceClient interface {
+	CreateContributionCharge(ctx context.Context, in *CreateContributionChargeRequest, opts ...grpc.CallOption) (*CreateContributionChargeResponse, error)
+	ListContributionCharges(ctx context.Context, in *ListContributionChargesRequest, opts ...grpc.CallOption) (*ListContributionChargesResponse, error)
 	InitiateDarajaSTKContribution(ctx context.Context, in *InitiateDarajaSTKContributionRequest, opts ...grpc.CallOption) (*InitiateDarajaSTKContributionResponse, error)
 	OpenCashierSession(ctx context.Context, in *OpenCashierSessionRequest, opts ...grpc.CallOption) (*OpenCashierSessionResponse, error)
 	CreateCashContribution(ctx context.Context, in *CreateCashContributionRequest, opts ...grpc.CallOption) (*CreateCashContributionResponse, error)
@@ -47,6 +51,26 @@ type contributionServiceClient struct {
 
 func NewContributionServiceClient(cc grpc.ClientConnInterface) ContributionServiceClient {
 	return &contributionServiceClient{cc}
+}
+
+func (c *contributionServiceClient) CreateContributionCharge(ctx context.Context, in *CreateContributionChargeRequest, opts ...grpc.CallOption) (*CreateContributionChargeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateContributionChargeResponse)
+	err := c.cc.Invoke(ctx, ContributionService_CreateContributionCharge_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *contributionServiceClient) ListContributionCharges(ctx context.Context, in *ListContributionChargesRequest, opts ...grpc.CallOption) (*ListContributionChargesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListContributionChargesResponse)
+	err := c.cc.Invoke(ctx, ContributionService_ListContributionCharges_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *contributionServiceClient) InitiateDarajaSTKContribution(ctx context.Context, in *InitiateDarajaSTKContributionRequest, opts ...grpc.CallOption) (*InitiateDarajaSTKContributionResponse, error) {
@@ -123,6 +147,8 @@ func (c *contributionServiceClient) VerifyCashDeposit(ctx context.Context, in *V
 // All implementations must embed UnimplementedContributionServiceServer
 // for forward compatibility.
 type ContributionServiceServer interface {
+	CreateContributionCharge(context.Context, *CreateContributionChargeRequest) (*CreateContributionChargeResponse, error)
+	ListContributionCharges(context.Context, *ListContributionChargesRequest) (*ListContributionChargesResponse, error)
 	InitiateDarajaSTKContribution(context.Context, *InitiateDarajaSTKContributionRequest) (*InitiateDarajaSTKContributionResponse, error)
 	OpenCashierSession(context.Context, *OpenCashierSessionRequest) (*OpenCashierSessionResponse, error)
 	CreateCashContribution(context.Context, *CreateCashContributionRequest) (*CreateCashContributionResponse, error)
@@ -140,6 +166,12 @@ type ContributionServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedContributionServiceServer struct{}
 
+func (UnimplementedContributionServiceServer) CreateContributionCharge(context.Context, *CreateContributionChargeRequest) (*CreateContributionChargeResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateContributionCharge not implemented")
+}
+func (UnimplementedContributionServiceServer) ListContributionCharges(context.Context, *ListContributionChargesRequest) (*ListContributionChargesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListContributionCharges not implemented")
+}
 func (UnimplementedContributionServiceServer) InitiateDarajaSTKContribution(context.Context, *InitiateDarajaSTKContributionRequest) (*InitiateDarajaSTKContributionResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method InitiateDarajaSTKContribution not implemented")
 }
@@ -180,6 +212,42 @@ func RegisterContributionServiceServer(s grpc.ServiceRegistrar, srv Contribution
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&ContributionService_ServiceDesc, srv)
+}
+
+func _ContributionService_CreateContributionCharge_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateContributionChargeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ContributionServiceServer).CreateContributionCharge(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ContributionService_CreateContributionCharge_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ContributionServiceServer).CreateContributionCharge(ctx, req.(*CreateContributionChargeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ContributionService_ListContributionCharges_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListContributionChargesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ContributionServiceServer).ListContributionCharges(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ContributionService_ListContributionCharges_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ContributionServiceServer).ListContributionCharges(ctx, req.(*ListContributionChargesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _ContributionService_InitiateDarajaSTKContribution_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -315,6 +383,14 @@ var ContributionService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "contribution.v1.ContributionService",
 	HandlerType: (*ContributionServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "CreateContributionCharge",
+			Handler:    _ContributionService_CreateContributionCharge_Handler,
+		},
+		{
+			MethodName: "ListContributionCharges",
+			Handler:    _ContributionService_ListContributionCharges_Handler,
+		},
 		{
 			MethodName: "InitiateDarajaSTKContribution",
 			Handler:    _ContributionService_InitiateDarajaSTKContribution_Handler,

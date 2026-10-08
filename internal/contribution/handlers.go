@@ -434,7 +434,9 @@ func paymentRequestStatusToProto(status contributionsqlc.ContributionPaymentRequ
 // server failure.
 func mapContributionError(err error) error {
 	switch {
-	case errors.Is(err, ErrInvalidPayment),
+	case errors.Is(err, ErrInvalidCharge),
+		errors.Is(err, ErrChargeConflict),
+		errors.Is(err, ErrInvalidPayment),
 		errors.Is(err, ErrInvalidReceiptAmount),
 		errors.Is(err, ErrInvalidAllocationPlan),
 		errors.Is(err, ErrInvalidAllocation),
@@ -446,7 +448,8 @@ func mapContributionError(err error) error {
 		return status.Error(codes.AlreadyExists, err.Error())
 	case errors.Is(err, ErrCashierSessionNotFound):
 		return status.Error(codes.NotFound, err.Error())
-	case errors.Is(err, ErrMembershipFeeMismatch),
+	case errors.Is(err, ErrChargeOverpayment),
+		errors.Is(err, ErrMembershipFeeMismatch),
 		errors.Is(err, ErrCashierSessionState),
 		errors.Is(err, ErrCashSeparationOfDuties),
 		errors.Is(err, ErrCashDepositSelfVerify):
