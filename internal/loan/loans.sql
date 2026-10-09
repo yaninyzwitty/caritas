@@ -8,6 +8,20 @@ SELECT id, member_id, branch_id, principal, interest_rate, repayment_period_mont
 FROM loans
 WHERE id = $1 AND is_deleted = FALSE;
 
+
+-- name: GetLoanByMemberID :one
+SELECT id, member_id, branch_id, principal, interest_rate,
+       repayment_period_months, status, disbursed_at,
+       updated_by, previous_status, is_deleted,
+       created_at, updated_at
+FROM loans
+WHERE member_id = $1
+  AND is_deleted = FALSE
+  AND status NOT IN ('closed', 'rejected')
+ORDER BY created_at DESC, id DESC
+LIMIT 1;
+
+
 -- name: ListLoansByBranch :many
 SELECT id, member_id, branch_id, principal, interest_rate, repayment_period_months, status, disbursed_at, updated_by, previous_status, is_deleted, created_at, updated_at
 FROM loans

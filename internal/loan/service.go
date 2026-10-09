@@ -170,6 +170,17 @@ func (s *Service) GetLoan(ctx context.Context, loanID pgtype.UUID) (loansqlc.Get
 	return loan, nil
 }
 
+func (s *Service) GetLoanByMemberID(ctx context.Context, memberID pgtype.UUID) (loansqlc.GetLoanByMemberIDRow, error) {
+	loan, err := s.store.GetLoanByMemberID(ctx, memberID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return loansqlc.GetLoanByMemberIDRow{}, ErrLoanNotFound
+		}
+		return loansqlc.GetLoanByMemberIDRow{}, fmt.Errorf("get loan: %w", err)
+	}
+	return loan, nil
+}
+
 func (s *Service) GetLoanStatus(ctx context.Context, loanID pgtype.UUID) (loansqlc.GetLoanByIDRow, error) {
 	return s.GetLoan(ctx, loanID)
 }

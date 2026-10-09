@@ -19,6 +19,7 @@ type Querier interface {
 	CreateRepaymentSchedule(ctx context.Context, arg CreateRepaymentScheduleParams) (RepaymentSchedule, error)
 	GetCreditBalanceByID(ctx context.Context, id pgtype.UUID) (CreditBalance, error)
 	GetLoanByID(ctx context.Context, id pgtype.UUID) (GetLoanByIDRow, error)
+	GetLoanByMemberID(ctx context.Context, memberID pgtype.UUID) (GetLoanByMemberIDRow, error)
 	GetLoanDisbursement(ctx context.Context, loanID pgtype.UUID) (LoanTransaction, error)
 	GetLoanGuarantor(ctx context.Context, arg GetLoanGuarantorParams) (LoanGuarantor, error)
 	GetLoanInterestPeriod(ctx context.Context, loanID pgtype.UUID) (pgtype.Date, error)

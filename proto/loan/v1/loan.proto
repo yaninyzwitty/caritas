@@ -201,8 +201,11 @@ message DisburseLoanResponse {
 
 // GetLoanRequest specifies which loan to retrieve.
 message GetLoanRequest {
-  string loan_id = 1;
-}
+ oneof loan_status_param {
+    string loan_id   = 1;
+    string member_id = 2;
+
+  }}
 
 // GetLoanResponse returns the requested loan.
 message GetLoanResponse {
@@ -225,7 +228,7 @@ message ListLoansResponse {
 
 // GetLoanStatusRequest requests the current status of a loan.
 message GetLoanStatusRequest {
-  string loan_id = 1;
+ string loan_id = 1;
 }
 
 // GetLoanStatusResponse returns the loan's current status.
