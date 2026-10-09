@@ -1090,10 +1090,14 @@ func (x *DisburseLoanResponse) GetReferenceId() string {
 
 // GetLoanRequest specifies which loan to retrieve.
 type GetLoanRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	LoanId        string                 `protobuf:"bytes,1,opt,name=loan_id,json=loanId,proto3" json:"loan_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Types that are valid to be assigned to LoanStatusParam:
+	//
+	//	*GetLoanRequest_LoanId
+	//	*GetLoanRequest_MemberId
+	LoanStatusParam isGetLoanRequest_LoanStatusParam `protobuf_oneof:"loan_status_param"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *GetLoanRequest) Reset() {
@@ -1126,12 +1130,46 @@ func (*GetLoanRequest) Descriptor() ([]byte, []int) {
 	return file_loan_v1_loan_proto_rawDescGZIP(), []int{12}
 }
 
+func (x *GetLoanRequest) GetLoanStatusParam() isGetLoanRequest_LoanStatusParam {
+	if x != nil {
+		return x.LoanStatusParam
+	}
+	return nil
+}
+
 func (x *GetLoanRequest) GetLoanId() string {
 	if x != nil {
-		return x.LoanId
+		if x, ok := x.LoanStatusParam.(*GetLoanRequest_LoanId); ok {
+			return x.LoanId
+		}
 	}
 	return ""
 }
+
+func (x *GetLoanRequest) GetMemberId() string {
+	if x != nil {
+		if x, ok := x.LoanStatusParam.(*GetLoanRequest_MemberId); ok {
+			return x.MemberId
+		}
+	}
+	return ""
+}
+
+type isGetLoanRequest_LoanStatusParam interface {
+	isGetLoanRequest_LoanStatusParam()
+}
+
+type GetLoanRequest_LoanId struct {
+	LoanId string `protobuf:"bytes,1,opt,name=loan_id,json=loanId,proto3,oneof"`
+}
+
+type GetLoanRequest_MemberId struct {
+	MemberId string `protobuf:"bytes,2,opt,name=member_id,json=memberId,proto3,oneof"`
+}
+
+func (*GetLoanRequest_LoanId) isGetLoanRequest_LoanStatusParam() {}
+
+func (*GetLoanRequest_MemberId) isGetLoanRequest_LoanStatusParam() {}
 
 // GetLoanResponse returns the requested loan.
 type GetLoanResponse struct {
@@ -1926,9 +1964,11 @@ const file_loan_v1_loan_proto_rawDesc = "" +
 	"\n" +
 	"new_status\x18\x01 \x01(\x0e2\x13.loan.v1.LoanStatusR\tnewStatus\x12=\n" +
 	"\fdisbursed_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\vdisbursedAt\x12!\n" +
-	"\freference_id\x18\x03 \x01(\tR\vreferenceId\")\n" +
-	"\x0eGetLoanRequest\x12\x17\n" +
-	"\aloan_id\x18\x01 \x01(\tR\x06loanId\"4\n" +
+	"\freference_id\x18\x03 \x01(\tR\vreferenceId\"_\n" +
+	"\x0eGetLoanRequest\x12\x19\n" +
+	"\aloan_id\x18\x01 \x01(\tH\x00R\x06loanId\x12\x1d\n" +
+	"\tmember_id\x18\x02 \x01(\tH\x00R\bmemberIdB\x13\n" +
+	"\x11loan_status_param\"4\n" +
 	"\x0fGetLoanResponse\x12!\n" +
 	"\x04loan\x18\x01 \x01(\v2\r.loan.v1.LoanR\x04loan\"\x88\x01\n" +
 	"\x10ListLoansRequest\x12\x1b\n" +
@@ -2127,6 +2167,10 @@ func init() { file_loan_v1_loan_proto_init() }
 func file_loan_v1_loan_proto_init() {
 	if File_loan_v1_loan_proto != nil {
 		return
+	}
+	file_loan_v1_loan_proto_msgTypes[12].OneofWrappers = []any{
+		(*GetLoanRequest_LoanId)(nil),
+		(*GetLoanRequest_MemberId)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{

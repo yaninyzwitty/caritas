@@ -254,27 +254,50 @@ func (h *Handlers) DisburseLoan(ctx context.Context, req *loanv1.DisburseLoanReq
 
 }
 func (h *Handlers) GetLoan(ctx context.Context, req *loanv1.GetLoanRequest) (*loanv1.GetLoanResponse, error) {
-	if req.GetLoanId() == "" {
-		return nil, status.Error(codes.InvalidArgument, "loan id is required")
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "request is required")
 	}
 
-	loanID, err := stringToUUID(req.GetLoanId())
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid loan_id")
+	var (
+		loan loansqlc.GetLoanByIDRow
+		err  error
+	)
+
+	switch target := req.GetLoanStatusParam().(type) {
+	case *loanv1.GetLoanRequest_LoanId:
+		loanID, parseErr := stringToUUID(target.LoanId)
+		if parseErr != nil {
+			return nil, status.Error(codes.InvalidArgument, "invalid loan_id")
+		}
+
+		loan, err = h.service.GetLoan(ctx, loanID)
+
+	case *loanv1.GetLoanRequest_MemberId:
+		memberID, parseErr := stringToUUID(target.MemberId)
+		if parseErr != nil {
+			return nil, status.Error(codes.InvalidArgument, "invalid member_id")
+		}
+
+		memberLoan, getErr := h.service.GetLoanByMemberID(ctx, memberID)
+		loan, err = loansqlc.GetLoanByIDRow(memberLoan), getErr
+
+	default:
+		return nil, status.Error(
+			codes.InvalidArgument,
+			"either loan_id or member_id is required",
+		)
+
 	}
 
-	loan, err := h.service.GetLoan(ctx, loanID)
 	if err != nil {
 		return nil, mapServiceError(err)
 	}
 
-	branchID := strconv.FormatInt(loan.BranchID, 10)
-
 	return &loanv1.GetLoanResponse{
 		Loan: &loanv1.Loan{
-			Id:                    loan.ID.String(), // TODO we can drop the returned loan id
+			Id:                    loan.ID.String(),
 			MemberId:              loan.MemberID.String(),
-			BranchId:              branchID,
+			BranchId:              strconv.FormatInt(loan.BranchID, 10),
 			Principal:             numericToString(loan.Principal),
 			InterestRate:          numericToString(loan.InterestRate),
 			RepaymentPeriodMonths: loan.RepaymentPeriodMonths,
