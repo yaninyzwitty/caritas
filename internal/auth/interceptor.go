@@ -205,3 +205,9 @@ func roleHasPermission(role, permission string) bool {
 		return false
 	}
 }
+
+// CashPermissions reuses the interceptor's role matrix for visible cash controls.
+// Without it, the UI's advertised actions could drift from RPC authorization.
+func CashPermissions(role string) (record, approve bool) {
+	return roleHasPermission(role, permissionCashRecord), roleHasPermission(role, permissionCashApprove)
+}

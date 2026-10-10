@@ -152,6 +152,41 @@ func (q *Queries) GetCashDepositByID(ctx context.Context, id pgtype.UUID) (CashD
 	return i, err
 }
 
+const getCashStaffNames = `-- name: GetCashStaffNames :many
+SELECT id, name FROM staff_users
+WHERE branch_id = $1 AND id = ANY($2::uuid[])
+`
+
+type GetCashStaffNamesParams struct {
+	BranchID int64         `json:"branchId"`
+	StaffIds []pgtype.UUID `json:"staffIds"`
+}
+
+type GetCashStaffNamesRow struct {
+	ID   pgtype.UUID `json:"id"`
+	Name string      `json:"name"`
+}
+
+func (q *Queries) GetCashStaffNames(ctx context.Context, arg GetCashStaffNamesParams) ([]GetCashStaffNamesRow, error) {
+	rows, err := q.db.Query(ctx, getCashStaffNames, arg.BranchID, arg.StaffIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetCashStaffNamesRow
+	for rows.Next() {
+		var i GetCashStaffNamesRow
+		if err := rows.Scan(&i.ID, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getOpenCashierSession = `-- name: GetOpenCashierSession :one
 SELECT id, branch_id, cashier_id, status, expected_amount, counted_amount, variance, variance_reason, opened_at, closed_at, closed_by, handed_over_at, handed_over_to, deposited_at, created_at, updated_at
 FROM cashier_sessions
@@ -295,6 +330,115 @@ func (q *Queries) ListCashDepositSessions(ctx context.Context, depositID pgtype.
 			return nil, err
 		}
 		items = append(items, session_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listCashDeposits = `-- name: ListCashDeposits :many
+SELECT id, branch_id, amount, bank_reference, status, recorded_by, recorded_at, verified_by, verified_at, created_at, updated_at FROM cash_deposits
+WHERE branch_id = $1
+  AND ($2::timestamptz IS NULL
+       OR (created_at, id) < ($2::timestamptz, $3::uuid))
+ORDER BY created_at DESC, id DESC LIMIT $4
+`
+
+type ListCashDepositsParams struct {
+	BranchID        int64              `json:"branchId"`
+	CursorCreatedAt pgtype.Timestamptz `json:"cursorCreatedAt"`
+	CursorID        pgtype.UUID        `json:"cursorId"`
+	FetchLimit      int32              `json:"fetchLimit"`
+}
+
+func (q *Queries) ListCashDeposits(ctx context.Context, arg ListCashDepositsParams) ([]CashDeposit, error) {
+	rows, err := q.db.Query(ctx, listCashDeposits,
+		arg.BranchID,
+		arg.CursorCreatedAt,
+		arg.CursorID,
+		arg.FetchLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []CashDeposit
+	for rows.Next() {
+		var i CashDeposit
+		if err := rows.Scan(
+			&i.ID,
+			&i.BranchID,
+			&i.Amount,
+			&i.BankReference,
+			&i.Status,
+			&i.RecordedBy,
+			&i.RecordedAt,
+			&i.VerifiedBy,
+			&i.VerifiedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listCashierSessions = `-- name: ListCashierSessions :many
+SELECT id, branch_id, cashier_id, status, expected_amount, counted_amount, variance, variance_reason, opened_at, closed_at, closed_by, handed_over_at, handed_over_to, deposited_at, created_at, updated_at FROM cashier_sessions
+WHERE branch_id = $1
+  AND ($2::timestamptz IS NULL
+       OR (created_at, id) < ($2::timestamptz, $3::uuid))
+ORDER BY created_at DESC, id DESC LIMIT $4
+`
+
+type ListCashierSessionsParams struct {
+	BranchID        int64              `json:"branchId"`
+	CursorCreatedAt pgtype.Timestamptz `json:"cursorCreatedAt"`
+	CursorID        pgtype.UUID        `json:"cursorId"`
+	FetchLimit      int32              `json:"fetchLimit"`
+}
+
+func (q *Queries) ListCashierSessions(ctx context.Context, arg ListCashierSessionsParams) ([]CashierSession, error) {
+	rows, err := q.db.Query(ctx, listCashierSessions,
+		arg.BranchID,
+		arg.CursorCreatedAt,
+		arg.CursorID,
+		arg.FetchLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []CashierSession
+	for rows.Next() {
+		var i CashierSession
+		if err := rows.Scan(
+			&i.ID,
+			&i.BranchID,
+			&i.CashierID,
+			&i.Status,
+			&i.ExpectedAmount,
+			&i.CountedAmount,
+			&i.Variance,
+			&i.VarianceReason,
+			&i.OpenedAt,
+			&i.ClosedAt,
+			&i.ClosedBy,
+			&i.HandedOverAt,
+			&i.HandedOverTo,
+			&i.DepositedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err

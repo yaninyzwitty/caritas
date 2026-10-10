@@ -19,6 +19,12 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
+	ContributionService_GetCashContext_FullMethodName                = "/contribution.v1.ContributionService/GetCashContext"
+	ContributionService_GetContributionQuote_FullMethodName          = "/contribution.v1.ContributionService/GetContributionQuote"
+	ContributionService_GetCashReceipt_FullMethodName                = "/contribution.v1.ContributionService/GetCashReceipt"
+	ContributionService_ListCashierSessions_FullMethodName           = "/contribution.v1.ContributionService/ListCashierSessions"
+	ContributionService_ListCashDeposits_FullMethodName              = "/contribution.v1.ContributionService/ListCashDeposits"
+	ContributionService_GetCashDeposit_FullMethodName                = "/contribution.v1.ContributionService/GetCashDeposit"
 	ContributionService_CreateContributionCharge_FullMethodName      = "/contribution.v1.ContributionService/CreateContributionCharge"
 	ContributionService_ListContributionCharges_FullMethodName       = "/contribution.v1.ContributionService/ListContributionCharges"
 	ContributionService_InitiateDarajaSTKContribution_FullMethodName = "/contribution.v1.ContributionService/InitiateDarajaSTKContribution"
@@ -34,6 +40,12 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ContributionServiceClient interface {
+	GetCashContext(ctx context.Context, in *GetCashContextRequest, opts ...grpc.CallOption) (*GetCashContextResponse, error)
+	GetContributionQuote(ctx context.Context, in *GetContributionQuoteRequest, opts ...grpc.CallOption) (*GetContributionQuoteResponse, error)
+	GetCashReceipt(ctx context.Context, in *GetCashReceiptRequest, opts ...grpc.CallOption) (*GetCashReceiptResponse, error)
+	ListCashierSessions(ctx context.Context, in *ListCashierSessionsRequest, opts ...grpc.CallOption) (*ListCashierSessionsResponse, error)
+	ListCashDeposits(ctx context.Context, in *ListCashDepositsRequest, opts ...grpc.CallOption) (*ListCashDepositsResponse, error)
+	GetCashDeposit(ctx context.Context, in *GetCashDepositRequest, opts ...grpc.CallOption) (*GetCashDepositResponse, error)
 	CreateContributionCharge(ctx context.Context, in *CreateContributionChargeRequest, opts ...grpc.CallOption) (*CreateContributionChargeResponse, error)
 	ListContributionCharges(ctx context.Context, in *ListContributionChargesRequest, opts ...grpc.CallOption) (*ListContributionChargesResponse, error)
 	InitiateDarajaSTKContribution(ctx context.Context, in *InitiateDarajaSTKContributionRequest, opts ...grpc.CallOption) (*InitiateDarajaSTKContributionResponse, error)
@@ -51,6 +63,66 @@ type contributionServiceClient struct {
 
 func NewContributionServiceClient(cc grpc.ClientConnInterface) ContributionServiceClient {
 	return &contributionServiceClient{cc}
+}
+
+func (c *contributionServiceClient) GetCashContext(ctx context.Context, in *GetCashContextRequest, opts ...grpc.CallOption) (*GetCashContextResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetCashContextResponse)
+	err := c.cc.Invoke(ctx, ContributionService_GetCashContext_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *contributionServiceClient) GetContributionQuote(ctx context.Context, in *GetContributionQuoteRequest, opts ...grpc.CallOption) (*GetContributionQuoteResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetContributionQuoteResponse)
+	err := c.cc.Invoke(ctx, ContributionService_GetContributionQuote_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *contributionServiceClient) GetCashReceipt(ctx context.Context, in *GetCashReceiptRequest, opts ...grpc.CallOption) (*GetCashReceiptResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetCashReceiptResponse)
+	err := c.cc.Invoke(ctx, ContributionService_GetCashReceipt_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *contributionServiceClient) ListCashierSessions(ctx context.Context, in *ListCashierSessionsRequest, opts ...grpc.CallOption) (*ListCashierSessionsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListCashierSessionsResponse)
+	err := c.cc.Invoke(ctx, ContributionService_ListCashierSessions_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *contributionServiceClient) ListCashDeposits(ctx context.Context, in *ListCashDepositsRequest, opts ...grpc.CallOption) (*ListCashDepositsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListCashDepositsResponse)
+	err := c.cc.Invoke(ctx, ContributionService_ListCashDeposits_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *contributionServiceClient) GetCashDeposit(ctx context.Context, in *GetCashDepositRequest, opts ...grpc.CallOption) (*GetCashDepositResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetCashDepositResponse)
+	err := c.cc.Invoke(ctx, ContributionService_GetCashDeposit_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *contributionServiceClient) CreateContributionCharge(ctx context.Context, in *CreateContributionChargeRequest, opts ...grpc.CallOption) (*CreateContributionChargeResponse, error) {
@@ -147,6 +219,12 @@ func (c *contributionServiceClient) VerifyCashDeposit(ctx context.Context, in *V
 // All implementations must embed UnimplementedContributionServiceServer
 // for forward compatibility.
 type ContributionServiceServer interface {
+	GetCashContext(context.Context, *GetCashContextRequest) (*GetCashContextResponse, error)
+	GetContributionQuote(context.Context, *GetContributionQuoteRequest) (*GetContributionQuoteResponse, error)
+	GetCashReceipt(context.Context, *GetCashReceiptRequest) (*GetCashReceiptResponse, error)
+	ListCashierSessions(context.Context, *ListCashierSessionsRequest) (*ListCashierSessionsResponse, error)
+	ListCashDeposits(context.Context, *ListCashDepositsRequest) (*ListCashDepositsResponse, error)
+	GetCashDeposit(context.Context, *GetCashDepositRequest) (*GetCashDepositResponse, error)
 	CreateContributionCharge(context.Context, *CreateContributionChargeRequest) (*CreateContributionChargeResponse, error)
 	ListContributionCharges(context.Context, *ListContributionChargesRequest) (*ListContributionChargesResponse, error)
 	InitiateDarajaSTKContribution(context.Context, *InitiateDarajaSTKContributionRequest) (*InitiateDarajaSTKContributionResponse, error)
@@ -166,6 +244,24 @@ type ContributionServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedContributionServiceServer struct{}
 
+func (UnimplementedContributionServiceServer) GetCashContext(context.Context, *GetCashContextRequest) (*GetCashContextResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetCashContext not implemented")
+}
+func (UnimplementedContributionServiceServer) GetContributionQuote(context.Context, *GetContributionQuoteRequest) (*GetContributionQuoteResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetContributionQuote not implemented")
+}
+func (UnimplementedContributionServiceServer) GetCashReceipt(context.Context, *GetCashReceiptRequest) (*GetCashReceiptResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetCashReceipt not implemented")
+}
+func (UnimplementedContributionServiceServer) ListCashierSessions(context.Context, *ListCashierSessionsRequest) (*ListCashierSessionsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListCashierSessions not implemented")
+}
+func (UnimplementedContributionServiceServer) ListCashDeposits(context.Context, *ListCashDepositsRequest) (*ListCashDepositsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListCashDeposits not implemented")
+}
+func (UnimplementedContributionServiceServer) GetCashDeposit(context.Context, *GetCashDepositRequest) (*GetCashDepositResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetCashDeposit not implemented")
+}
 func (UnimplementedContributionServiceServer) CreateContributionCharge(context.Context, *CreateContributionChargeRequest) (*CreateContributionChargeResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateContributionCharge not implemented")
 }
@@ -212,6 +308,114 @@ func RegisterContributionServiceServer(s grpc.ServiceRegistrar, srv Contribution
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&ContributionService_ServiceDesc, srv)
+}
+
+func _ContributionService_GetCashContext_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetCashContextRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ContributionServiceServer).GetCashContext(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ContributionService_GetCashContext_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ContributionServiceServer).GetCashContext(ctx, req.(*GetCashContextRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ContributionService_GetContributionQuote_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetContributionQuoteRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ContributionServiceServer).GetContributionQuote(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ContributionService_GetContributionQuote_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ContributionServiceServer).GetContributionQuote(ctx, req.(*GetContributionQuoteRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ContributionService_GetCashReceipt_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetCashReceiptRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ContributionServiceServer).GetCashReceipt(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ContributionService_GetCashReceipt_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ContributionServiceServer).GetCashReceipt(ctx, req.(*GetCashReceiptRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ContributionService_ListCashierSessions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListCashierSessionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ContributionServiceServer).ListCashierSessions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ContributionService_ListCashierSessions_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ContributionServiceServer).ListCashierSessions(ctx, req.(*ListCashierSessionsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ContributionService_ListCashDeposits_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListCashDepositsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ContributionServiceServer).ListCashDeposits(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ContributionService_ListCashDeposits_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ContributionServiceServer).ListCashDeposits(ctx, req.(*ListCashDepositsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ContributionService_GetCashDeposit_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetCashDepositRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ContributionServiceServer).GetCashDeposit(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ContributionService_GetCashDeposit_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ContributionServiceServer).GetCashDeposit(ctx, req.(*GetCashDepositRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _ContributionService_CreateContributionCharge_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -383,6 +587,30 @@ var ContributionService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "contribution.v1.ContributionService",
 	HandlerType: (*ContributionServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetCashContext",
+			Handler:    _ContributionService_GetCashContext_Handler,
+		},
+		{
+			MethodName: "GetContributionQuote",
+			Handler:    _ContributionService_GetContributionQuote_Handler,
+		},
+		{
+			MethodName: "GetCashReceipt",
+			Handler:    _ContributionService_GetCashReceipt_Handler,
+		},
+		{
+			MethodName: "ListCashierSessions",
+			Handler:    _ContributionService_ListCashierSessions_Handler,
+		},
+		{
+			MethodName: "ListCashDeposits",
+			Handler:    _ContributionService_ListCashDeposits_Handler,
+		},
+		{
+			MethodName: "GetCashDeposit",
+			Handler:    _ContributionService_GetCashDeposit_Handler,
+		},
 		{
 			MethodName: "CreateContributionCharge",
 			Handler:    _ContributionService_CreateContributionCharge_Handler,

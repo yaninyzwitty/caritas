@@ -219,6 +219,9 @@ type Loan struct {
 	UpdatedAt             *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	UpdatedBy             string                 `protobuf:"bytes,11,opt,name=updated_by,json=updatedBy,proto3" json:"updated_by,omitempty"`
 	PreviousStatus        string                 `protobuf:"bytes,12,opt,name=previous_status,json=previousStatus,proto3" json:"previous_status,omitempty"`
+	MemberNumber          int64                  `protobuf:"varint,13,opt,name=member_number,json=memberNumber,proto3" json:"member_number,omitempty"`
+	MemberName            string                 `protobuf:"bytes,14,opt,name=member_name,json=memberName,proto3" json:"member_name,omitempty"`
+	NationalId            string                 `protobuf:"bytes,15,opt,name=national_id,json=nationalId,proto3" json:"national_id,omitempty"`
 	unknownFields         protoimpl.UnknownFields
 	sizeCache             protoimpl.SizeCache
 }
@@ -333,6 +336,27 @@ func (x *Loan) GetUpdatedBy() string {
 func (x *Loan) GetPreviousStatus() string {
 	if x != nil {
 		return x.PreviousStatus
+	}
+	return ""
+}
+
+func (x *Loan) GetMemberNumber() int64 {
+	if x != nil {
+		return x.MemberNumber
+	}
+	return 0
+}
+
+func (x *Loan) GetMemberName() string {
+	if x != nil {
+		return x.MemberName
+	}
+	return ""
+}
+
+func (x *Loan) GetNationalId() string {
+	if x != nil {
+		return x.NationalId
 	}
 	return ""
 }
@@ -1880,7 +1904,7 @@ var File_loan_v1_loan_proto protoreflect.FileDescriptor
 
 const file_loan_v1_loan_proto_rawDesc = "" +
 	"\n" +
-	"\x12loan/v1/loan.proto\x12\aloan.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16member/v1/member.proto\"\xf5\x03\n" +
+	"\x12loan/v1/loan.proto\x12\aloan.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16member/v1/member.proto\"\xdc\x04\n" +
 	"\x04Loan\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tmember_id\x18\x02 \x01(\tR\bmemberId\x12\x1b\n" +
@@ -1897,7 +1921,12 @@ const file_loan_v1_loan_proto_rawDesc = "" +
 	" \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x1d\n" +
 	"\n" +
 	"updated_by\x18\v \x01(\tR\tupdatedBy\x12'\n" +
-	"\x0fprevious_status\x18\f \x01(\tR\x0epreviousStatus\"\xc3\x02\n" +
+	"\x0fprevious_status\x18\f \x01(\tR\x0epreviousStatus\x12#\n" +
+	"\rmember_number\x18\r \x01(\x03R\fmemberNumber\x12\x1f\n" +
+	"\vmember_name\x18\x0e \x01(\tR\n" +
+	"memberName\x12\x1f\n" +
+	"\vnational_id\x18\x0f \x01(\tR\n" +
+	"nationalId\"\xc3\x02\n" +
 	"\rLoanGuarantor\x12\x17\n" +
 	"\aloan_id\x18\x01 \x01(\tR\x06loanId\x12!\n" +
 	"\fguarantor_id\x18\x02 \x01(\tR\vguarantorId\x12+\n" +

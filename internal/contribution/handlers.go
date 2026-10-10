@@ -129,25 +129,7 @@ func (h *Handlers) CreateCashContribution(ctx context.Context, req *contribution
 	if err != nil {
 		return nil, mapContributionError(err)
 	}
-	id, err := uuidToString(result.Receipt.ID)
-	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to encode receipt id")
-	}
-	session, err := uuidToString(result.Receipt.CashierSessionID)
-	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to encode cashier session id")
-	}
-	response := &contributionv1.CashContributionReceipt{
-		Id:                       id,
-		InternalReceiptReference: result.Receipt.InternalReceiptReference.String,
-		SessionId:                session,
-		Status:                   string(result.Receipt.Status),
-		Amount:                   numericToMoney(result.Receipt.ReceivedAmount),
-	}
-	if result.Receipt.ReceivedAt.Valid {
-		response.ReceivedAt = timestamppb.New(result.Receipt.ReceivedAt.Time)
-	}
-	return &contributionv1.CreateCashContributionResponse{Receipt: response}, nil
+	return &contributionv1.CreateCashContributionResponse{Receipt: cashReceiptToProto(result.Receipt, result.Allocations)}, nil
 }
 
 // CloseCashierSession snapshots expected cash while the session row is locked.
@@ -353,6 +335,7 @@ func cashierSessionToProto(row contributionsqlc.CashierSession) (*contributionv1
 		CountedAmount:  numericToMoney(row.CountedAmount),
 		Variance:       numericToMoney(row.Variance),
 		VarianceReason: row.VarianceReason.String,
+		HandedOverTo:   row.HandedOverTo.String(),
 	}
 	if row.OpenedAt.Valid {
 		result.OpenedAt = timestamppb.New(row.OpenedAt.Time)
@@ -381,10 +364,14 @@ func cashDepositToProto(row contributionsqlc.CashDeposit) (*contributionv1.CashD
 		BranchId:      row.BranchID,
 		Amount:        numericToMoney(row.Amount),
 		BankReference: row.BankReference,
+		RecordedBy:    row.RecordedBy.String(),
 		Status:        string(row.Status),
 	}
 	if row.RecordedAt.Valid {
 		result.RecordedAt = timestamppb.New(row.RecordedAt.Time)
+	}
+	if row.VerifiedBy.Valid {
+		result.VerifiedBy = row.VerifiedBy.String()
 	}
 	if row.VerifiedAt.Valid {
 		result.VerifiedAt = timestamppb.New(row.VerifiedAt.Time)
@@ -446,7 +433,7 @@ func mapContributionError(err error) error {
 		return status.Error(codes.InvalidArgument, err.Error())
 	case errors.Is(err, ErrPaymentRequestInProgress):
 		return status.Error(codes.AlreadyExists, err.Error())
-	case errors.Is(err, ErrCashierSessionNotFound):
+	case errors.Is(err, ErrCashierSessionNotFound), errors.Is(err, ErrReceiptNotFound):
 		return status.Error(codes.NotFound, err.Error())
 	case errors.Is(err, ErrChargeOverpayment),
 		errors.Is(err, ErrMembershipFeeMismatch),
