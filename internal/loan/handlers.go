@@ -351,7 +351,7 @@ func (h *Handlers) ListLoans(ctx context.Context, req *loanv1.ListLoansRequest) 
 	if hasMore {
 		last := loans[limit-1]
 
-		token, err := encodeCursor(last.CreatedAt, last.ID)
+		token, err := encodeCursor(last.Loan.CreatedAt, last.Loan.ID)
 		if err != nil {
 			return nil, status.Error(codes.Internal, "failed to encode next page token")
 		}
@@ -366,23 +366,26 @@ func (h *Handlers) ListLoans(ctx context.Context, req *loanv1.ListLoansRequest) 
 
 	for _, loan := range loans {
 
-		branchID := strconv.Itoa(int(loan.BranchID))
-		loanPrincipal := numericToString(loan.Principal)
-		interestRate := numericToString(loan.InterestRate)
+		branchID := strconv.Itoa(int(loan.Loan.BranchID))
+		loanPrincipal := numericToString(loan.Loan.Principal)
+		interestRate := numericToString(loan.Loan.InterestRate)
 
 		resp.Loans = append(resp.Loans, &loanv1.Loan{
-			MemberId:              loan.MemberID.String(),
+			MemberId:              loan.Loan.MemberID.String(),
 			BranchId:              branchID,
 			Principal:             loanPrincipal,
-			Id:                    loan.ID.String(),
+			Id:                    loan.Loan.ID.String(),
 			InterestRate:          interestRate,
-			RepaymentPeriodMonths: loan.RepaymentPeriodMonths,
-			Status:                loanStatusToProto(loan.Status),
-			DisbursedAt:           timestamppb.New(loan.DisbursedAt.Time),
-			CreatedAt:             timestamppb.New(loan.CreatedAt.Time),
-			UpdatedAt:             timestamppb.New(loan.UpdatedAt.Time),
-			UpdatedBy:             loan.UpdatedBy.String(),
-			PreviousStatus:        string(loan.PreviousStatus.LoanStatus),
+			RepaymentPeriodMonths: loan.Loan.RepaymentPeriodMonths,
+			Status:                loanStatusToProto(loan.Loan.Status),
+			DisbursedAt:           timestamppb.New(loan.Loan.DisbursedAt.Time),
+			CreatedAt:             timestamppb.New(loan.Loan.CreatedAt.Time),
+			UpdatedAt:             timestamppb.New(loan.Loan.UpdatedAt.Time),
+			UpdatedBy:             loan.Loan.UpdatedBy.String(),
+			PreviousStatus:        string(loan.Loan.PreviousStatus.LoanStatus),
+			MemberNumber:          loan.MemberNumber,
+			MemberName:            loan.MemberName.String,
+			NationalId:            loan.NationalID,
 		})
 	}
 

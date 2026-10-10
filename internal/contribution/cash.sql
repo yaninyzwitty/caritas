@@ -95,3 +95,21 @@ SET status = 'verified',
     updated_at = NOW()
 WHERE id = $1 AND status = 'recorded'
 RETURNING *;
+
+-- name: ListCashierSessions :many
+SELECT * FROM cashier_sessions
+WHERE branch_id = sqlc.arg(branch_id)
+  AND (sqlc.narg(cursor_created_at)::timestamptz IS NULL
+       OR (created_at, id) < (sqlc.narg(cursor_created_at)::timestamptz, sqlc.narg(cursor_id)::uuid))
+ORDER BY created_at DESC, id DESC LIMIT sqlc.arg(fetch_limit);
+
+-- name: ListCashDeposits :many
+SELECT * FROM cash_deposits
+WHERE branch_id = sqlc.arg(branch_id)
+  AND (sqlc.narg(cursor_created_at)::timestamptz IS NULL
+       OR (created_at, id) < (sqlc.narg(cursor_created_at)::timestamptz, sqlc.narg(cursor_id)::uuid))
+ORDER BY created_at DESC, id DESC LIMIT sqlc.arg(fetch_limit);
+
+-- name: GetCashStaffNames :many
+SELECT id, name FROM staff_users
+WHERE branch_id = sqlc.arg(branch_id) AND id = ANY(sqlc.arg(staff_ids)::uuid[]);

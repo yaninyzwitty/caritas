@@ -164,13 +164,26 @@ func (q *Queries) GetLoanByMemberID(ctx context.Context, memberID pgtype.UUID) (
 }
 
 const listLoansByBranch = `-- name: ListLoansByBranch :many
-SELECT id, member_id, branch_id, principal, interest_rate, repayment_period_months, status, disbursed_at, updated_by, previous_status, is_deleted, created_at, updated_at
-FROM loans
-WHERE branch_id = $1
-  AND is_deleted = FALSE
-  AND ($2::timestamptz IS NULL OR created_at < $2 OR (created_at = $2 AND id < $3))
-  AND ($5::loan_status IS NULL OR status = $5)
-ORDER BY created_at DESC, id DESC
+SELECT
+    l.id, l.member_id, l.branch_id, l.principal, l.interest_rate, l.interest_period, l.repayment_period_months, l.status, l.disbursed_at, l.updated_by, l.previous_status, l.is_deleted, l.created_at, l.updated_at,
+    m.member_number,
+    m.national_id,
+    mp.full_name AS member_name
+FROM loans l
+JOIN members m ON m.id = l.member_id
+LEFT JOIN member_profiles mp ON mp.member_id = m.id
+WHERE l.branch_id = $1
+  AND l.is_deleted = FALSE
+  AND (
+      $2::timestamptz IS NULL
+      OR l.created_at < $2
+      OR (l.created_at = $2 AND l.id < $3)
+  )
+  AND (
+      $5::loan_status IS NULL
+      OR l.status = $5
+  )
+ORDER BY l.created_at DESC, l.id DESC
 LIMIT $4
 `
 
@@ -183,19 +196,10 @@ type ListLoansByBranchParams struct {
 }
 
 type ListLoansByBranchRow struct {
-	ID                    pgtype.UUID        `json:"id"`
-	MemberID              pgtype.UUID        `json:"memberId"`
-	BranchID              int64              `json:"branchId"`
-	Principal             pgtype.Numeric     `json:"principal"`
-	InterestRate          pgtype.Numeric     `json:"interestRate"`
-	RepaymentPeriodMonths int32              `json:"repaymentPeriodMonths"`
-	Status                LoanStatus         `json:"status"`
-	DisbursedAt           pgtype.Timestamptz `json:"disbursedAt"`
-	UpdatedBy             pgtype.UUID        `json:"updatedBy"`
-	PreviousStatus        NullLoanStatus     `json:"previousStatus"`
-	IsDeleted             bool               `json:"isDeleted"`
-	CreatedAt             pgtype.Timestamptz `json:"createdAt"`
-	UpdatedAt             pgtype.Timestamptz `json:"updatedAt"`
+	Loan         Loan        `json:"loan"`
+	MemberNumber int64       `json:"memberNumber"`
+	NationalID   string      `json:"nationalId"`
+	MemberName   pgtype.Text `json:"memberName"`
 }
 
 func (q *Queries) ListLoansByBranch(ctx context.Context, arg ListLoansByBranchParams) ([]ListLoansByBranchRow, error) {
@@ -214,19 +218,23 @@ func (q *Queries) ListLoansByBranch(ctx context.Context, arg ListLoansByBranchPa
 	for rows.Next() {
 		var i ListLoansByBranchRow
 		if err := rows.Scan(
-			&i.ID,
-			&i.MemberID,
-			&i.BranchID,
-			&i.Principal,
-			&i.InterestRate,
-			&i.RepaymentPeriodMonths,
-			&i.Status,
-			&i.DisbursedAt,
-			&i.UpdatedBy,
-			&i.PreviousStatus,
-			&i.IsDeleted,
-			&i.CreatedAt,
-			&i.UpdatedAt,
+			&i.Loan.ID,
+			&i.Loan.MemberID,
+			&i.Loan.BranchID,
+			&i.Loan.Principal,
+			&i.Loan.InterestRate,
+			&i.Loan.InterestPeriod,
+			&i.Loan.RepaymentPeriodMonths,
+			&i.Loan.Status,
+			&i.Loan.DisbursedAt,
+			&i.Loan.UpdatedBy,
+			&i.Loan.PreviousStatus,
+			&i.Loan.IsDeleted,
+			&i.Loan.CreatedAt,
+			&i.Loan.UpdatedAt,
+			&i.MemberNumber,
+			&i.NationalID,
+			&i.MemberName,
 		); err != nil {
 			return nil, err
 		}

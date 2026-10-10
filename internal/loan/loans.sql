@@ -23,13 +23,26 @@ LIMIT 1;
 
 
 -- name: ListLoansByBranch :many
-SELECT id, member_id, branch_id, principal, interest_rate, repayment_period_months, status, disbursed_at, updated_by, previous_status, is_deleted, created_at, updated_at
-FROM loans
-WHERE branch_id = $1
-  AND is_deleted = FALSE
-  AND ($2::timestamptz IS NULL OR created_at < $2 OR (created_at = $2 AND id < $3))
-  AND (sqlc.narg('status_filter')::loan_status IS NULL OR status = sqlc.narg('status_filter'))
-ORDER BY created_at DESC, id DESC
+SELECT
+    sqlc.embed(l),
+    m.member_number,
+    m.national_id,
+    mp.full_name AS member_name
+FROM loans l
+JOIN members m ON m.id = l.member_id
+LEFT JOIN member_profiles mp ON mp.member_id = m.id
+WHERE l.branch_id = $1
+  AND l.is_deleted = FALSE
+  AND (
+      $2::timestamptz IS NULL
+      OR l.created_at < $2
+      OR (l.created_at = $2 AND l.id < $3)
+  )
+  AND (
+      sqlc.narg('status_filter')::loan_status IS NULL
+      OR l.status = sqlc.narg('status_filter')
+  )
+ORDER BY l.created_at DESC, l.id DESC
 LIMIT $4;
 
 -- name: ListLoansByMember :many

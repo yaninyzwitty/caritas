@@ -109,6 +109,9 @@ message Loan {
   google.protobuf.Timestamp updated_at              = 10;
   string                    updated_by              = 11;
   string                    previous_status         = 12;
+  int64                     member_number           = 13;
+  string                    member_name             = 14;
+  string                    national_id             = 15;
 }
 
 // LoanGuarantor represents a member who guarantees a loan.
@@ -201,89 +204,89 @@ message DisburseLoanResponse {
 
 // GetLoanRequest specifies which loan to retrieve.
 message GetLoanRequest {
- oneof loan_status_param {
+  oneof loan_status_param {
     string loan_id   = 1;
     string member_id = 2;
 
   }}
 
 // GetLoanResponse returns the requested loan.
-message GetLoanResponse {
-  Loan loan = 1;
-}
+  message GetLoanResponse {
+    Loan loan = 1;
+  }
 
 // ListLoansRequest specifies filtering and pagination for listing loans.
-message ListLoansRequest {
-  int32      page_size     = 1;
-  string     page_token    = 2;
-  LoanStatus status_filter = 3;
+  message ListLoansRequest {
+    int32      page_size     = 1;
+    string     page_token    = 2;
+    LoanStatus status_filter = 3;
   // string     member_id     = 4;  // Optional: filter by member
-}
+  }
 
 // ListLoansResponse returns a paginated list of loans.
-message ListLoansResponse {
-  repeated Loan loans           = 1;
-  string        next_page_token = 2;
-}
+  message ListLoansResponse {
+    repeated Loan loans           = 1;
+    string        next_page_token = 2;
+  }
 
 // GetLoanStatusRequest requests the current status of a loan.
-message GetLoanStatusRequest {
- string loan_id = 1;
-}
+  message GetLoanStatusRequest {
+    string loan_id = 1;
+  }
 
 // GetLoanStatusResponse returns the loan's current status.
-message GetLoanStatusResponse {
-  LoanStatus                status          = 1;
-  string                    previous_status = 2;
-  google.protobuf.Timestamp last_updated    = 3;
-}
+  message GetLoanStatusResponse {
+    LoanStatus                status          = 1;
+    string                    previous_status = 2;
+    google.protobuf.Timestamp last_updated    = 3;
+  }
 
 // AddGuarantorRequest specifies the loan and guarantor to add.
-message AddGuarantorRequest {
-  string loan_id           = 1;
-  string guarantor_id      = 2;
-  string guaranteed_amount = 3;  // decimal.Decimal as string
-}
+  message AddGuarantorRequest {
+    string loan_id           = 1;
+    string guarantor_id      = 2;
+    string guaranteed_amount = 3;  // decimal.Decimal as string
+  }
 
 // AddGuarantorResponse confirms the guarantor was added.
-message AddGuarantorResponse {
-  GuarantorStatus           status     = 1;
-  google.protobuf.Timestamp created_at = 2;
-}
+  message AddGuarantorResponse {
+    GuarantorStatus           status     = 1;
+    google.protobuf.Timestamp created_at = 2;
+  }
 
 // RemoveGuarantorRequest specifies the loan and guarantor to remove.
-message RemoveGuarantorRequest {
-  string loan_id      = 1;
-  string guarantor_id = 2;
-}
+  message RemoveGuarantorRequest {
+    string loan_id      = 1;
+    string guarantor_id = 2;
+  }
 
 // RemoveGuarantorResponse confirms the guarantor was removed.
-message RemoveGuarantorResponse {
-  bool success = 1;
-}
+  message RemoveGuarantorResponse {
+    bool success = 1;
+  }
 
 // ApproveGuarantorRequest specifies the guarantor to approve.
-message ApproveGuarantorRequest {
-  string loan_id      = 1;
-  string guarantor_id = 2;
-  string approved_by  = 3;  // Admin ID who is approving
-}
+  message ApproveGuarantorRequest {
+    string loan_id      = 1;
+    string guarantor_id = 2;
+    string approved_by  = 3;  // Admin ID who is approving
+  }
 
 // ApproveGuarantorResponse confirms the guarantor approval.
-message ApproveGuarantorResponse {
-  GuarantorStatus           new_status  = 1;
-  google.protobuf.Timestamp approved_at = 2;
-}
+  message ApproveGuarantorResponse {
+    GuarantorStatus           new_status  = 1;
+    google.protobuf.Timestamp approved_at = 2;
+  }
 
 // ListGuarantorsRequest requests guarantors for a specific loan.
-message ListGuarantorsRequest {
-  string loan_id    = 1;
-  int32  page_size  = 2;
-  string page_token = 3;
-}
+  message ListGuarantorsRequest {
+    string loan_id    = 1;
+    int32  page_size  = 2;
+    string page_token = 3;
+  }
 
 // ListGuarantorsResponse returns guarantors for a loan.
-message ListGuarantorsResponse {
-  repeated LoanGuarantor guarantors      = 1;
-  string                 next_page_token = 2;
-}
+  message ListGuarantorsResponse {
+    repeated LoanGuarantor guarantors      = 1;
+    string                 next_page_token = 2;
+  }

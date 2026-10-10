@@ -7,32 +7,74 @@ import "google/protobuf/timestamp.proto";
 import "member/v1/member.proto";
 
 service ContributionService {
+  rpc GetCashContext(GetCashContextRequest) returns (GetCashContextResponse) {
+    option (google.api.http) = {get: "/api/v1/contributions/cash-context"};
+  }
+  rpc GetContributionQuote(GetContributionQuoteRequest) returns (GetContributionQuoteResponse) {
+    option (google.api.http) = {get: "/api/v1/contributions/quote"};
+  }
+  rpc GetCashReceipt(GetCashReceiptRequest) returns (GetCashReceiptResponse) {
+    option (google.api.http) = {get: "/api/v1/contributions/cash-receipt"};
+  }
+  rpc ListCashierSessions(ListCashierSessionsRequest) returns (ListCashierSessionsResponse) {
+    option (google.api.http) = {get: "/api/v1/contributions/cashier-sessions"};
+  }
+  rpc ListCashDeposits(ListCashDepositsRequest) returns (ListCashDepositsResponse) {
+    option (google.api.http) = {get: "/api/v1/contributions/cash-deposits"};
+  }
+  rpc GetCashDeposit(GetCashDepositRequest) returns (GetCashDepositResponse) {
+    option (google.api.http) = {get: "/api/v1/contributions/cash-deposit"};
+  }
   rpc CreateContributionCharge(CreateContributionChargeRequest) returns (CreateContributionChargeResponse) {
-    option (google.api.http) = {post: "/api/v1/contributions/charges" body: "*"};
+    option (google.api.http) = {
+      post: "/api/v1/contributions/charges"
+      body: "*"
+    };
   }
   rpc ListContributionCharges(ListContributionChargesRequest) returns (ListContributionChargesResponse) {
     option (google.api.http) = {get: "/api/v1/contributions/charges"};
   }
   rpc InitiateDarajaSTKContribution(InitiateDarajaSTKContributionRequest) returns (InitiateDarajaSTKContributionResponse) {
-    option (google.api.http) = {post: "/api/v1/contributions/initiate-daraja-stk" body: "*"};
+    option (google.api.http) = {
+      post: "/api/v1/contributions/initiate-daraja-stk"
+      body: "*"
+    };
   }
   rpc OpenCashierSession(OpenCashierSessionRequest) returns (OpenCashierSessionResponse) {
-    option (google.api.http) = {post: "/api/v1/contributions/open-cashier-session" body: "*"};
+    option (google.api.http) = {
+      post: "/api/v1/contributions/open-cashier-session"
+      body: "*"
+    };
   }
   rpc CreateCashContribution(CreateCashContributionRequest) returns (CreateCashContributionResponse) {
-    option (google.api.http) = {post: "/api/v1/contributions/create-cash" body: "*"};
+    option (google.api.http) = {
+      post: "/api/v1/contributions/create-cash"
+      body: "*"
+    };
   }
   rpc CloseCashierSession(CloseCashierSessionRequest) returns (CloseCashierSessionResponse) {
-    option (google.api.http) = {post: "/api/v1/contributions/close-cashier-session" body: "*"};
+    option (google.api.http) = {
+      post: "/api/v1/contributions/close-cashier-session"
+      body: "*"
+    };
   }
   rpc AcceptCashHandover(AcceptCashHandoverRequest) returns (AcceptCashHandoverResponse) {
-    option (google.api.http) = {post: "/api/v1/contributions/accept-cash-handover" body: "*"};
+    option (google.api.http) = {
+      post: "/api/v1/contributions/accept-cash-handover"
+      body: "*"
+    };
   }
   rpc RecordCashDeposit(RecordCashDepositRequest) returns (RecordCashDepositResponse) {
-    option (google.api.http) = {post: "/api/v1/contributions/record-cash-deposit" body: "*"};
+    option (google.api.http) = {
+      post: "/api/v1/contributions/record-cash-deposit"
+      body: "*"
+    };
   }
   rpc VerifyCashDeposit(VerifyCashDepositRequest) returns (VerifyCashDepositResponse) {
-    option (google.api.http) = {post: "/api/v1/contributions/verify-cash-deposit" body: "*"};
+    option (google.api.http) = {
+      post: "/api/v1/contributions/verify-cash-deposit"
+      body: "*"
+    };
   }
 }
 
@@ -102,6 +144,9 @@ message CashierSession {
   google.protobuf.Timestamp closed_at = 10;
   google.protobuf.Timestamp handed_over_at = 11;
   google.protobuf.Timestamp deposited_at = 12;
+  string handed_over_to = 13;
+  string cashier_name = 14;
+  string handed_over_to_name = 15;
 }
 
 message CreateCashContributionRequest {
@@ -120,6 +165,9 @@ message CashContributionReceipt {
   string status = 4;
   member.v1.Money amount = 5;
   google.protobuf.Timestamp received_at = 6;
+  string member_id = 7;
+  string contribution_period = 8;
+  repeated CashReceiptAllocation allocations = 9;
 }
 
 message CreateCashContributionResponse {
@@ -158,6 +206,11 @@ message CashDeposit {
   string status = 5;
   google.protobuf.Timestamp recorded_at = 6;
   google.protobuf.Timestamp verified_at = 7;
+  string recorded_by = 8;
+  string verified_by = 9;
+  repeated string session_ids = 10;
+  string recorded_by_name = 11;
+  string verified_by_name = 12;
 }
 
 message RecordCashDepositResponse {
@@ -205,4 +258,57 @@ message ListContributionChargesRequest {
 message ListContributionChargesResponse {
   repeated ContributionCharge charges = 1;
   string next_page_token = 2;
+}
+
+// These reads let clients resume cash work without guessing fees or trusting browser state.
+message GetCashContextRequest {}
+message GetCashContextResponse {
+  string staff_id = 1;
+  int64 branch_id = 2;
+  bool can_record = 3;
+  bool can_approve = 4;
+}
+message GetContributionQuoteRequest {
+  string member_id = 1;
+  string contribution_period = 2;
+}
+message GetContributionQuoteResponse {
+  repeated ContributionAllocationInput fees = 1;
+}
+message GetCashReceiptRequest {
+  string receipt_id = 1;
+  string idempotency_key = 2;
+}
+message CashReceiptAllocation {
+  ContributionAllocationType type = 1;
+  string target_id = 2;
+  member.v1.Money amount = 3;
+  string status = 4;
+  string authoritative_reference_id = 5;
+}
+message ListCashierSessionsRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+}
+message ListCashierSessionsResponse {
+  repeated CashierSession sessions = 1;
+  string next_page_token = 2;
+}
+message ListCashDepositsRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+}
+message ListCashDepositsResponse {
+  repeated CashDeposit deposits = 1;
+  string next_page_token = 2;
+}
+message GetCashDepositRequest {
+  string deposit_id = 1;
+}
+
+message GetCashReceiptResponse {
+  CashContributionReceipt receipt = 1;
+}
+message GetCashDepositResponse {
+  CashDeposit deposit = 1;
 }

@@ -38,6 +38,17 @@ func (q *Queries) AssessMonthlyFees(ctx context.Context, arg AssessMonthlyFeesPa
 	return err
 }
 
+const getContributionMemberBranch = `-- name: GetContributionMemberBranch :one
+SELECT branch_id FROM members WHERE id = $1 AND NOT is_deleted
+`
+
+func (q *Queries) GetContributionMemberBranch(ctx context.Context, id pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, getContributionMemberBranch, id)
+	var branch_id int64
+	err := row.Scan(&branch_id)
+	return branch_id, err
+}
+
 const lockMonthlyFees = `-- name: LockMonthlyFees :many
 SELECT member_id, period, type, amount, exemption_reason, approved_by, created_at FROM contribution_monthly_fees
 WHERE member_id = $1 AND period = $2
@@ -68,6 +79,67 @@ func (q *Queries) LockMonthlyFees(ctx context.Context, arg LockMonthlyFeesParams
 			&i.ApprovedBy,
 			&i.CreatedAt,
 		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const quoteMonthlyFees = `-- name: QuoteMonthlyFees :many
+WITH eligible AS (
+ SELECT m.id FROM members m WHERE m.id = $1 AND NOT m.is_deleted
+ AND m.created_at < $2::date + INTERVAL '1 month'
+  AND COALESCE(
+      (SELECT h.to_status FROM member_status_history h
+       WHERE h.member_id = m.id AND h.created_at <= ($2::timestamp AT TIME ZONE 'Africa/Nairobi')
+       ORDER BY h.created_at DESC, h.id DESC LIMIT 1),
+      (SELECT h.from_status FROM member_status_history h
+       WHERE h.member_id = m.id AND h.created_at > ($2::timestamp AT TIME ZONE 'Africa/Nairobi')
+       ORDER BY h.created_at, h.id LIMIT 1), m.status) = 'active'
+), fee_types AS (SELECT 'com'::contribution_allocation_type AS type UNION ALL SELECT 'lgom'::contribution_allocation_type), assessments AS (
+ SELECT fee.type, COALESCE(f.amount, CASE WHEN e.id IS NOT NULL THEN 30 ELSE 0 END)::numeric AS amount
+ FROM fee_types fee
+ LEFT JOIN eligible e ON true
+ LEFT JOIN contribution_monthly_fees f
+   ON f.member_id = $1 AND f.period = $2::date AND f.type = fee.type
+)
+SELECT x.type, GREATEST(x.amount - COALESCE(p.paid, 0), 0)::numeric AS outstanding
+FROM assessments x
+LEFT JOIN LATERAL (
+ SELECT SUM(a.amount) AS paid FROM contribution_allocations a
+ JOIN contribution_receipts r ON r.id = a.receipt_id
+ WHERE r.member_id = $1 AND r.contribution_period >= $2::date
+   AND r.contribution_period < $2::date + INTERVAL '1 month'
+   AND a.type = x.type AND a.status = 'completed'
+) p ON true ORDER BY x.type
+`
+
+type QuoteMonthlyFeesParams struct {
+	MemberID pgtype.UUID `json:"memberId"`
+	Period   pgtype.Date `json:"period"`
+}
+
+type QuoteMonthlyFeesRow struct {
+	Type        ContributionAllocationType `json:"type"`
+	Outstanding pgtype.Numeric             `json:"outstanding"`
+}
+
+// Read-only mirror of AssessMonthlyFees eligibility and the schema default (KES 30).
+// Keep them together when changing fee policy, or the cashier quote and posting will disagree.
+func (q *Queries) QuoteMonthlyFees(ctx context.Context, arg QuoteMonthlyFeesParams) ([]QuoteMonthlyFeesRow, error) {
+	rows, err := q.db.Query(ctx, quoteMonthlyFees, arg.MemberID, arg.Period)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []QuoteMonthlyFeesRow
+	for rows.Next() {
+		var i QuoteMonthlyFeesRow
+		if err := rows.Scan(&i.Type, &i.Outstanding); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
