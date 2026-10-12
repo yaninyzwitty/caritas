@@ -36,6 +36,7 @@ type Querier interface {
 	ListLoanAuditTrail(ctx context.Context, arg ListLoanAuditTrailParams) ([]LoanAuditTrail, error)
 	ListLoanGuarantors(ctx context.Context, arg ListLoanGuarantorsParams) ([]LoanGuarantor, error)
 	ListLoanTransactions(ctx context.Context, arg ListLoanTransactionsParams) ([]LoanTransaction, error)
+	// Match SumLoanAppliedRepayments so interest and overpayment credit do not reduce principal.
 	ListLoansByBranch(ctx context.Context, arg ListLoansByBranchParams) ([]ListLoansByBranchRow, error)
 	ListLoansByMember(ctx context.Context, arg ListLoansByMemberParams) ([]ListLoansByMemberRow, error)
 	ListLoansForDelinquencyUpdate(ctx context.Context, limit int32) ([]ListLoansForDelinquencyUpdateRow, error)

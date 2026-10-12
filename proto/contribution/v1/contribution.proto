@@ -125,7 +125,56 @@ message InitiateDarajaSTKContributionResponse {
   google.protobuf.Timestamp created_at = 4;
 }
 
+// Either identifier recovers the same stored request; neither initiates payment.
+message GetContributionPaymentRequestRequest {
+  oneof lookup {
+    string payment_request_id = 1;
+    string idempotency_key = 2;
+  }
+}
+
+// Request completion means payment was received, not that allocations succeeded.
+message GetContributionPaymentRequestResponse {
+  string payment_request_id = 1;
+  ContributionPaymentRequestStatus status = 2;
+  member.v1.Money amount = 3;
+  string contribution_period = 4;
+  google.protobuf.Timestamp created_at = 5;
+  string failure_reason = 6;
+  ContributionPaymentReceipt receipt = 7;
+}
+
+// The receipt's own status prevents collected money being mistaken for a posted contribution.
+message ContributionPaymentReceipt {
+  string id = 1;
+  // Existing receipt states: pending, processing, completed, failed, manual_review.
+  string status = 2;
+  member.v1.Money amount = 3;
+  string mpesa_reference = 4;
+  google.protobuf.Timestamp received_at = 5;
+}
+
 message OpenCashierSessionRequest {}
+
+message GetCashContextRequest {}
+
+// Staff identity and permissions come from authentication, never browser input.
+message GetCashContextResponse {
+  string staff_id = 1;
+  int64 branch_id = 2;
+  bool can_record = 3;
+  bool can_approve = 4;
+}
+
+message GetContributionQuoteRequest {
+  string member_id = 1;
+  string contribution_period = 2;
+}
+
+// Unpaid fees use the same assessment rules as contribution posting.
+message GetContributionQuoteResponse {
+  repeated ContributionAllocationInput fees = 1;
+}
 
 message OpenCashierSessionResponse {
   CashierSession session = 1;

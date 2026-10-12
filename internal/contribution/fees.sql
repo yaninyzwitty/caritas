@@ -1,3 +1,9 @@
+-- name: ContributionMemberExists :one
+SELECT EXISTS (
+    SELECT 1 FROM members
+    WHERE id = sqlc.arg(member_id) AND branch_id = sqlc.arg(branch_id) AND NOT is_deleted
+);
+
 -- name: AssessMonthlyFees :exec
 INSERT INTO contribution_monthly_fees (member_id, period, type)
 SELECT m.id, sqlc.arg(period)::date, fee.type

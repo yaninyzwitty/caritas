@@ -162,6 +162,58 @@ func (q *Queries) LockContributionPaymentRequestByCheckoutID(ctx context.Context
 	return i, err
 }
 
+const lookupContributionPaymentRequest = `-- name: LookupContributionPaymentRequest :one
+SELECT p.id, p.status, p.expected_amount, p.contribution_period,
+       p.created_at, p.failure_reason,
+       r.id AS receipt_id, COALESCE(r.status::text, '')::text AS receipt_status,
+       r.received_amount, r.external_transaction_id, r.received_at
+FROM contribution_payment_requests p
+LEFT JOIN contribution_receipts r
+  ON r.id = p.receipt_id AND r.branch_id = p.branch_id AND r.is_deleted = FALSE
+WHERE p.branch_id = $1
+  AND (p.id = $2::uuid
+       OR p.idempotency_key = $3::text)
+`
+
+type LookupContributionPaymentRequestParams struct {
+	BranchID         int64       `json:"branchId"`
+	PaymentRequestID pgtype.UUID `json:"paymentRequestId"`
+	IdempotencyKey   pgtype.Text `json:"idempotencyKey"`
+}
+
+type LookupContributionPaymentRequestRow struct {
+	ID                    pgtype.UUID                      `json:"id"`
+	Status                ContributionPaymentRequestStatus `json:"status"`
+	ExpectedAmount        pgtype.Numeric                   `json:"expectedAmount"`
+	ContributionPeriod    pgtype.Date                      `json:"contributionPeriod"`
+	CreatedAt             pgtype.Timestamptz               `json:"createdAt"`
+	FailureReason         pgtype.Text                      `json:"failureReason"`
+	ReceiptID             pgtype.UUID                      `json:"receiptId"`
+	ReceiptStatus         string                           `json:"receiptStatus"`
+	ReceivedAmount        pgtype.Numeric                   `json:"receivedAmount"`
+	ExternalTransactionID pgtype.Text                      `json:"externalTransactionId"`
+	ReceivedAt            pgtype.Timestamptz               `json:"receivedAt"`
+}
+
+func (q *Queries) LookupContributionPaymentRequest(ctx context.Context, arg LookupContributionPaymentRequestParams) (LookupContributionPaymentRequestRow, error) {
+	row := q.db.QueryRow(ctx, lookupContributionPaymentRequest, arg.BranchID, arg.PaymentRequestID, arg.IdempotencyKey)
+	var i LookupContributionPaymentRequestRow
+	err := row.Scan(
+		&i.ID,
+		&i.Status,
+		&i.ExpectedAmount,
+		&i.ContributionPeriod,
+		&i.CreatedAt,
+		&i.FailureReason,
+		&i.ReceiptID,
+		&i.ReceiptStatus,
+		&i.ReceivedAmount,
+		&i.ExternalTransactionID,
+		&i.ReceivedAt,
+	)
+	return i, err
+}
+
 const updateContributionPaymentRequestCheckoutID = `-- name: UpdateContributionPaymentRequestCheckoutID :one
 UPDATE contribution_payment_requests
 SET checkout_request_id = $2,

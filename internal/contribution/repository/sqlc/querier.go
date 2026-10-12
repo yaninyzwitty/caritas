@@ -14,6 +14,7 @@ type Querier interface {
 	AcceptCashHandover(ctx context.Context, arg AcceptCashHandoverParams) (CashierSession, error)
 	AssessMonthlyFees(ctx context.Context, arg AssessMonthlyFeesParams) error
 	CloseCashierSession(ctx context.Context, arg CloseCashierSessionParams) (CashierSession, error)
+	ContributionMemberExists(ctx context.Context, arg ContributionMemberExistsParams) (bool, error)
 	CreateContributionCharge(ctx context.Context, arg CreateContributionChargeParams) (ContributionCharge, error)
 	GetCashDepositByBankReference(ctx context.Context, bankReference string) (CashDeposit, error)
 	GetCashDepositByID(ctx context.Context, id pgtype.UUID) (CashDeposit, error)
@@ -47,6 +48,7 @@ type Querier interface {
 	LockContributionPaymentRequestByCheckoutID(ctx context.Context, checkoutRequestID pgtype.Text) (ContributionPaymentRequest, error)
 	LockContributionReceiptByID(ctx context.Context, id pgtype.UUID) (ContributionReceipt, error)
 	LockMonthlyFees(ctx context.Context, arg LockMonthlyFeesParams) ([]ContributionMonthlyFee, error)
+	LookupContributionPaymentRequest(ctx context.Context, arg LookupContributionPaymentRequestParams) (LookupContributionPaymentRequestRow, error)
 	MarkCashierSessionDeposited(ctx context.Context, id pgtype.UUID) (CashierSession, error)
 	// Read-only mirror of AssessMonthlyFees eligibility and the schema default (KES 30).
 	// Keep them together when changing fee policy, or the cashier quote and posting will disagree.

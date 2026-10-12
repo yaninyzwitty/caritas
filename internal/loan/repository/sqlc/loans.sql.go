@@ -192,6 +192,7 @@ type ListLoansByBranchParams struct {
 	Column2      pgtype.Timestamptz `json:"column2"`
 	ID           pgtype.UUID        `json:"id"`
 	Limit        int32              `json:"limit"`
+	MemberID     pgtype.UUID        `json:"memberId"`
 	StatusFilter NullLoanStatus     `json:"statusFilter"`
 }
 
@@ -202,12 +203,14 @@ type ListLoansByBranchRow struct {
 	MemberName   pgtype.Text `json:"memberName"`
 }
 
+// Match SumLoanAppliedRepayments so interest and overpayment credit do not reduce principal.
 func (q *Queries) ListLoansByBranch(ctx context.Context, arg ListLoansByBranchParams) ([]ListLoansByBranchRow, error) {
 	rows, err := q.db.Query(ctx, listLoansByBranch,
 		arg.BranchID,
 		arg.Column2,
 		arg.ID,
 		arg.Limit,
+		arg.MemberID,
 		arg.StatusFilter,
 	)
 	if err != nil {
