@@ -23,13 +23,23 @@ LIMIT 1;
 
 
 -- name: ListLoansByBranch :many
-SELECT id, member_id, branch_id, principal, interest_rate, repayment_period_months, status, disbursed_at, updated_by, previous_status, is_deleted, created_at, updated_at
-FROM loans
-WHERE branch_id = $1
-  AND is_deleted = FALSE
-  AND ($2::timestamptz IS NULL OR created_at < $2 OR (created_at = $2 AND id < $3))
-  AND (sqlc.narg('status_filter')::loan_status IS NULL OR status = sqlc.narg('status_filter'))
-ORDER BY created_at DESC, id DESC
+-- Match SumLoanAppliedRepayments so interest and overpayment credit do not reduce principal.
+SELECT l.id, l.member_id, l.branch_id, l.principal, l.interest_rate, l.repayment_period_months, l.status, l.disbursed_at, l.updated_by, l.previous_status, l.is_deleted, l.created_at, l.updated_at,
+       (l.principal - (
+           SELECT COALESCE(SUM(COALESCE(
+               (allocation_breakdown->>'principal')::numeric,
+               amount - COALESCE((allocation_breakdown->>'credit')::numeric, 0)
+           )), 0)
+           FROM loan_transactions
+           WHERE loan_id = l.id AND type = 'repayment'
+       ))::numeric AS outstanding_principal
+FROM loans l
+WHERE l.branch_id = $1
+  AND l.is_deleted = FALSE
+  AND (sqlc.narg('member_id')::uuid IS NULL OR l.member_id = sqlc.narg('member_id'))
+  AND ($2::timestamptz IS NULL OR l.created_at < $2 OR (l.created_at = $2 AND l.id < $3))
+  AND (sqlc.narg('status_filter')::loan_status IS NULL OR l.status = sqlc.narg('status_filter'))
+ORDER BY l.created_at DESC, l.id DESC
 LIMIT $4;
 
 -- name: ListLoansByMember :many

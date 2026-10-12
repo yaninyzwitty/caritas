@@ -35,6 +35,188 @@ var (
 	_ = metadata.Join
 )
 
+func request_ContributionService_GetCashContext_0(ctx context.Context, marshaler runtime.Marshaler, client ContributionServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq GetCashContextRequest
+		metadata runtime.ServerMetadata
+	)
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
+	}
+	msg, err := client.GetCashContext(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_ContributionService_GetCashContext_0(ctx context.Context, marshaler runtime.Marshaler, server ContributionServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq GetCashContextRequest
+		metadata runtime.ServerMetadata
+	)
+	msg, err := server.GetCashContext(ctx, &protoReq)
+	return msg, metadata, err
+}
+
+var filter_ContributionService_GetContributionQuote_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
+
+func request_ContributionService_GetContributionQuote_0(ctx context.Context, marshaler runtime.Marshaler, client ContributionServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq GetContributionQuoteRequest
+		metadata runtime.ServerMetadata
+	)
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
+	}
+	if err := req.ParseForm(); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_ContributionService_GetContributionQuote_0); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	msg, err := client.GetContributionQuote(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_ContributionService_GetContributionQuote_0(ctx context.Context, marshaler runtime.Marshaler, server ContributionServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq GetContributionQuoteRequest
+		metadata runtime.ServerMetadata
+	)
+	if err := req.ParseForm(); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_ContributionService_GetContributionQuote_0); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	msg, err := server.GetContributionQuote(ctx, &protoReq)
+	return msg, metadata, err
+}
+
+var filter_ContributionService_GetContributionPaymentRequest_0 = &utilities.DoubleArray{Encoding: map[string]int{"payment_request_id": 0}, Base: []int{1, 1, 0}, Check: []int{0, 1, 2}}
+
+func request_ContributionService_GetContributionPaymentRequest_0(ctx context.Context, marshaler runtime.Marshaler, client ContributionServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq GetContributionPaymentRequestRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
+	}
+	val, ok := pathParams["payment_request_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "payment_request_id")
+	}
+	if protoReq.Lookup == nil {
+		protoReq.Lookup = &GetContributionPaymentRequestRequest_PaymentRequestId{}
+	} else if _, ok := protoReq.Lookup.(*GetContributionPaymentRequestRequest_PaymentRequestId); !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "expect type: *GetContributionPaymentRequestRequest_PaymentRequestId, but: %t\n", protoReq.Lookup)
+	}
+	protoReq.Lookup.(*GetContributionPaymentRequestRequest_PaymentRequestId).PaymentRequestId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "payment_request_id", err)
+	}
+	if err := req.ParseForm(); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_ContributionService_GetContributionPaymentRequest_0); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	msg, err := client.GetContributionPaymentRequest(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_ContributionService_GetContributionPaymentRequest_0(ctx context.Context, marshaler runtime.Marshaler, server ContributionServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq GetContributionPaymentRequestRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	val, ok := pathParams["payment_request_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "payment_request_id")
+	}
+	if protoReq.Lookup == nil {
+		protoReq.Lookup = &GetContributionPaymentRequestRequest_PaymentRequestId{}
+	} else if _, ok := protoReq.Lookup.(*GetContributionPaymentRequestRequest_PaymentRequestId); !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "expect type: *GetContributionPaymentRequestRequest_PaymentRequestId, but: %t\n", protoReq.Lookup)
+	}
+	protoReq.Lookup.(*GetContributionPaymentRequestRequest_PaymentRequestId).PaymentRequestId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "payment_request_id", err)
+	}
+	if err := req.ParseForm(); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_ContributionService_GetContributionPaymentRequest_0); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	msg, err := server.GetContributionPaymentRequest(ctx, &protoReq)
+	return msg, metadata, err
+}
+
+var filter_ContributionService_GetContributionPaymentRequest_1 = &utilities.DoubleArray{Encoding: map[string]int{"idempotency_key": 0}, Base: []int{1, 1, 0}, Check: []int{0, 1, 2}}
+
+func request_ContributionService_GetContributionPaymentRequest_1(ctx context.Context, marshaler runtime.Marshaler, client ContributionServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq GetContributionPaymentRequestRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
+	}
+	val, ok := pathParams["idempotency_key"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "idempotency_key")
+	}
+	if protoReq.Lookup == nil {
+		protoReq.Lookup = &GetContributionPaymentRequestRequest_IdempotencyKey{}
+	} else if _, ok := protoReq.Lookup.(*GetContributionPaymentRequestRequest_IdempotencyKey); !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "expect type: *GetContributionPaymentRequestRequest_IdempotencyKey, but: %t\n", protoReq.Lookup)
+	}
+	protoReq.Lookup.(*GetContributionPaymentRequestRequest_IdempotencyKey).IdempotencyKey, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "idempotency_key", err)
+	}
+	if err := req.ParseForm(); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_ContributionService_GetContributionPaymentRequest_1); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	msg, err := client.GetContributionPaymentRequest(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_ContributionService_GetContributionPaymentRequest_1(ctx context.Context, marshaler runtime.Marshaler, server ContributionServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq GetContributionPaymentRequestRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	val, ok := pathParams["idempotency_key"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "idempotency_key")
+	}
+	if protoReq.Lookup == nil {
+		protoReq.Lookup = &GetContributionPaymentRequestRequest_IdempotencyKey{}
+	} else if _, ok := protoReq.Lookup.(*GetContributionPaymentRequestRequest_IdempotencyKey); !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "expect type: *GetContributionPaymentRequestRequest_IdempotencyKey, but: %t\n", protoReq.Lookup)
+	}
+	protoReq.Lookup.(*GetContributionPaymentRequestRequest_IdempotencyKey).IdempotencyKey, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "idempotency_key", err)
+	}
+	if err := req.ParseForm(); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_ContributionService_GetContributionPaymentRequest_1); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	msg, err := server.GetContributionPaymentRequest(ctx, &protoReq)
+	return msg, metadata, err
+}
+
 func request_ContributionService_CreateContributionCharge_0(ctx context.Context, marshaler runtime.Marshaler, client ContributionServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
 		protoReq CreateContributionChargeRequest
@@ -292,6 +474,86 @@ func local_request_ContributionService_VerifyCashDeposit_0(ctx context.Context, 
 // Note that using this registration option will cause many gRPC library features to stop working. Consider using RegisterContributionServiceHandlerFromEndpoint instead.
 // GRPC interceptors will not work for this type of registration. To use interceptors, you must use the "runtime.WithMiddlewares" option in the "runtime.NewServeMux" call.
 func RegisterContributionServiceHandlerServer(ctx context.Context, mux *runtime.ServeMux, server ContributionServiceServer) error {
+	mux.Handle(http.MethodGet, pattern_ContributionService_GetCashContext_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/contribution.v1.ContributionService/GetCashContext", runtime.WithHTTPPathPattern("/api/v1/contributions/cash-context"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_ContributionService_GetCashContext_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_ContributionService_GetCashContext_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodGet, pattern_ContributionService_GetContributionQuote_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/contribution.v1.ContributionService/GetContributionQuote", runtime.WithHTTPPathPattern("/api/v1/contributions/quote"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_ContributionService_GetContributionQuote_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_ContributionService_GetContributionQuote_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodGet, pattern_ContributionService_GetContributionPaymentRequest_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/contribution.v1.ContributionService/GetContributionPaymentRequest", runtime.WithHTTPPathPattern("/api/v1/contributions/payment-requests/{payment_request_id}"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_ContributionService_GetContributionPaymentRequest_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_ContributionService_GetContributionPaymentRequest_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodGet, pattern_ContributionService_GetContributionPaymentRequest_1, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/contribution.v1.ContributionService/GetContributionPaymentRequest", runtime.WithHTTPPathPattern("/api/v1/contributions/payment-requests/by-idempotency-key/{idempotency_key}"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_ContributionService_GetContributionPaymentRequest_1(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_ContributionService_GetContributionPaymentRequest_1(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
 	mux.Handle(http.MethodPost, pattern_ContributionService_CreateContributionCharge_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
@@ -512,6 +774,74 @@ func RegisterContributionServiceHandler(ctx context.Context, mux *runtime.ServeM
 // doesn't go through the normal gRPC flow (creating a gRPC client etc.) then it will be up to the passed in
 // "ContributionServiceClient" to call the correct interceptors. This client ignores the HTTP middlewares.
 func RegisterContributionServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux, client ContributionServiceClient) error {
+	mux.Handle(http.MethodGet, pattern_ContributionService_GetCashContext_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/contribution.v1.ContributionService/GetCashContext", runtime.WithHTTPPathPattern("/api/v1/contributions/cash-context"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_ContributionService_GetCashContext_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_ContributionService_GetCashContext_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodGet, pattern_ContributionService_GetContributionQuote_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/contribution.v1.ContributionService/GetContributionQuote", runtime.WithHTTPPathPattern("/api/v1/contributions/quote"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_ContributionService_GetContributionQuote_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_ContributionService_GetContributionQuote_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodGet, pattern_ContributionService_GetContributionPaymentRequest_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/contribution.v1.ContributionService/GetContributionPaymentRequest", runtime.WithHTTPPathPattern("/api/v1/contributions/payment-requests/{payment_request_id}"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_ContributionService_GetContributionPaymentRequest_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_ContributionService_GetContributionPaymentRequest_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodGet, pattern_ContributionService_GetContributionPaymentRequest_1, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/contribution.v1.ContributionService/GetContributionPaymentRequest", runtime.WithHTTPPathPattern("/api/v1/contributions/payment-requests/by-idempotency-key/{idempotency_key}"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_ContributionService_GetContributionPaymentRequest_1(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_ContributionService_GetContributionPaymentRequest_1(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
 	mux.Handle(http.MethodPost, pattern_ContributionService_CreateContributionCharge_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
@@ -669,6 +999,10 @@ func RegisterContributionServiceHandlerClient(ctx context.Context, mux *runtime.
 }
 
 var (
+	pattern_ContributionService_GetCashContext_0                = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "contributions", "cash-context"}, ""))
+	pattern_ContributionService_GetContributionQuote_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "contributions", "quote"}, ""))
+	pattern_ContributionService_GetContributionPaymentRequest_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "contributions", "payment-requests", "payment_request_id"}, ""))
+	pattern_ContributionService_GetContributionPaymentRequest_1 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"api", "v1", "contributions", "payment-requests", "by-idempotency-key", "idempotency_key"}, ""))
 	pattern_ContributionService_CreateContributionCharge_0      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "contributions", "charges"}, ""))
 	pattern_ContributionService_ListContributionCharges_0       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "contributions", "charges"}, ""))
 	pattern_ContributionService_InitiateDarajaSTKContribution_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "contributions", "initiate-daraja-stk"}, ""))
@@ -681,6 +1015,10 @@ var (
 )
 
 var (
+	forward_ContributionService_GetCashContext_0                = runtime.ForwardResponseMessage
+	forward_ContributionService_GetContributionQuote_0          = runtime.ForwardResponseMessage
+	forward_ContributionService_GetContributionPaymentRequest_0 = runtime.ForwardResponseMessage
+	forward_ContributionService_GetContributionPaymentRequest_1 = runtime.ForwardResponseMessage
 	forward_ContributionService_CreateContributionCharge_0      = runtime.ForwardResponseMessage
 	forward_ContributionService_ListContributionCharges_0       = runtime.ForwardResponseMessage
 	forward_ContributionService_InitiateDarajaSTKContribution_0 = runtime.ForwardResponseMessage

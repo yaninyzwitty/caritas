@@ -164,13 +164,22 @@ func (q *Queries) GetLoanByMemberID(ctx context.Context, memberID pgtype.UUID) (
 }
 
 const listLoansByBranch = `-- name: ListLoansByBranch :many
-SELECT id, member_id, branch_id, principal, interest_rate, repayment_period_months, status, disbursed_at, updated_by, previous_status, is_deleted, created_at, updated_at
-FROM loans
-WHERE branch_id = $1
-  AND is_deleted = FALSE
-  AND ($2::timestamptz IS NULL OR created_at < $2 OR (created_at = $2 AND id < $3))
-  AND ($5::loan_status IS NULL OR status = $5)
-ORDER BY created_at DESC, id DESC
+SELECT l.id, l.member_id, l.branch_id, l.principal, l.interest_rate, l.repayment_period_months, l.status, l.disbursed_at, l.updated_by, l.previous_status, l.is_deleted, l.created_at, l.updated_at,
+       (l.principal - (
+           SELECT COALESCE(SUM(COALESCE(
+               (allocation_breakdown->>'principal')::numeric,
+               amount - COALESCE((allocation_breakdown->>'credit')::numeric, 0)
+           )), 0)
+           FROM loan_transactions
+           WHERE loan_id = l.id AND type = 'repayment'
+       ))::numeric AS outstanding_principal
+FROM loans l
+WHERE l.branch_id = $1
+  AND l.is_deleted = FALSE
+  AND ($5::uuid IS NULL OR l.member_id = $5)
+  AND ($2::timestamptz IS NULL OR l.created_at < $2 OR (l.created_at = $2 AND l.id < $3))
+  AND ($6::loan_status IS NULL OR l.status = $6)
+ORDER BY l.created_at DESC, l.id DESC
 LIMIT $4
 `
 
@@ -179,6 +188,7 @@ type ListLoansByBranchParams struct {
 	Column2      pgtype.Timestamptz `json:"column2"`
 	ID           pgtype.UUID        `json:"id"`
 	Limit        int32              `json:"limit"`
+	MemberID     pgtype.UUID        `json:"memberId"`
 	StatusFilter NullLoanStatus     `json:"statusFilter"`
 }
 
@@ -196,14 +206,17 @@ type ListLoansByBranchRow struct {
 	IsDeleted             bool               `json:"isDeleted"`
 	CreatedAt             pgtype.Timestamptz `json:"createdAt"`
 	UpdatedAt             pgtype.Timestamptz `json:"updatedAt"`
+	OutstandingPrincipal  pgtype.Numeric     `json:"outstandingPrincipal"`
 }
 
+// Match SumLoanAppliedRepayments so interest and overpayment credit do not reduce principal.
 func (q *Queries) ListLoansByBranch(ctx context.Context, arg ListLoansByBranchParams) ([]ListLoansByBranchRow, error) {
 	rows, err := q.db.Query(ctx, listLoansByBranch,
 		arg.BranchID,
 		arg.Column2,
 		arg.ID,
 		arg.Limit,
+		arg.MemberID,
 		arg.StatusFilter,
 	)
 	if err != nil {
@@ -227,6 +240,7 @@ func (q *Queries) ListLoansByBranch(ctx context.Context, arg ListLoansByBranchPa
 			&i.IsDeleted,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.OutstandingPrincipal,
 		); err != nil {
 			return nil, err
 		}

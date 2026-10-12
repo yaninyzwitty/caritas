@@ -446,7 +446,7 @@ func mapContributionError(err error) error {
 		return status.Error(codes.InvalidArgument, err.Error())
 	case errors.Is(err, ErrPaymentRequestInProgress):
 		return status.Error(codes.AlreadyExists, err.Error())
-	case errors.Is(err, ErrCashierSessionNotFound):
+	case errors.Is(err, ErrCashierSessionNotFound), errors.Is(err, ErrPaymentRequestNotFound):
 		return status.Error(codes.NotFound, err.Error())
 	case errors.Is(err, ErrChargeOverpayment),
 		errors.Is(err, ErrMembershipFeeMismatch),

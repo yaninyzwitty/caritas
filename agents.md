@@ -18,6 +18,7 @@ Stack: Go, Postgres (pgx/v5, sqlc, goose), Temporal, gRPC, Github Actions.
 - Don't hard-delete rows, in code or in scripts. is_deleted only.
 - Don't add a new query layer — sqlc is the only one.
 - Don't bypass member_service to write members/member_profiles directly.
+- Don't run any integration tests whatsoever, only write them, i'll catch them directly in the ci
 
 ## Domain specs
 

@@ -312,7 +312,6 @@ func (h *Handlers) GetLoan(ctx context.Context, req *loanv1.GetLoanRequest) (*lo
 
 }
 
-// TODO-LATER check whether we can support multiple loan, types with different repayment periods, then we can fetch loans by member id
 func (h *Handlers) ListLoans(ctx context.Context, req *loanv1.ListLoansRequest) (*loanv1.ListLoansResponse, error) {
 	const (
 		defaultPageSize = 50
@@ -333,8 +332,17 @@ func (h *Handlers) ListLoans(ctx context.Context, req *loanv1.ListLoansRequest) 
 		return nil, status.Error(codes.InvalidArgument, "invalid page_token")
 	}
 
+	var memberID pgtype.UUID
+	if req.GetMemberId() != "" {
+		memberID, err = stringToUUID(req.GetMemberId())
+		if err != nil {
+			return nil, status.Error(codes.InvalidArgument, "invalid member_id")
+		}
+	}
+
 	loans, err := h.store.ListLoansByBranch(ctx, loansqlc.ListLoansByBranchParams{
 		BranchID: defaultBranchID,
+		MemberID: memberID,
 		Limit:    limit + 1,
 		Column2:  cursorTS,
 		ID:       cursorID,
@@ -368,12 +376,14 @@ func (h *Handlers) ListLoans(ctx context.Context, req *loanv1.ListLoansRequest) 
 
 		branchID := strconv.Itoa(int(loan.BranchID))
 		loanPrincipal := numericToString(loan.Principal)
+		outstandingPrincipal := numericToString(loan.OutstandingPrincipal)
 		interestRate := numericToString(loan.InterestRate)
 
 		resp.Loans = append(resp.Loans, &loanv1.Loan{
 			MemberId:              loan.MemberID.String(),
 			BranchId:              branchID,
 			Principal:             loanPrincipal,
+			OutstandingPrincipal:  &outstandingPrincipal,
 			Id:                    loan.ID.String(),
 			InterestRate:          interestRate,
 			RepaymentPeriodMonths: loan.RepaymentPeriodMonths,

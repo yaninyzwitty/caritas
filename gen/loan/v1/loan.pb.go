@@ -219,8 +219,10 @@ type Loan struct {
 	UpdatedAt             *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	UpdatedBy             string                 `protobuf:"bytes,11,opt,name=updated_by,json=updatedBy,proto3" json:"updated_by,omitempty"`
 	PreviousStatus        string                 `protobuf:"bytes,12,opt,name=previous_status,json=previousStatus,proto3" json:"previous_status,omitempty"`
-	unknownFields         protoimpl.UnknownFields
-	sizeCache             protoimpl.SizeCache
+	// Returned by ListLoans: principal remaining after recorded principal repayments, excluding interest and penalties.
+	OutstandingPrincipal *string `protobuf:"bytes,13,opt,name=outstanding_principal,json=outstandingPrincipal,proto3,oneof" json:"outstanding_principal,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *Loan) Reset() {
@@ -333,6 +335,13 @@ func (x *Loan) GetUpdatedBy() string {
 func (x *Loan) GetPreviousStatus() string {
 	if x != nil {
 		return x.PreviousStatus
+	}
+	return ""
+}
+
+func (x *Loan) GetOutstandingPrincipal() string {
+	if x != nil && x.OutstandingPrincipal != nil {
+		return *x.OutstandingPrincipal
 	}
 	return ""
 }
@@ -1221,7 +1230,8 @@ type ListLoansRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	PageSize      int32                  `protobuf:"varint,1,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
 	PageToken     string                 `protobuf:"bytes,2,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
-	StatusFilter  LoanStatus             `protobuf:"varint,3,opt,name=status_filter,json=statusFilter,proto3,enum=loan.v1.LoanStatus" json:"status_filter,omitempty"` // string     member_id     = 4;  // Optional: filter by member
+	StatusFilter  LoanStatus             `protobuf:"varint,3,opt,name=status_filter,json=statusFilter,proto3,enum=loan.v1.LoanStatus" json:"status_filter,omitempty"`
+	MemberId      string                 `protobuf:"bytes,4,opt,name=member_id,json=memberId,proto3" json:"member_id,omitempty"` // Optional: filter by member
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1275,6 +1285,13 @@ func (x *ListLoansRequest) GetStatusFilter() LoanStatus {
 		return x.StatusFilter
 	}
 	return LoanStatus_LOAN_STATUS_UNSPECIFIED
+}
+
+func (x *ListLoansRequest) GetMemberId() string {
+	if x != nil {
+		return x.MemberId
+	}
+	return ""
 }
 
 // ListLoansResponse returns a paginated list of loans.
@@ -1880,7 +1897,7 @@ var File_loan_v1_loan_proto protoreflect.FileDescriptor
 
 const file_loan_v1_loan_proto_rawDesc = "" +
 	"\n" +
-	"\x12loan/v1/loan.proto\x12\aloan.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16member/v1/member.proto\"\xf5\x03\n" +
+	"\x12loan/v1/loan.proto\x12\aloan.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16member/v1/member.proto\"\xc9\x04\n" +
 	"\x04Loan\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tmember_id\x18\x02 \x01(\tR\bmemberId\x12\x1b\n" +
@@ -1897,7 +1914,9 @@ const file_loan_v1_loan_proto_rawDesc = "" +
 	" \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x1d\n" +
 	"\n" +
 	"updated_by\x18\v \x01(\tR\tupdatedBy\x12'\n" +
-	"\x0fprevious_status\x18\f \x01(\tR\x0epreviousStatus\"\xc3\x02\n" +
+	"\x0fprevious_status\x18\f \x01(\tR\x0epreviousStatus\x128\n" +
+	"\x15outstanding_principal\x18\r \x01(\tH\x00R\x14outstandingPrincipal\x88\x01\x01B\x18\n" +
+	"\x16_outstanding_principal\"\xc3\x02\n" +
 	"\rLoanGuarantor\x12\x17\n" +
 	"\aloan_id\x18\x01 \x01(\tR\x06loanId\x12!\n" +
 	"\fguarantor_id\x18\x02 \x01(\tR\vguarantorId\x12+\n" +
@@ -1970,12 +1989,13 @@ const file_loan_v1_loan_proto_rawDesc = "" +
 	"\tmember_id\x18\x02 \x01(\tH\x00R\bmemberIdB\x13\n" +
 	"\x11loan_status_param\"4\n" +
 	"\x0fGetLoanResponse\x12!\n" +
-	"\x04loan\x18\x01 \x01(\v2\r.loan.v1.LoanR\x04loan\"\x88\x01\n" +
+	"\x04loan\x18\x01 \x01(\v2\r.loan.v1.LoanR\x04loan\"\xa5\x01\n" +
 	"\x10ListLoansRequest\x12\x1b\n" +
 	"\tpage_size\x18\x01 \x01(\x05R\bpageSize\x12\x1d\n" +
 	"\n" +
 	"page_token\x18\x02 \x01(\tR\tpageToken\x128\n" +
-	"\rstatus_filter\x18\x03 \x01(\x0e2\x13.loan.v1.LoanStatusR\fstatusFilter\"`\n" +
+	"\rstatus_filter\x18\x03 \x01(\x0e2\x13.loan.v1.LoanStatusR\fstatusFilter\x12\x1b\n" +
+	"\tmember_id\x18\x04 \x01(\tR\bmemberId\"`\n" +
 	"\x11ListLoansResponse\x12#\n" +
 	"\x05loans\x18\x01 \x03(\v2\r.loan.v1.LoanR\x05loans\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"/\n" +
@@ -2168,6 +2188,7 @@ func file_loan_v1_loan_proto_init() {
 	if File_loan_v1_loan_proto != nil {
 		return
 	}
+	file_loan_v1_loan_proto_msgTypes[0].OneofWrappers = []any{}
 	file_loan_v1_loan_proto_msgTypes[12].OneofWrappers = []any{
 		(*GetLoanRequest_LoanId)(nil),
 		(*GetLoanRequest_MemberId)(nil),
