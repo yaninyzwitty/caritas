@@ -168,20 +168,30 @@ SELECT
     l.id, l.member_id, l.branch_id, l.principal, l.interest_rate, l.interest_period, l.repayment_period_months, l.status, l.disbursed_at, l.updated_by, l.previous_status, l.is_deleted, l.created_at, l.updated_at,
     m.member_number,
     m.national_id,
-    mp.full_name AS member_name
+    mp.full_name AS member_name,
+    -- Match SumLoanAppliedRepayments: interest and overpayment credit do not reduce principal.
+    (l.principal - (
+        SELECT COALESCE(SUM(COALESCE(
+            (allocation_breakdown->>'principal')::numeric,
+            amount - COALESCE((allocation_breakdown->>'credit')::numeric, 0)
+        )), 0)
+        FROM loan_transactions
+        WHERE loan_id = l.id AND type = 'repayment'
+    ))::numeric AS outstanding_principal
 FROM loans l
 JOIN members m ON m.id = l.member_id
 LEFT JOIN member_profiles mp ON mp.member_id = m.id
 WHERE l.branch_id = $1
   AND l.is_deleted = FALSE
+  AND ($5::uuid IS NULL OR l.member_id = $5)
   AND (
       $2::timestamptz IS NULL
       OR l.created_at < $2
       OR (l.created_at = $2 AND l.id < $3)
   )
   AND (
-      $5::loan_status IS NULL
-      OR l.status = $5
+      $6::loan_status IS NULL
+      OR l.status = $6
   )
 ORDER BY l.created_at DESC, l.id DESC
 LIMIT $4
@@ -197,13 +207,13 @@ type ListLoansByBranchParams struct {
 }
 
 type ListLoansByBranchRow struct {
-	Loan         Loan        `json:"loan"`
-	MemberNumber int64       `json:"memberNumber"`
-	NationalID   string      `json:"nationalId"`
-	MemberName   pgtype.Text `json:"memberName"`
+	Loan                 Loan           `json:"loan"`
+	MemberNumber         int64          `json:"memberNumber"`
+	NationalID           string         `json:"nationalId"`
+	MemberName           pgtype.Text    `json:"memberName"`
+	OutstandingPrincipal pgtype.Numeric `json:"outstandingPrincipal"`
 }
 
-// Match SumLoanAppliedRepayments so interest and overpayment credit do not reduce principal.
 func (q *Queries) ListLoansByBranch(ctx context.Context, arg ListLoansByBranchParams) ([]ListLoansByBranchRow, error) {
 	rows, err := q.db.Query(ctx, listLoansByBranch,
 		arg.BranchID,
@@ -238,6 +248,7 @@ func (q *Queries) ListLoansByBranch(ctx context.Context, arg ListLoansByBranchPa
 			&i.MemberNumber,
 			&i.NationalID,
 			&i.MemberName,
+			&i.OutstandingPrincipal,
 		); err != nil {
 			return nil, err
 		}

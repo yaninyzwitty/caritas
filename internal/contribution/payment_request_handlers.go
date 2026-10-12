@@ -15,22 +15,22 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-// GetContributionPaymentRequest reads the request and receipt together so clients
+// GetContributionPayment reads the request and receipt together so clients
 // can recover an uncertain initiation without sending another M-Pesa prompt.
-func (h *Handlers) GetContributionPaymentRequest(ctx context.Context, req *contributionv1.GetContributionPaymentRequestRequest) (*contributionv1.GetContributionPaymentRequestResponse, error) {
+func (h *Handlers) GetContributionPayment(ctx context.Context, req *contributionv1.GetContributionPaymentRequest) (*contributionv1.GetContributionPaymentResponse, error) {
 	actor, ok := auth.PrincipalFromContext(ctx)
 	if !ok {
 		return nil, status.Error(codes.Unauthenticated, "authenticated staff is required")
 	}
 	params := contributionsqlc.LookupContributionPaymentRequestParams{BranchID: actor.BranchID}
 	switch lookup := req.GetLookup().(type) {
-	case *contributionv1.GetContributionPaymentRequestRequest_PaymentRequestId:
+	case *contributionv1.GetContributionPaymentRequest_PaymentRequestId:
 		id, err := stringToUUID(lookup.PaymentRequestId)
 		if err != nil {
 			return nil, status.Error(codes.InvalidArgument, "invalid payment_request_id")
 		}
 		params.PaymentRequestID = id
-	case *contributionv1.GetContributionPaymentRequestRequest_IdempotencyKey:
+	case *contributionv1.GetContributionPaymentRequest_IdempotencyKey:
 		key := strings.TrimSpace(lookup.IdempotencyKey)
 		if key == "" {
 			return nil, status.Error(codes.InvalidArgument, "idempotency_key is required")
@@ -46,7 +46,7 @@ func (h *Handlers) GetContributionPaymentRequest(ctx context.Context, req *contr
 	if err != nil {
 		return nil, mapContributionError(err)
 	}
-	response := &contributionv1.GetContributionPaymentRequestResponse{
+	response := &contributionv1.GetContributionPaymentResponse{
 		PaymentRequestId:   row.ID.String(),
 		Status:             paymentRequestStatusToProto(row.Status),
 		Amount:             numericToMoney(row.ExpectedAmount),

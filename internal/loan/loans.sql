@@ -27,12 +27,22 @@ SELECT
     sqlc.embed(l),
     m.member_number,
     m.national_id,
-    mp.full_name AS member_name
+    mp.full_name AS member_name,
+    -- Match SumLoanAppliedRepayments: interest and overpayment credit do not reduce principal.
+    (l.principal - (
+        SELECT COALESCE(SUM(COALESCE(
+            (allocation_breakdown->>'principal')::numeric,
+            amount - COALESCE((allocation_breakdown->>'credit')::numeric, 0)
+        )), 0)
+        FROM loan_transactions
+        WHERE loan_id = l.id AND type = 'repayment'
+    ))::numeric AS outstanding_principal
 FROM loans l
 JOIN members m ON m.id = l.member_id
 LEFT JOIN member_profiles mp ON mp.member_id = m.id
 WHERE l.branch_id = $1
   AND l.is_deleted = FALSE
+  AND (sqlc.narg('member_id')::uuid IS NULL OR l.member_id = sqlc.narg('member_id'))
   AND (
       $2::timestamptz IS NULL
       OR l.created_at < $2
