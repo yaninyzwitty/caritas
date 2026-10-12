@@ -140,6 +140,48 @@ func (ns NullGuarantorStatus) Value() (driver.Value, error) {
 	return string(ns.GuarantorStatus), nil
 }
 
+type InterestPeriod string
+
+const (
+	InterestPeriodMonthly InterestPeriod = "monthly"
+	InterestPeriodYearly  InterestPeriod = "yearly"
+)
+
+func (e *InterestPeriod) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = InterestPeriod(s)
+	case string:
+		*e = InterestPeriod(s)
+	default:
+		return fmt.Errorf("unsupported scan type for InterestPeriod: %T", src)
+	}
+	return nil
+}
+
+type NullInterestPeriod struct {
+	InterestPeriod InterestPeriod `json:"interestPeriod"`
+	Valid          bool           `json:"valid"` // Valid is true if InterestPeriod is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullInterestPeriod) Scan(value interface{}) error {
+	if value == nil {
+		ns.InterestPeriod, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.InterestPeriod.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullInterestPeriod) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.InterestPeriod), nil
+}
+
 type LoanStatus string
 
 const (
@@ -290,6 +332,23 @@ type CreditBalance struct {
 	Status         CreditBalanceStatus `json:"status"`
 	CreatedAt      pgtype.Timestamptz  `json:"createdAt"`
 	LastActivityAt pgtype.Timestamptz  `json:"lastActivityAt"`
+}
+
+type Loan struct {
+	ID                    pgtype.UUID        `json:"id"`
+	MemberID              pgtype.UUID        `json:"memberId"`
+	BranchID              int64              `json:"branchId"`
+	Principal             pgtype.Numeric     `json:"principal"`
+	InterestRate          pgtype.Numeric     `json:"interestRate"`
+	InterestPeriod        InterestPeriod     `json:"interestPeriod"`
+	RepaymentPeriodMonths int32              `json:"repaymentPeriodMonths"`
+	Status                LoanStatus         `json:"status"`
+	DisbursedAt           pgtype.Timestamptz `json:"disbursedAt"`
+	UpdatedBy             pgtype.UUID        `json:"updatedBy"`
+	PreviousStatus        NullLoanStatus     `json:"previousStatus"`
+	IsDeleted             bool               `json:"isDeleted"`
+	CreatedAt             pgtype.Timestamptz `json:"createdAt"`
+	UpdatedAt             pgtype.Timestamptz `json:"updatedAt"`
 }
 
 type LoanAuditTrail struct {

@@ -121,7 +121,7 @@ Assuming unpaid fees total 60:
 | 10,000 | 4,000 | 6,000 | 60 | Allocation total mismatch |
 | 10,060 | 4,000 | 6,000 | 60 | Balanced |
 
-If fees are already paid, allocations can use the full received amount. The client needs applicable unpaid fees before distributing fixed cash. A preview/quote contract is a future consideration; this document does not claim an endpoint exists. Server validation is authoritative.
+If fees are already paid, allocations can use the full received amount. The client needs applicable unpaid fees before distributing fixed cash. GET /api/v1/contributions/quote now supplies unpaid monthly fees without creating assessments. The quote is advisory; posting rechecks the obligations under locks. Server validation is authoritative.
 
 Cash requests contain idempotencyKey, sessionId, memberId, amount, contributionPeriod and allocations. Branch and cashier come from authentication. Shares target a share account UUID; loans target a loan UUID. Retries reuse the same key and details.
 
@@ -190,7 +190,7 @@ All referenced charges are locked in UUID order before posting, then checked aga
 
 STK initiation validates the current balance but does not reserve it. A callback rechecks the balance before posting. If another payment settled the charge after the prompt, collected STK money is retained as a failed receipt for reconciliation rather than disappearing or overpaying the obligation.
 
-The existing cash-record permission authorizes charge creation; authenticated readers can list charges in their own branch. This implementation does not add automatic assessment schedules, configurable rates, a preview endpoint, loan penalty allocation, or CEEP snapshot generation.
+The existing cash-record permission authorizes charge creation; authenticated readers can list charges in their own branch. This implementation does not add automatic assessment schedules, configurable rates, loan penalty allocation, or CEEP snapshot generation.
 
 ### Integration checks for CI (not run locally)
 
@@ -205,3 +205,19 @@ Command:
 ```text
 go test ./internal/contribution -run '^(TestContributionChargePaymentsIntegration|TestConcurrentContributionChargePaymentsIntegration|TestCashAndSTKMonthlyCharges|TestConcurrentReceiptsDoNotCollectMonthlyFeesTwice)$' -count=1
 ```
+
+## 12. Cash workspace reads and frontend recovery
+
+The authenticated staff context supplies the branch, staff UUID and existing cash.record/cash.approve permissions. The frontend does not use a fixed branch for cash operations.
+
+- GET /api/v1/contributions/cash-context returns staffId, branchId, canRecord and canApprove.
+- GET /api/v1/contributions/quote?memberId=<uuid>&contributionPeriod=YYYY-MM-01 returns unpaid COM/LGOM allocations. It reads existing assessments (including approved exemptions), or the current standard assessment where the existing eligibility rules would assess fees. Completed allocation payments reduce the quote. Future months are rejected. It does not write assessments or estimate loan interest.
+- GET /api/v1/contributions/cash-receipt accepts either receiptId or idempotencyKey. Reads are restricted to cash receipts in the authenticated branch. Posting and recovery return the same receipt facts: member, month, actual cash, reference, status and stored allocation rows with their status and authoritative transaction reference. Combined loan allocations are not the final principal/interest/credit breakdown.
+- GET /api/v1/contributions/cashier-sessions and cash-deposits use pageSize/pageToken cursor pagination on (created_at, id) within the authenticated branch. Open till expected cash is read from its receipts; closing still calculates and locks the final count.
+- GET /api/v1/contributions/cash-deposit?depositId=<uuid> returns deposit facts and linked till IDs in the authenticated branch. Custody list reads include cashier/accepting staff names and deposit recorder/verifier names from branch-scoped staff records; deposit details also include recorder/verifier names. UUIDs remain the operation references.
+
+The entry form records physical cash independently, adds quoted fees, and requires allocations to equal that cash. Charges are selected from assessed obligations by UUID; non-loan penalties use the penalty type. New assessments are a separate operation with a required category, amount and reason. Backend validation remains authoritative when a quote or charge balance changes before posting.
+
+Before posting cash, the browser saves the exact request and idempotency key in session storage scoped to the authenticated staff UUID. An uncertain result blocks another payment until the cashier retrieves the receipt or retries the same request. Reloading the same tab retains the pending request; clearing browser storage or closing the tab is not a durable recovery mechanism. Receipt IDs can also be reopened explicitly. Deposits and charge assessments preserve their own exact retry details. No member profile is saved in the cash submission snapshot.
+
+Collection, till closure, handover acceptance, deposit recording and independent bank verification are distinct operations. The frontend displays existing permissions and prevents self-handover/self-verification choices; backend authorization and separation-of-duties checks remain the security boundary. No automatic fee-rate policy, loan penalty policy, waivers, reversals, or CEEP generation is introduced here.

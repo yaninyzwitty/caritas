@@ -164,21 +164,25 @@ func (q *Queries) GetLoanByMemberID(ctx context.Context, memberID pgtype.UUID) (
 }
 
 const listLoansByBranch = `-- name: ListLoansByBranch :many
-SELECT l.id, l.member_id, l.branch_id, l.principal, l.interest_rate, l.repayment_period_months, l.status, l.disbursed_at, l.updated_by, l.previous_status, l.is_deleted, l.created_at, l.updated_at,
-       (l.principal - (
-           SELECT COALESCE(SUM(COALESCE(
-               (allocation_breakdown->>'principal')::numeric,
-               amount - COALESCE((allocation_breakdown->>'credit')::numeric, 0)
-           )), 0)
-           FROM loan_transactions
-           WHERE loan_id = l.id AND type = 'repayment'
-       ))::numeric AS outstanding_principal
+SELECT
+    l.id, l.member_id, l.branch_id, l.principal, l.interest_rate, l.interest_period, l.repayment_period_months, l.status, l.disbursed_at, l.updated_by, l.previous_status, l.is_deleted, l.created_at, l.updated_at,
+    m.member_number,
+    m.national_id,
+    mp.full_name AS member_name
 FROM loans l
+JOIN members m ON m.id = l.member_id
+LEFT JOIN member_profiles mp ON mp.member_id = m.id
 WHERE l.branch_id = $1
   AND l.is_deleted = FALSE
-  AND ($5::uuid IS NULL OR l.member_id = $5)
-  AND ($2::timestamptz IS NULL OR l.created_at < $2 OR (l.created_at = $2 AND l.id < $3))
-  AND ($6::loan_status IS NULL OR l.status = $6)
+  AND (
+      $2::timestamptz IS NULL
+      OR l.created_at < $2
+      OR (l.created_at = $2 AND l.id < $3)
+  )
+  AND (
+      $5::loan_status IS NULL
+      OR l.status = $5
+  )
 ORDER BY l.created_at DESC, l.id DESC
 LIMIT $4
 `
@@ -193,20 +197,10 @@ type ListLoansByBranchParams struct {
 }
 
 type ListLoansByBranchRow struct {
-	ID                    pgtype.UUID        `json:"id"`
-	MemberID              pgtype.UUID        `json:"memberId"`
-	BranchID              int64              `json:"branchId"`
-	Principal             pgtype.Numeric     `json:"principal"`
-	InterestRate          pgtype.Numeric     `json:"interestRate"`
-	RepaymentPeriodMonths int32              `json:"repaymentPeriodMonths"`
-	Status                LoanStatus         `json:"status"`
-	DisbursedAt           pgtype.Timestamptz `json:"disbursedAt"`
-	UpdatedBy             pgtype.UUID        `json:"updatedBy"`
-	PreviousStatus        NullLoanStatus     `json:"previousStatus"`
-	IsDeleted             bool               `json:"isDeleted"`
-	CreatedAt             pgtype.Timestamptz `json:"createdAt"`
-	UpdatedAt             pgtype.Timestamptz `json:"updatedAt"`
-	OutstandingPrincipal  pgtype.Numeric     `json:"outstandingPrincipal"`
+	Loan         Loan        `json:"loan"`
+	MemberNumber int64       `json:"memberNumber"`
+	NationalID   string      `json:"nationalId"`
+	MemberName   pgtype.Text `json:"memberName"`
 }
 
 // Match SumLoanAppliedRepayments so interest and overpayment credit do not reduce principal.
@@ -227,20 +221,23 @@ func (q *Queries) ListLoansByBranch(ctx context.Context, arg ListLoansByBranchPa
 	for rows.Next() {
 		var i ListLoansByBranchRow
 		if err := rows.Scan(
-			&i.ID,
-			&i.MemberID,
-			&i.BranchID,
-			&i.Principal,
-			&i.InterestRate,
-			&i.RepaymentPeriodMonths,
-			&i.Status,
-			&i.DisbursedAt,
-			&i.UpdatedBy,
-			&i.PreviousStatus,
-			&i.IsDeleted,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.OutstandingPrincipal,
+			&i.Loan.ID,
+			&i.Loan.MemberID,
+			&i.Loan.BranchID,
+			&i.Loan.Principal,
+			&i.Loan.InterestRate,
+			&i.Loan.InterestPeriod,
+			&i.Loan.RepaymentPeriodMonths,
+			&i.Loan.Status,
+			&i.Loan.DisbursedAt,
+			&i.Loan.UpdatedBy,
+			&i.Loan.PreviousStatus,
+			&i.Loan.IsDeleted,
+			&i.Loan.CreatedAt,
+			&i.Loan.UpdatedAt,
+			&i.MemberNumber,
+			&i.NationalID,
+			&i.MemberName,
 		); err != nil {
 			return nil, err
 		}
