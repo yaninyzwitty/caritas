@@ -376,12 +376,14 @@ func (h *Handlers) ListLoans(ctx context.Context, req *loanv1.ListLoansRequest) 
 
 		branchID := strconv.Itoa(int(loan.Loan.BranchID))
 		loanPrincipal := numericToString(loan.Loan.Principal)
+		outstandingPrincipal := numericToString(loan.OutstandingPrincipal)
 		interestRate := numericToString(loan.Loan.InterestRate)
 
 		resp.Loans = append(resp.Loans, &loanv1.Loan{
 			MemberId:              loan.Loan.MemberID.String(),
 			BranchId:              branchID,
 			Principal:             loanPrincipal,
+			OutstandingPrincipal:  &outstandingPrincipal,
 			Id:                    loan.Loan.ID.String(),
 			InterestRate:          interestRate,
 			RepaymentPeriodMonths: loan.Loan.RepaymentPeriodMonths,

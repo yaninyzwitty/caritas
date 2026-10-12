@@ -38,6 +38,25 @@ func (q *Queries) AssessMonthlyFees(ctx context.Context, arg AssessMonthlyFeesPa
 	return err
 }
 
+const contributionMemberExists = `-- name: ContributionMemberExists :one
+SELECT EXISTS (
+    SELECT 1 FROM members
+    WHERE id = $1 AND branch_id = $2 AND NOT is_deleted
+)
+`
+
+type ContributionMemberExistsParams struct {
+	MemberID pgtype.UUID `json:"memberId"`
+	BranchID int64       `json:"branchId"`
+}
+
+func (q *Queries) ContributionMemberExists(ctx context.Context, arg ContributionMemberExistsParams) (bool, error) {
+	row := q.db.QueryRow(ctx, contributionMemberExists, arg.MemberID, arg.BranchID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const getContributionMemberBranch = `-- name: GetContributionMemberBranch :one
 SELECT branch_id FROM members WHERE id = $1 AND NOT is_deleted
 `

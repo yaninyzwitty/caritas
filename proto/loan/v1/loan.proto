@@ -109,9 +109,11 @@ message Loan {
   google.protobuf.Timestamp updated_at              = 10;
   string                    updated_by              = 11;
   string                    previous_status         = 12;
-  int64                     member_number           = 13;
-  string                    member_name             = 14;
-  string                    national_id             = 15;
+  // Keep field 13 for the existing principal balance contract, excluding interest and penalties.
+  optional string outstanding_principal = 13;
+  string          member_name           = 14;
+  string          national_id           = 15;
+  int64           member_number         = 16;
 }
 
 // LoanGuarantor represents a member who guarantees a loan.
@@ -220,7 +222,7 @@ message GetLoanRequest {
     int32      page_size     = 1;
     string     page_token    = 2;
     LoanStatus status_filter = 3;
-  // string     member_id     = 4;  // Optional: filter by member
+    string     member_id     = 4;  // Optional: filter by member
   }
 
 // ListLoansResponse returns a paginated list of loans.

@@ -10,6 +10,9 @@ service ContributionService {
   rpc GetCashContext(GetCashContextRequest) returns (GetCashContextResponse) {
     option (google.api.http) = {get: "/api/v1/contributions/cash-context"};
   }
+  rpc GetContributionPayment(GetContributionPaymentRequest) returns (GetContributionPaymentResponse) {
+    option (google.api.http) = {get: "/api/v1/contributions/payment-request"};
+  }
   rpc GetContributionQuote(GetContributionQuoteRequest) returns (GetContributionQuoteResponse) {
     option (google.api.http) = {get: "/api/v1/contributions/quote"};
   }
@@ -80,20 +83,20 @@ service ContributionService {
 
 enum ContributionPaymentRequestStatus {
   CONTRIBUTION_PAYMENT_REQUEST_STATUS_UNSPECIFIED = 0;
-  CONTRIBUTION_PAYMENT_REQUEST_STATUS_PENDING = 1;
-  CONTRIBUTION_PAYMENT_REQUEST_STATUS_COMPLETED = 2;
-  CONTRIBUTION_PAYMENT_REQUEST_STATUS_FAILED = 3;
+  CONTRIBUTION_PAYMENT_REQUEST_STATUS_PENDING     = 1;
+  CONTRIBUTION_PAYMENT_REQUEST_STATUS_COMPLETED   = 2;
+  CONTRIBUTION_PAYMENT_REQUEST_STATUS_FAILED      = 3;
 }
 
 enum ContributionAllocationType {
-  CONTRIBUTION_ALLOCATION_TYPE_UNSPECIFIED = 0;
-  CONTRIBUTION_ALLOCATION_TYPE_COM = 1;
-  CONTRIBUTION_ALLOCATION_TYPE_LGOM = 2;
-  CONTRIBUTION_ALLOCATION_TYPE_SHARE_PURCHASE = 3;
-  CONTRIBUTION_ALLOCATION_TYPE_LOAN_PRINCIPAL = 4;
-  CONTRIBUTION_ALLOCATION_TYPE_LOAN_INTEREST = 5;
-  CONTRIBUTION_ALLOCATION_TYPE_PENALTY = 6;
-  CONTRIBUTION_ALLOCATION_TYPE_OTHER_CHARGE = 7;
+  CONTRIBUTION_ALLOCATION_TYPE_UNSPECIFIED        = 0;
+  CONTRIBUTION_ALLOCATION_TYPE_COM                = 1;
+  CONTRIBUTION_ALLOCATION_TYPE_LGOM               = 2;
+  CONTRIBUTION_ALLOCATION_TYPE_SHARE_PURCHASE     = 3;
+  CONTRIBUTION_ALLOCATION_TYPE_LOAN_PRINCIPAL     = 4;
+  CONTRIBUTION_ALLOCATION_TYPE_LOAN_INTEREST      = 5;
+  CONTRIBUTION_ALLOCATION_TYPE_PENALTY            = 6;
+  CONTRIBUTION_ALLOCATION_TYPE_OTHER_CHARGE       = 7;
   CONTRIBUTION_ALLOCATION_TYPE_OVERPAYMENT_CREDIT = 8;
 }
 
@@ -104,54 +107,54 @@ enum ContributionAllocationType {
 message ContributionAllocationInput {
   ContributionAllocationType type = 1;
   // OTHER_CHARGE/PENALTY target a contribution charge UUID, never a loan UUID.
-  string target_id = 2;
-  member.v1.Money amount = 3;
+  string          target_id = 2;
+  member.v1.Money amount    = 3;
 }
 
 message InitiateDarajaSTKContributionRequest {
-  string idempotency_key = 1;
-  string member_id = 2;
-  int64 branch_id = 3;
-  string phone_number = 4;
-  member.v1.Money amount = 5;
-  string contribution_period = 6;
-  repeated ContributionAllocationInput allocations = 7;
+  string                               idempotency_key     = 1;
+  string                               member_id           = 2;
+  int64                                branch_id           = 3;
+  string                               phone_number        = 4;
+  member.v1.Money                      amount              = 5;
+  string                               contribution_period = 6;
+  repeated ContributionAllocationInput allocations         = 7;
 }
 
 message InitiateDarajaSTKContributionResponse {
-  string payment_request_id = 1;
-  string checkout_request_id = 2;
-  ContributionPaymentRequestStatus status = 3;
-  google.protobuf.Timestamp created_at = 4;
+  string                           payment_request_id  = 1;
+  string                           checkout_request_id = 2;
+  ContributionPaymentRequestStatus status              = 3;
+  google.protobuf.Timestamp        created_at          = 4;
 }
 
 // Either identifier recovers the same stored request; neither initiates payment.
-message GetContributionPaymentRequestRequest {
+message GetContributionPaymentRequest {
   oneof lookup {
     string payment_request_id = 1;
-    string idempotency_key = 2;
+    string idempotency_key    = 2;
   }
 }
 
 // Request completion means payment was received, not that allocations succeeded.
-message GetContributionPaymentRequestResponse {
-  string payment_request_id = 1;
-  ContributionPaymentRequestStatus status = 2;
-  member.v1.Money amount = 3;
-  string contribution_period = 4;
-  google.protobuf.Timestamp created_at = 5;
-  string failure_reason = 6;
-  ContributionPaymentReceipt receipt = 7;
+message GetContributionPaymentResponse {
+  string                           payment_request_id  = 1;
+  ContributionPaymentRequestStatus status              = 2;
+  member.v1.Money                  amount              = 3;
+  string                           contribution_period = 4;
+  google.protobuf.Timestamp        created_at          = 5;
+  string                           failure_reason      = 6;
+  ContributionPaymentReceipt       receipt             = 7;
 }
 
 // The receipt's own status prevents collected money being mistaken for a posted contribution.
 message ContributionPaymentReceipt {
   string id = 1;
   // Existing receipt states: pending, processing, completed, failed, manual_review.
-  string status = 2;
-  member.v1.Money amount = 3;
-  string mpesa_reference = 4;
-  google.protobuf.Timestamp received_at = 5;
+  string                    status          = 2;
+  member.v1.Money           amount          = 3;
+  string                    mpesa_reference = 4;
+  google.protobuf.Timestamp received_at     = 5;
 }
 
 message OpenCashierSessionRequest {}
@@ -159,64 +162,50 @@ message OpenCashierSessionRequest {}
 message GetCashContextRequest {}
 
 // Staff identity and permissions come from authentication, never browser input.
-message GetCashContextResponse {
-  string staff_id = 1;
-  int64 branch_id = 2;
-  bool can_record = 3;
-  bool can_approve = 4;
-}
-
-message GetContributionQuoteRequest {
-  string member_id = 1;
-  string contribution_period = 2;
-}
 
 // Unpaid fees use the same assessment rules as contribution posting.
-message GetContributionQuoteResponse {
-  repeated ContributionAllocationInput fees = 1;
-}
 
 message OpenCashierSessionResponse {
   CashierSession session = 1;
 }
 
 message CashierSession {
-  string id = 1;
-  int64 branch_id = 2;
-  string cashier_id = 3;
-  string status = 4;
-  member.v1.Money expected_amount = 5;
-  member.v1.Money counted_amount = 6;
-  member.v1.Money variance = 7;
-  string variance_reason = 8;
-  google.protobuf.Timestamp opened_at = 9;
-  google.protobuf.Timestamp closed_at = 10;
-  google.protobuf.Timestamp handed_over_at = 11;
-  google.protobuf.Timestamp deposited_at = 12;
-  string handed_over_to = 13;
-  string cashier_name = 14;
-  string handed_over_to_name = 15;
+  string                    id                  = 1;
+  int64                     branch_id           = 2;
+  string                    cashier_id          = 3;
+  string                    status              = 4;
+  member.v1.Money           expected_amount     = 5;
+  member.v1.Money           counted_amount      = 6;
+  member.v1.Money           variance            = 7;
+  string                    variance_reason     = 8;
+  google.protobuf.Timestamp opened_at           = 9;
+  google.protobuf.Timestamp closed_at           = 10;
+  google.protobuf.Timestamp handed_over_at      = 11;
+  google.protobuf.Timestamp deposited_at        = 12;
+  string                    handed_over_to      = 13;
+  string                    cashier_name        = 14;
+  string                    handed_over_to_name = 15;
 }
 
 message CreateCashContributionRequest {
-  string idempotency_key = 1;
-  string session_id = 2;
-  string member_id = 3;
-  member.v1.Money amount = 4;
-  string contribution_period = 5;
-  repeated ContributionAllocationInput allocations = 6;
+  string                               idempotency_key     = 1;
+  string                               session_id          = 2;
+  string                               member_id           = 3;
+  member.v1.Money                      amount              = 4;
+  string                               contribution_period = 5;
+  repeated ContributionAllocationInput allocations         = 6;
 }
 
 message CashContributionReceipt {
-  string id = 1;
-  string internal_receipt_reference = 2;
-  string session_id = 3;
-  string status = 4;
-  member.v1.Money amount = 5;
-  google.protobuf.Timestamp received_at = 6;
-  string member_id = 7;
-  string contribution_period = 8;
-  repeated CashReceiptAllocation allocations = 9;
+  string                         id                         = 1;
+  string                         internal_receipt_reference = 2;
+  string                         session_id                 = 3;
+  string                         status                     = 4;
+  member.v1.Money                amount                     = 5;
+  google.protobuf.Timestamp      received_at                = 6;
+  string                         member_id                  = 7;
+  string                         contribution_period        = 8;
+  repeated CashReceiptAllocation allocations                = 9;
 }
 
 message CreateCashContributionResponse {
@@ -224,9 +213,9 @@ message CreateCashContributionResponse {
 }
 
 message CloseCashierSessionRequest {
-  string session_id = 1;
-  member.v1.Money counted_amount = 2;
-  string variance_reason = 3;
+  string          session_id      = 1;
+  member.v1.Money counted_amount  = 2;
+  string          variance_reason = 3;
 }
 
 message CloseCashierSessionResponse {
@@ -242,24 +231,24 @@ message AcceptCashHandoverResponse {
 }
 
 message RecordCashDepositRequest {
-  repeated string session_ids = 1;
-  member.v1.Money amount = 2;
-  string bank_reference = 3;
+  repeated string session_ids    = 1;
+  member.v1.Money amount         = 2;
+  string          bank_reference = 3;
 }
 
 message CashDeposit {
-  string id = 1;
-  int64 branch_id = 2;
-  member.v1.Money amount = 3;
-  string bank_reference = 4;
-  string status = 5;
-  google.protobuf.Timestamp recorded_at = 6;
-  google.protobuf.Timestamp verified_at = 7;
-  string recorded_by = 8;
-  string verified_by = 9;
-  repeated string session_ids = 10;
-  string recorded_by_name = 11;
-  string verified_by_name = 12;
+  string                    id               = 1;
+  int64                     branch_id        = 2;
+  member.v1.Money           amount           = 3;
+  string                    bank_reference   = 4;
+  string                    status           = 5;
+  google.protobuf.Timestamp recorded_at      = 6;
+  google.protobuf.Timestamp verified_at      = 7;
+  string                    recorded_by      = 8;
+  string                    verified_by      = 9;
+  repeated string           session_ids      = 10;
+  string                    recorded_by_name = 11;
+  string                    verified_by_name = 12;
 }
 
 message RecordCashDepositResponse {
@@ -277,80 +266,92 @@ message VerifyCashDepositResponse {
 // ContributionCharge preserves the obligation and its category for CEEP.
 // Without it, partial payments cannot be distinguished from the amount owed.
 message ContributionCharge {
-  string id = 1;
-  string member_id = 2;
-  string category = 3;
-  member.v1.Money amount = 4;
-  member.v1.Money paid = 5;
-  member.v1.Money outstanding = 6;
-  string reason = 7;
-  string created_by = 8;
-  google.protobuf.Timestamp created_at = 9;
+  string                    id          = 1;
+  string                    member_id   = 2;
+  string                    category    = 3;
+  member.v1.Money           amount      = 4;
+  member.v1.Money           paid        = 5;
+  member.v1.Money           outstanding = 6;
+  string                    reason      = 7;
+  string                    created_by  = 8;
+  google.protobuf.Timestamp created_at  = 9;
 }
 
 message CreateContributionChargeRequest {
   string idempotency_key = 1;
-  string member_id = 2;
+  string member_id       = 2;
   // literature, caritas_registration, lsf, laptop, penalty (non-loan), or other.
-  string category = 3;
-  member.v1.Money amount = 4;
-  string reason = 5;
+  string          category = 3;
+  member.v1.Money amount   = 4;
+  string          reason   = 5;
 }
+
 message CreateContributionChargeResponse {
   ContributionCharge charge = 1;
 }
+
 message ListContributionChargesRequest {
-  string member_id = 1;
-  int32 page_size = 2;
+  string member_id  = 1;
+  int32  page_size  = 2;
   string page_token = 3;
 }
+
 message ListContributionChargesResponse {
-  repeated ContributionCharge charges = 1;
-  string next_page_token = 2;
+  repeated ContributionCharge charges         = 1;
+  string                      next_page_token = 2;
 }
 
 // These reads let clients resume cash work without guessing fees or trusting browser state.
-message GetCashContextRequest {}
+
 message GetCashContextResponse {
-  string staff_id = 1;
-  int64 branch_id = 2;
-  bool can_record = 3;
-  bool can_approve = 4;
+  string staff_id    = 1;
+  int64  branch_id   = 2;
+  bool   can_record  = 3;
+  bool   can_approve = 4;
 }
+
 message GetContributionQuoteRequest {
-  string member_id = 1;
+  string member_id           = 1;
   string contribution_period = 2;
 }
+
 message GetContributionQuoteResponse {
   repeated ContributionAllocationInput fees = 1;
 }
+
 message GetCashReceiptRequest {
-  string receipt_id = 1;
+  string receipt_id      = 1;
   string idempotency_key = 2;
 }
+
 message CashReceiptAllocation {
-  ContributionAllocationType type = 1;
-  string target_id = 2;
-  member.v1.Money amount = 3;
-  string status = 4;
-  string authoritative_reference_id = 5;
+  ContributionAllocationType type                       = 1;
+  string                     target_id                  = 2;
+  member.v1.Money            amount                     = 3;
+  string                     status                     = 4;
+  string                     authoritative_reference_id = 5;
 }
+
 message ListCashierSessionsRequest {
-  int32 page_size = 1;
+  int32  page_size  = 1;
   string page_token = 2;
 }
+
 message ListCashierSessionsResponse {
-  repeated CashierSession sessions = 1;
-  string next_page_token = 2;
+  repeated CashierSession sessions        = 1;
+  string                  next_page_token = 2;
 }
+
 message ListCashDepositsRequest {
-  int32 page_size = 1;
+  int32  page_size  = 1;
   string page_token = 2;
 }
+
 message ListCashDepositsResponse {
-  repeated CashDeposit deposits = 1;
-  string next_page_token = 2;
+  repeated CashDeposit deposits        = 1;
+  string               next_page_token = 2;
 }
+
 message GetCashDepositRequest {
   string deposit_id = 1;
 }
@@ -358,6 +359,7 @@ message GetCashDepositRequest {
 message GetCashReceiptResponse {
   CashContributionReceipt receipt = 1;
 }
+
 message GetCashDepositResponse {
   CashDeposit deposit = 1;
 }
