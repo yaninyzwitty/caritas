@@ -60,105 +60,160 @@ func (s *Service) postTransaction(
 ) (sharesqlc.ShareTransaction, error) {
 	var result sharesqlc.ShareTransaction
 	err := s.store.ExecTx(ctx, func(q sharesqlc.Querier) error {
-		account, err := q.LockAndReadAccount(ctx, accountID)
+		var err error
+		result, err = s.postTransactionInTx(ctx, q, accountID, txType, amount, referenceID, originatorID, reason, pgtype.UUID{}, 0)
+		return err
+	})
+	if err != nil {
+		return sharesqlc.ShareTransaction{}, err
+	}
+	return result, err
+}
+
+// PurchaseSharesInTx keeps contribution postings in the caller's transaction.
+// Opening another transaction here can exhaust the pool while the receipt holds locks.
+func (s *Service) PurchaseSharesInTx(
+	ctx context.Context,
+	q sharesqlc.Querier,
+	accountID pgtype.UUID,
+	amount pgtype.Numeric,
+	referenceID, originatorID pgtype.UUID,
+	reason string,
+	memberID pgtype.UUID,
+	branchID int64,
+) (sharesqlc.ShareTransaction, error) {
+	return s.postTransactionInTx(ctx, q, accountID, sharesqlc.ShareTransactionTypePurchase, amount, referenceID, originatorID, reason, memberID, branchID)
+}
+
+// ValidateContributionTarget locks eligibility before a new cash receipt is accepted.
+// Without it, direct RPC clients could record cash against another member's account.
+func (s *Service) ValidateContributionTarget(ctx context.Context, q sharesqlc.Querier, accountID, memberID pgtype.UUID, branchID int64) error {
+	account, err := q.LockAndReadAccount(ctx, accountID)
+	if errors.Is(err, pgx.ErrNoRows) || (err == nil && (account.MemberID != memberID || account.BranchID != branchID)) {
+		return ErrAccountNotFound
+	}
+	if err != nil {
+		return err
+	}
+	if account.Status != sharesqlc.ShareAccountStatusActive {
+		return ErrAccountNotActive
+	}
+	return nil
+}
+
+// postTransactionInTx shares ledger rules between standalone and contribution payments.
+// Removing it would duplicate balance and idempotency checks across the two paths.
+func (s *Service) postTransactionInTx(
+	ctx context.Context,
+	q sharesqlc.Querier,
+	accountID pgtype.UUID,
+	txType sharesqlc.ShareTransactionType,
+	amount pgtype.Numeric,
+	referenceID, originatorID pgtype.UUID,
+	reason string,
+	memberID pgtype.UUID,
+	branchID int64,
+) (sharesqlc.ShareTransaction, error) {
+	var result sharesqlc.ShareTransaction
+
+	account, err := q.LockAndReadAccount(ctx, accountID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return result, ErrAccountNotFound
+		}
+		return result, fmt.Errorf("lock account: %w", err)
+	}
+	if memberID.Valid && (account.MemberID != memberID || account.BranchID != branchID) {
+		return result, ErrAccountNotFound
+	}
+
+	// Idempotency (spec I4): a retried reference_id returns the original
+	// transaction without re-applying the amount. Without this check a
+	// retried withdrawal would re-read the reduced balance and fail.
+
+	result, err = q.GetTransactionByReference(ctx, sharesqlc.GetTransactionByReferenceParams{
+		ShareAccountID: accountID,
+		ReferenceID:    referenceID,
+		Type:           txType,
+	})
+
+	switch {
+	case err == nil:
+		if numericToNanos(result.Amount).Cmp(numericToNanos(amount)) != 0 {
+			return result, fmt.Errorf("%w: amount differs from the original transaction", ErrDuplicateReference)
+		}
+		return result, nil // Idempotent retry.
+
+	case !errors.Is(err, pgx.ErrNoRows):
+		return result, fmt.Errorf("lookup existing transaction: %w", err)
+	}
+
+	if account.Status != sharesqlc.ShareAccountStatusActive {
+		return result, ErrAccountNotActive
+	}
+
+	// Determine the current balance. A missing transaction history implies a
+	// newly created account with a zero balance.
+	balanceNanos := new(big.Int)
+
+	latest, err := q.GetLatestBalance(ctx, accountID)
+	switch {
+	case err == nil:
+		balanceNanos = numericToNanos(latest)
+
+	case !errors.Is(err, pgx.ErrNoRows):
+		return result, fmt.Errorf("read latest balance: %w", err)
+	}
+	amountNanos := numericToNanos(amount)
+
+	switch txType {
+	case sharesqlc.ShareTransactionTypeWithdrawal:
+		pledged, err := q.GetActivePledgedAmount(ctx, accountID)
 		if err != nil {
-			if errors.Is(err, pgx.ErrNoRows) {
-				return ErrAccountNotFound
-			}
-			return fmt.Errorf("lock account: %w", err)
+			return result, fmt.Errorf("read active pledges: %w", err)
 		}
-		if account.Status != sharesqlc.ShareAccountStatusActive {
-			return ErrAccountNotActive
+		if new(big.Int).Sub(new(big.Int).Set(balanceNanos), amountNanos).Cmp(numericToNanos(pledged)) < 0 {
+			return result, ErrInsufficientBalance
 		}
+		balanceNanos.Sub(balanceNanos, amountNanos)
 
-		// Idempotency (spec I4): a retried reference_id returns the original
-		// transaction without re-applying the amount. Without this check a
-		// retried withdrawal would re-read the reduced balance and fail.
+	default:
+		balanceNanos.Add(balanceNanos, amountNanos)
+	}
 
+	result, err = q.InsertShareTransaction(ctx, sharesqlc.InsertShareTransactionParams{
+		ShareAccountID: accountID,
+		Type:           txType,
+		Amount:         amount,
+		BalanceAfter:   pgtype.Numeric{Int: balanceNanos, Exp: -9, Valid: true},
+		ReferenceID:    referenceID,
+		Reason:         pgtype.Text{String: reason, Valid: reason != ""},
+		OriginatorID:   originatorID,
+	})
+
+	switch {
+	case err == nil:
+		return result, nil
+
+	case errors.Is(err, pgx.ErrNoRows):
+		// Lost the race to another transaction with the same reference ID.
+		// Return the transaction that won.
 		result, err = q.GetTransactionByReference(ctx, sharesqlc.GetTransactionByReferenceParams{
 			ShareAccountID: accountID,
 			ReferenceID:    referenceID,
 			Type:           txType,
 		})
-
-		switch {
-		case err == nil:
-			if numericToNanos(result.Amount).Cmp(numericToNanos(amount)) != 0 {
-				return fmt.Errorf("%w: amount differs from the original transaction", ErrDuplicateReference)
-			}
-			return nil // Idempotent retry.
-
-		case !errors.Is(err, pgx.ErrNoRows):
-			return fmt.Errorf("lookup existing transaction: %w", err)
+		if err != nil {
+			return result, fmt.Errorf("read existing transaction: %w", err)
 		}
-
-		// Determine the current balance. A missing transaction history implies a
-		// newly created account with a zero balance.
-		balanceNanos := new(big.Int)
-
-		latest, err := q.GetLatestBalance(ctx, accountID)
-		switch {
-		case err == nil:
-			balanceNanos = numericToNanos(latest)
-
-		case !errors.Is(err, pgx.ErrNoRows):
-			return fmt.Errorf("read latest balance: %w", err)
+		if numericToNanos(result.Amount).Cmp(numericToNanos(amount)) != 0 {
+			return result, fmt.Errorf("%w: amount differs from the original transaction", ErrDuplicateReference)
 		}
-		amountNanos := numericToNanos(amount)
+		return result, nil
 
-		switch txType {
-		case sharesqlc.ShareTransactionTypeWithdrawal:
-			pledged, err := q.GetActivePledgedAmount(ctx, accountID)
-			if err != nil {
-				return fmt.Errorf("read active pledges: %w", err)
-			}
-			if new(big.Int).Sub(new(big.Int).Set(balanceNanos), amountNanos).Cmp(numericToNanos(pledged)) < 0 {
-				return ErrInsufficientBalance
-			}
-			balanceNanos.Sub(balanceNanos, amountNanos)
-
-		default:
-			balanceNanos.Add(balanceNanos, amountNanos)
-		}
-
-		result, err = q.InsertShareTransaction(ctx, sharesqlc.InsertShareTransactionParams{
-			ShareAccountID: accountID,
-			Type:           txType,
-			Amount:         amount,
-			BalanceAfter:   pgtype.Numeric{Int: balanceNanos, Exp: -9, Valid: true},
-			ReferenceID:    referenceID,
-			Reason:         pgtype.Text{String: reason, Valid: reason != ""},
-			OriginatorID:   originatorID,
-		})
-
-		switch {
-		case err == nil:
-			return nil
-
-		case errors.Is(err, pgx.ErrNoRows):
-			// Lost the race to another transaction with the same reference ID.
-			// Return the transaction that won.
-			result, err = q.GetTransactionByReference(ctx, sharesqlc.GetTransactionByReferenceParams{
-				ShareAccountID: accountID,
-				ReferenceID:    referenceID,
-				Type:           txType,
-			})
-			if err != nil {
-				return fmt.Errorf("read existing transaction: %w", err)
-			}
-			if numericToNanos(result.Amount).Cmp(numericToNanos(amount)) != 0 {
-				return fmt.Errorf("%w: amount differs from the original transaction", ErrDuplicateReference)
-			}
-			return nil
-
-		default:
-			return fmt.Errorf("insert transaction: %w", err)
-		}
-	})
-	if err != nil {
-		return sharesqlc.ShareTransaction{}, err
+	default:
+		return result, fmt.Errorf("insert transaction: %w", err)
 	}
-	return result, nil
 }
 
 // PurchaseShares credits a share account. Without it the PurchaseShares RPC has

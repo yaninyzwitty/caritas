@@ -2212,8 +2212,10 @@ type CashReceiptAllocation struct {
 	Amount                   *v1.Money                  `protobuf:"bytes,3,opt,name=amount,proto3" json:"amount,omitempty"`
 	Status                   string                     `protobuf:"bytes,4,opt,name=status,proto3" json:"status,omitempty"`
 	AuthoritativeReferenceId string                     `protobuf:"bytes,5,opt,name=authoritative_reference_id,json=authoritativeReferenceId,proto3" json:"authoritative_reference_id,omitempty"`
-	unknownFields            protoimpl.UnknownFields
-	sizeCache                protoimpl.SizeCache
+	// Charge wording captured when cash was recorded; absent on older receipts.
+	DisplayLabel  string `protobuf:"bytes,6,opt,name=display_label,json=displayLabel,proto3" json:"display_label,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CashReceiptAllocation) Reset() {
@@ -2277,6 +2279,13 @@ func (x *CashReceiptAllocation) GetStatus() string {
 func (x *CashReceiptAllocation) GetAuthoritativeReferenceId() string {
 	if x != nil {
 		return x.AuthoritativeReferenceId
+	}
+	return ""
+}
+
+func (x *CashReceiptAllocation) GetDisplayLabel() string {
+	if x != nil {
+		return x.DisplayLabel
 	}
 	return ""
 }
@@ -2794,13 +2803,14 @@ const file_contribution_v1_contribution_proto_rawDesc = "" +
 	"\x15GetCashReceiptRequest\x12\x1d\n" +
 	"\n" +
 	"receipt_id\x18\x01 \x01(\tR\treceiptId\x12'\n" +
-	"\x0fidempotency_key\x18\x02 \x01(\tR\x0eidempotencyKey\"\xf5\x01\n" +
+	"\x0fidempotency_key\x18\x02 \x01(\tR\x0eidempotencyKey\"\x9a\x02\n" +
 	"\x15CashReceiptAllocation\x12?\n" +
 	"\x04type\x18\x01 \x01(\x0e2+.contribution.v1.ContributionAllocationTypeR\x04type\x12\x1b\n" +
 	"\ttarget_id\x18\x02 \x01(\tR\btargetId\x12(\n" +
 	"\x06amount\x18\x03 \x01(\v2\x10.member.v1.MoneyR\x06amount\x12\x16\n" +
 	"\x06status\x18\x04 \x01(\tR\x06status\x12<\n" +
-	"\x1aauthoritative_reference_id\x18\x05 \x01(\tR\x18authoritativeReferenceId\"X\n" +
+	"\x1aauthoritative_reference_id\x18\x05 \x01(\tR\x18authoritativeReferenceId\x12#\n" +
+	"\rdisplay_label\x18\x06 \x01(\tR\fdisplayLabel\"X\n" +
 	"\x1aListCashierSessionsRequest\x12\x1b\n" +
 	"\tpage_size\x18\x01 \x01(\x05R\bpageSize\x12\x1d\n" +
 	"\n" +

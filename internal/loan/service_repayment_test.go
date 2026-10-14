@@ -47,6 +47,22 @@ func TestDisburseLoanCreatesPrincipalOnlyEndOfMonthScheduleAndActivatesLoan(t *t
 	}); err != nil {
 		t.Fatalf("create approved guarantor: %v", err)
 	}
+	if _, err := pool.Exec(ctx, `
+		WITH approver AS (
+			INSERT INTO staff_users (id, branch_id, email, password_hash, role, name)
+			VALUES ($3, 1, 'security-approver@example.com', 'test', 'loan_officer', 'Approver') RETURNING id
+		), account AS (
+			INSERT INTO share_accounts (member_id, branch_id, opened_at)
+			VALUES ($1, 1, NOW()) RETURNING id
+		), balance AS (
+			INSERT INTO share_transactions (share_account_id, type, amount, balance_after, reference_id, originator_id)
+			SELECT id, 'purchase', 500000, 500000, gen_random_uuid(), $1 FROM account
+		)
+		INSERT INTO share_pledges (share_account_id, loan_id, pledged_amount, type, status, approved_by, approved_at)
+		SELECT account.id, $2, 100000, 'guarantor_security', 'active', approver.id, NOW() FROM account CROSS JOIN approver
+	`, guarantorID, loanID, testUUID("00000000-0000-0000-0000-000000000011")); err != nil {
+		t.Fatalf("reserve guarantor shares: %v", err)
+	}
 
 	_, loan, err := service.DisburseLoan(ctx, loanID, testUUID("00000000-0000-0000-0000-000000000012"), "test disbursement")
 	if err != nil {
@@ -320,8 +336,11 @@ func createRepaymentLoan(t *testing.T, ctx context.Context, pool *pgxpool.Pool, 
 			INSERT INTO share_accounts (member_id, branch_id, opened_at)
 			VALUES ($1, 1, NOW()) RETURNING id
 		)
-		INSERT INTO share_transactions (share_account_id, type, amount, balance_after, reference_id, originator_id)
-		SELECT id, 'purchase', 100000, 100000, $1, $1 FROM account
+		INSERT INTO share_transactions (share_account_id, type, amount, balance_after, reference_id, originator_id, created_at)
+		SELECT id, 'purchase', CASE WHEN n = 6 THEN 20000 ELSE 16000 END,
+		       CASE WHEN n = 6 THEN 100000 ELSE n * 16000 END,
+		       gen_random_uuid(), $1, NOW() - (6 - n) * INTERVAL '1 month'
+		FROM account CROSS JOIN generate_series(1, 6) n
 	`, memberID)
 	if err != nil {
 		t.Fatalf("insert member shares: %v", err)

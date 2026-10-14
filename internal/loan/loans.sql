@@ -8,6 +8,17 @@ SELECT id, member_id, branch_id, principal, interest_rate, repayment_period_mont
 FROM loans
 WHERE id = $1 AND is_deleted = FALSE;
 
+-- name: GetLoanSecuritySummary :one
+SELECT
+    COALESCE((SELECT SUM(applicant.pledged_amount) FROM share_pledges applicant
+              WHERE applicant.loan_id = $1 AND applicant.type = 'applicant_security' AND applicant.status IN ('pending', 'active')), 0)::numeric AS applicant_pledge,
+    COALESCE((SELECT SUM(lg.guaranteed_amount) FROM loan_guarantors lg
+              JOIN share_accounts sa ON sa.member_id = lg.guarantor_id
+              JOIN share_pledges sp ON sp.share_account_id = sa.id AND sp.loan_id = lg.loan_id
+              WHERE lg.loan_id = $1 AND lg.status = 'approved'
+                AND sp.type = 'guarantor_security' AND sp.status = 'active'
+                AND sp.pledged_amount >= lg.guaranteed_amount), 0)::numeric AS approved_guarantees;
+
 
 -- name: GetLoanByMemberID :one
 SELECT id, member_id, branch_id, principal, interest_rate,

@@ -85,6 +85,7 @@ COM and LGOM are monthly membership charges assessed once per active member per 
 
 - COM amount: 30
 - LGOM amount: 30
+- Fees start in the month the member becomes active, at the full monthly amount without prorating. Eligibility includes members active at month start or activated during that month; earlier months are not charged before activation.
 - Mandatory unless a valid approved exemption exists for the member, fee type and period.
 - Must not be assessed for periods after the member withdrawal effective period.
 - Treatment of the withdrawal month depends on the configured monthly assessment date.

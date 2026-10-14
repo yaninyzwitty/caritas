@@ -177,6 +177,7 @@ message ListMembersRequest {
   int32        page_size     = 2;
   string       page_token    = 3;
   MemberStatus status_filter = 4;
+  string search = 5;
 }
 
 // ListMembersResponse returns a paginated list of members.

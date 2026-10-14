@@ -117,7 +117,7 @@ func TestProcessAllocationCompletesContributionOwnedFeeLocally(t *testing.T) {
 	service := NewService(nil, nil, nil)
 
 	referenceID, externalReference, err := service.processAllocation(
-		t.Context(),
+		t.Context(), nil,
 		receipt,
 		allocation,
 		testUUID("00000000-0000-0000-0000-000000000203"),
@@ -152,7 +152,7 @@ func TestProcessAllocationRejectsUnsupportedLoanBreakdown(t *testing.T) {
 	service := NewService(nil, nil, nil)
 
 	_, _, err := service.processAllocation(
-		t.Context(),
+		t.Context(), nil,
 		receipt,
 		allocation,
 		testUUID("00000000-0000-0000-0000-000000000303"),

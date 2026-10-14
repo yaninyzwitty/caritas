@@ -114,6 +114,9 @@ message Loan {
   string          member_name           = 14;
   string          national_id           = 15;
   int64           member_number         = 16;
+  string applicant_share_pledge = 17;
+  string approved_guarantor_coverage = 18;
+  string collateral_shortfall = 19;
 }
 
 // LoanGuarantor represents a member who guarantees a loan.
@@ -125,6 +128,8 @@ message LoanGuarantor {
   google.protobuf.Timestamp approved_at       = 5;
   string                    approved_by       = 6;
   google.protobuf.Timestamp created_at        = 7;
+  string guarantor_name = 8;
+  int64 guarantor_number = 9;
 }
 
 // CreditBalance represents overpayment tracking for a loan.

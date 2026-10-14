@@ -909,6 +909,7 @@ type ListMembersRequest struct {
 	PageSize      int32                  `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
 	PageToken     string                 `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 	StatusFilter  MemberStatus           `protobuf:"varint,4,opt,name=status_filter,json=statusFilter,proto3,enum=member.v1.MemberStatus" json:"status_filter,omitempty"`
+	Search        string                 `protobuf:"bytes,5,opt,name=search,proto3" json:"search,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -969,6 +970,13 @@ func (x *ListMembersRequest) GetStatusFilter() MemberStatus {
 		return x.StatusFilter
 	}
 	return MemberStatus_MEMBER_STATUS_UNSPECIFIED
+}
+
+func (x *ListMembersRequest) GetSearch() string {
+	if x != nil {
+		return x.Search
+	}
+	return ""
 }
 
 // ListMembersResponse returns a paginated list of members.
@@ -1582,13 +1590,14 @@ const file_member_v1_member_proto_rawDesc = "" +
 	"\n" +
 	"identifier\">\n" +
 	"\x11GetMemberResponse\x12)\n" +
-	"\x06member\x18\x01 \x01(\v2\x11.member.v1.MemberR\x06member\"\xab\x01\n" +
+	"\x06member\x18\x01 \x01(\v2\x11.member.v1.MemberR\x06member\"\xc3\x01\n" +
 	"\x12ListMembersRequest\x12\x1b\n" +
 	"\tbranch_id\x18\x01 \x01(\x03R\bbranchId\x12\x1b\n" +
 	"\tpage_size\x18\x02 \x01(\x05R\bpageSize\x12\x1d\n" +
 	"\n" +
 	"page_token\x18\x03 \x01(\tR\tpageToken\x12<\n" +
-	"\rstatus_filter\x18\x04 \x01(\x0e2\x17.member.v1.MemberStatusR\fstatusFilter\"j\n" +
+	"\rstatus_filter\x18\x04 \x01(\x0e2\x17.member.v1.MemberStatusR\fstatusFilter\x12\x16\n" +
+	"\x06search\x18\x05 \x01(\tR\x06search\"j\n" +
 	"\x13ListMembersResponse\x12+\n" +
 	"\amembers\x18\x01 \x03(\v2\x11.member.v1.MemberR\amembers\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"m\n" +

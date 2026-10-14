@@ -42,6 +42,21 @@ func (q *Queries) ActivateSharePledge(ctx context.Context, arg ActivateSharePled
 	return i, err
 }
 
+const countQualifyingContributionMonths = `-- name: CountQualifyingContributionMonths :one
+SELECT COUNT(DISTINCT date_trunc('month', st.created_at AT TIME ZONE 'Africa/Nairobi'))
+FROM share_transactions st
+WHERE st.share_account_id = $1 AND st.type = 'purchase' AND st.amount > 0
+  AND st.created_at <= NOW()
+  AND NOT EXISTS (SELECT 1 FROM share_transactions reversal WHERE reversal.reversal_of = st.id)
+`
+
+func (q *Queries) CountQualifyingContributionMonths(ctx context.Context, shareAccountID pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countQualifyingContributionMonths, shareAccountID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createSharePledge = `-- name: CreateSharePledge :one
 INSERT INTO share_pledges (share_account_id, loan_id, pledged_amount, type)
 VALUES ($1, $2, $3, $4)
@@ -131,6 +146,73 @@ func (q *Queries) GetApplicantSharePledge(ctx context.Context, loanID pgtype.UUI
 	return i, err
 }
 
+const getGuarantorSharePledge = `-- name: GetGuarantorSharePledge :one
+SELECT id, share_account_id, loan_id, pledged_amount, type, status, approved_by, approved_at, released_at, created_at, updated_at
+FROM share_pledges
+WHERE share_account_id = $1 AND loan_id = $2 AND type = 'guarantor_security'
+`
+
+type GetGuarantorSharePledgeParams struct {
+	ShareAccountID pgtype.UUID `json:"shareAccountId"`
+	LoanID         pgtype.UUID `json:"loanId"`
+}
+
+func (q *Queries) GetGuarantorSharePledge(ctx context.Context, arg GetGuarantorSharePledgeParams) (SharePledge, error) {
+	row := q.db.QueryRow(ctx, getGuarantorSharePledge, arg.ShareAccountID, arg.LoanID)
+	var i SharePledge
+	err := row.Scan(
+		&i.ID,
+		&i.ShareAccountID,
+		&i.LoanID,
+		&i.PledgedAmount,
+		&i.Type,
+		&i.Status,
+		&i.ApprovedBy,
+		&i.ApprovedAt,
+		&i.ReleasedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const lockLoanShareAccounts = `-- name: LockLoanShareAccounts :many
+SELECT sa.id FROM share_accounts sa
+WHERE EXISTS (
+    SELECT 1 FROM share_pledges sp
+    WHERE sp.share_account_id = sa.id AND sp.loan_id = $1
+      AND ($2::uuid IS NULL OR sa.member_id = $2)
+      AND sp.status IN ('pending', 'active')
+)
+ORDER BY sa.id
+FOR UPDATE
+`
+
+type LockLoanShareAccountsParams struct {
+	LoanID   pgtype.UUID `json:"loanId"`
+	MemberID pgtype.UUID `json:"memberId"`
+}
+
+func (q *Queries) LockLoanShareAccounts(ctx context.Context, arg LockLoanShareAccountsParams) ([]pgtype.UUID, error) {
+	rows, err := q.db.Query(ctx, lockLoanShareAccounts, arg.LoanID, arg.MemberID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []pgtype.UUID
+	for rows.Next() {
+		var id pgtype.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const releaseApplicantSharePledge = `-- name: ReleaseApplicantSharePledge :exec
 UPDATE share_pledges
 SET status = CASE WHEN status = 'pending' THEN 'cancelled'::share_pledge_status ELSE 'released'::share_pledge_status END,
@@ -143,5 +225,26 @@ WHERE loan_id = $1
 
 func (q *Queries) ReleaseApplicantSharePledge(ctx context.Context, loanID pgtype.UUID) error {
 	_, err := q.db.Exec(ctx, releaseApplicantSharePledge, loanID)
+	return err
+}
+
+const releaseLoanSharePledges = `-- name: ReleaseLoanSharePledges :exec
+UPDATE share_pledges sp
+SET status = CASE WHEN sp.status = 'pending' THEN 'cancelled'::share_pledge_status ELSE 'released'::share_pledge_status END,
+    released_at = CASE WHEN sp.status = 'active' THEN NOW() ELSE sp.released_at END,
+    updated_at = NOW()
+FROM share_accounts sa
+WHERE sa.id = sp.share_account_id AND sp.loan_id = $1
+  AND ($2::uuid IS NULL OR sa.member_id = $2)
+  AND sp.status IN ('pending', 'active')
+`
+
+type ReleaseLoanSharePledgesParams struct {
+	LoanID   pgtype.UUID `json:"loanId"`
+	MemberID pgtype.UUID `json:"memberId"`
+}
+
+func (q *Queries) ReleaseLoanSharePledges(ctx context.Context, arg ReleaseLoanSharePledgesParams) error {
+	_, err := q.db.Exec(ctx, releaseLoanSharePledges, arg.LoanID, arg.MemberID)
 	return err
 }

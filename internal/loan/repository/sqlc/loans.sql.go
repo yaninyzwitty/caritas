@@ -163,6 +163,30 @@ func (q *Queries) GetLoanByMemberID(ctx context.Context, memberID pgtype.UUID) (
 	return i, err
 }
 
+const getLoanSecuritySummary = `-- name: GetLoanSecuritySummary :one
+SELECT
+    COALESCE((SELECT SUM(applicant.pledged_amount) FROM share_pledges applicant
+              WHERE applicant.loan_id = $1 AND applicant.type = 'applicant_security' AND applicant.status IN ('pending', 'active')), 0)::numeric AS applicant_pledge,
+    COALESCE((SELECT SUM(lg.guaranteed_amount) FROM loan_guarantors lg
+              JOIN share_accounts sa ON sa.member_id = lg.guarantor_id
+              JOIN share_pledges sp ON sp.share_account_id = sa.id AND sp.loan_id = lg.loan_id
+              WHERE lg.loan_id = $1 AND lg.status = 'approved'
+                AND sp.type = 'guarantor_security' AND sp.status = 'active'
+                AND sp.pledged_amount >= lg.guaranteed_amount), 0)::numeric AS approved_guarantees
+`
+
+type GetLoanSecuritySummaryRow struct {
+	ApplicantPledge    pgtype.Numeric `json:"applicantPledge"`
+	ApprovedGuarantees pgtype.Numeric `json:"approvedGuarantees"`
+}
+
+func (q *Queries) GetLoanSecuritySummary(ctx context.Context, loanID pgtype.UUID) (GetLoanSecuritySummaryRow, error) {
+	row := q.db.QueryRow(ctx, getLoanSecuritySummary, loanID)
+	var i GetLoanSecuritySummaryRow
+	err := row.Scan(&i.ApplicantPledge, &i.ApprovedGuarantees)
+	return i, err
+}
+
 const listLoansByBranch = `-- name: ListLoansByBranch :many
 SELECT
     l.id, l.member_id, l.branch_id, l.principal, l.interest_rate, l.interest_period, l.repayment_period_months, l.status, l.disbursed_at, l.updated_by, l.previous_status, l.is_deleted, l.created_at, l.updated_at,

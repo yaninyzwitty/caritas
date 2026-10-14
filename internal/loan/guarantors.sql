@@ -9,11 +9,14 @@ FROM loan_guarantors
 WHERE loan_id = $1 AND guarantor_id = $2;
 
 -- name: ListLoanGuarantors :many
-SELECT loan_id, guarantor_id, guaranteed_amount, status, approved_at, approved_by, created_at
-FROM loan_guarantors
-WHERE loan_id = $1
-  AND ($2::timestamptz IS NULL OR created_at < $2 OR (created_at = $2 AND guarantor_id < $3))
-ORDER BY created_at DESC, guarantor_id DESC
+SELECT lg.loan_id, lg.guarantor_id, lg.guaranteed_amount, lg.status, lg.approved_at, lg.approved_by, lg.created_at,
+       m.member_number AS guarantor_number, COALESCE(mp.full_name, '')::text AS guarantor_name
+FROM loan_guarantors lg
+JOIN members m ON m.id = lg.guarantor_id
+LEFT JOIN member_profiles mp ON mp.member_id = m.id
+WHERE lg.loan_id = $1
+  AND ($2::timestamptz IS NULL OR lg.created_at < $2 OR (lg.created_at = $2 AND lg.guarantor_id < $3))
+ORDER BY lg.created_at DESC, lg.guarantor_id DESC
 LIMIT $4;
 
 -- name: ListGuarantorLoans :many

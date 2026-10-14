@@ -3,6 +3,7 @@ package contribution
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"strings"
 	"time"
@@ -103,10 +104,19 @@ func cashReceiptToProto(row contributionsqlc.ContributionReceipt, allocations []
 	if row.ReceivedAt.Valid {
 		receipt.ReceivedAt = timestamppb.New(row.ReceivedAt.Time)
 	}
+	var plan allocationPlan
+	// Older receipts have no labels and retain their type/reference fallback.
+	_ = json.Unmarshal(row.AllocationPlan, &plan)
 	for _, row := range allocations {
 		allocation := &contributionv1.CashReceiptAllocation{Type: allocationTypeToProto(row.Type), Amount: numericToMoney(row.Amount), Status: string(row.Status)}
 		if row.TargetID.Valid {
 			allocation.TargetId = row.TargetID.String()
+		}
+		for _, item := range plan.Items {
+			if item.Type == row.Type && item.TargetID == allocation.TargetId {
+				allocation.DisplayLabel = item.DisplayLabel
+				break
+			}
 		}
 		if row.AuthoritativeReferenceID.Valid {
 			allocation.AuthoritativeReferenceId = row.AuthoritativeReferenceID.String()

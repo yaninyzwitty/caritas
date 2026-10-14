@@ -1142,10 +1142,12 @@ func (x *GetShareBalanceRequest) GetConsistencyStrong() bool {
 }
 
 type GetShareBalanceResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Balance       *v1.Money              `protobuf:"bytes,1,opt,name=balance,proto3" json:"balance,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                    protoimpl.MessageState `protogen:"open.v1"`
+	Balance                  *v1.Money              `protobuf:"bytes,1,opt,name=balance,proto3" json:"balance,omitempty"`
+	ActivePledgedAmount      *v1.Money              `protobuf:"bytes,2,opt,name=active_pledged_amount,json=activePledgedAmount,proto3" json:"active_pledged_amount,omitempty"`
+	GuarantorAvailableAmount *v1.Money              `protobuf:"bytes,3,opt,name=guarantor_available_amount,json=guarantorAvailableAmount,proto3" json:"guarantor_available_amount,omitempty"`
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
 }
 
 func (x *GetShareBalanceResponse) Reset() {
@@ -1181,6 +1183,20 @@ func (*GetShareBalanceResponse) Descriptor() ([]byte, []int) {
 func (x *GetShareBalanceResponse) GetBalance() *v1.Money {
 	if x != nil {
 		return x.Balance
+	}
+	return nil
+}
+
+func (x *GetShareBalanceResponse) GetActivePledgedAmount() *v1.Money {
+	if x != nil {
+		return x.ActivePledgedAmount
+	}
+	return nil
+}
+
+func (x *GetShareBalanceResponse) GetGuarantorAvailableAmount() *v1.Money {
+	if x != nil {
+		return x.GuarantorAvailableAmount
 	}
 	return nil
 }
@@ -1829,9 +1845,11 @@ const file_share_v1_share_proto_rawDesc = "" +
 	"\x16GetShareBalanceRequest\x12\x1d\n" +
 	"\n" +
 	"account_id\x18\x01 \x01(\tR\taccountId\x12-\n" +
-	"\x12consistency_strong\x18\x02 \x01(\bR\x11consistencyStrong\"E\n" +
+	"\x12consistency_strong\x18\x02 \x01(\bR\x11consistencyStrong\"\xdb\x01\n" +
 	"\x17GetShareBalanceResponse\x12*\n" +
-	"\abalance\x18\x01 \x01(\v2\x10.member.v1.MoneyR\abalance\"y\n" +
+	"\abalance\x18\x01 \x01(\v2\x10.member.v1.MoneyR\abalance\x12D\n" +
+	"\x15active_pledged_amount\x18\x02 \x01(\v2\x10.member.v1.MoneyR\x13activePledgedAmount\x12N\n" +
+	"\x1aguarantor_available_amount\x18\x03 \x01(\v2\x10.member.v1.MoneyR\x18guarantorAvailableAmount\"y\n" +
 	"\x1cListShareTransactionsRequest\x12\x1d\n" +
 	"\n" +
 	"account_id\x18\x01 \x01(\tR\taccountId\x12\x1b\n" +
@@ -1961,37 +1979,39 @@ var file_share_v1_share_proto_depIdxs = []int32{
 	28, // 15: share.v1.WithdrawSharesRequest.amount:type_name -> member.v1.Money
 	28, // 16: share.v1.WithdrawSharesResponse.balance_after:type_name -> member.v1.Money
 	28, // 17: share.v1.GetShareBalanceResponse.balance:type_name -> member.v1.Money
-	3,  // 18: share.v1.ListShareTransactionsResponse.transactions:type_name -> share.v1.ShareTransaction
-	3,  // 19: share.v1.GetShareTransactionResponse.transaction:type_name -> share.v1.ShareTransaction
-	28, // 20: share.v1.CreateAdjustmentRequest.amount:type_name -> member.v1.Money
-	28, // 21: share.v1.ReverseShareTransactionResponse.balance_after:type_name -> member.v1.Money
-	5,  // 22: share.v1.ShareService.OpenShareAccount:input_type -> share.v1.OpenShareAccountRequest
-	7,  // 23: share.v1.ShareService.GetShareAccount:input_type -> share.v1.GetShareAccountRequest
-	9,  // 24: share.v1.ShareService.ListShareAccounts:input_type -> share.v1.ListShareAccountsRequest
-	11, // 25: share.v1.ShareService.PurchaseShares:input_type -> share.v1.PurchaseSharesRequest
-	13, // 26: share.v1.ShareService.WithdrawShares:input_type -> share.v1.WithdrawSharesRequest
-	15, // 27: share.v1.ShareService.GetShareBalance:input_type -> share.v1.GetShareBalanceRequest
-	17, // 28: share.v1.ShareService.ListShareTransactions:input_type -> share.v1.ListShareTransactionsRequest
-	19, // 29: share.v1.ShareService.GetShareTransaction:input_type -> share.v1.GetShareTransactionRequest
-	23, // 30: share.v1.ShareService.CreateAdjustment:input_type -> share.v1.CreateAdjustmentRequest
-	21, // 31: share.v1.ShareService.ApproveShareAdjustment:input_type -> share.v1.ApproveShareAdjustmentRequest
-	25, // 32: share.v1.ShareService.ReverseShareTransaction:input_type -> share.v1.ReverseShareTransactionRequest
-	6,  // 33: share.v1.ShareService.OpenShareAccount:output_type -> share.v1.OpenShareAccountResponse
-	8,  // 34: share.v1.ShareService.GetShareAccount:output_type -> share.v1.GetShareAccountResponse
-	10, // 35: share.v1.ShareService.ListShareAccounts:output_type -> share.v1.ListShareAccountsResponse
-	12, // 36: share.v1.ShareService.PurchaseShares:output_type -> share.v1.PurchaseSharesResponse
-	14, // 37: share.v1.ShareService.WithdrawShares:output_type -> share.v1.WithdrawSharesResponse
-	16, // 38: share.v1.ShareService.GetShareBalance:output_type -> share.v1.GetShareBalanceResponse
-	18, // 39: share.v1.ShareService.ListShareTransactions:output_type -> share.v1.ListShareTransactionsResponse
-	20, // 40: share.v1.ShareService.GetShareTransaction:output_type -> share.v1.GetShareTransactionResponse
-	24, // 41: share.v1.ShareService.CreateAdjustment:output_type -> share.v1.CreateAdjustmentResponse
-	22, // 42: share.v1.ShareService.ApproveShareAdjustment:output_type -> share.v1.ApproveShareAdjustmentResponse
-	26, // 43: share.v1.ShareService.ReverseShareTransaction:output_type -> share.v1.ReverseShareTransactionResponse
-	33, // [33:44] is the sub-list for method output_type
-	22, // [22:33] is the sub-list for method input_type
-	22, // [22:22] is the sub-list for extension type_name
-	22, // [22:22] is the sub-list for extension extendee
-	0,  // [0:22] is the sub-list for field type_name
+	28, // 18: share.v1.GetShareBalanceResponse.active_pledged_amount:type_name -> member.v1.Money
+	28, // 19: share.v1.GetShareBalanceResponse.guarantor_available_amount:type_name -> member.v1.Money
+	3,  // 20: share.v1.ListShareTransactionsResponse.transactions:type_name -> share.v1.ShareTransaction
+	3,  // 21: share.v1.GetShareTransactionResponse.transaction:type_name -> share.v1.ShareTransaction
+	28, // 22: share.v1.CreateAdjustmentRequest.amount:type_name -> member.v1.Money
+	28, // 23: share.v1.ReverseShareTransactionResponse.balance_after:type_name -> member.v1.Money
+	5,  // 24: share.v1.ShareService.OpenShareAccount:input_type -> share.v1.OpenShareAccountRequest
+	7,  // 25: share.v1.ShareService.GetShareAccount:input_type -> share.v1.GetShareAccountRequest
+	9,  // 26: share.v1.ShareService.ListShareAccounts:input_type -> share.v1.ListShareAccountsRequest
+	11, // 27: share.v1.ShareService.PurchaseShares:input_type -> share.v1.PurchaseSharesRequest
+	13, // 28: share.v1.ShareService.WithdrawShares:input_type -> share.v1.WithdrawSharesRequest
+	15, // 29: share.v1.ShareService.GetShareBalance:input_type -> share.v1.GetShareBalanceRequest
+	17, // 30: share.v1.ShareService.ListShareTransactions:input_type -> share.v1.ListShareTransactionsRequest
+	19, // 31: share.v1.ShareService.GetShareTransaction:input_type -> share.v1.GetShareTransactionRequest
+	23, // 32: share.v1.ShareService.CreateAdjustment:input_type -> share.v1.CreateAdjustmentRequest
+	21, // 33: share.v1.ShareService.ApproveShareAdjustment:input_type -> share.v1.ApproveShareAdjustmentRequest
+	25, // 34: share.v1.ShareService.ReverseShareTransaction:input_type -> share.v1.ReverseShareTransactionRequest
+	6,  // 35: share.v1.ShareService.OpenShareAccount:output_type -> share.v1.OpenShareAccountResponse
+	8,  // 36: share.v1.ShareService.GetShareAccount:output_type -> share.v1.GetShareAccountResponse
+	10, // 37: share.v1.ShareService.ListShareAccounts:output_type -> share.v1.ListShareAccountsResponse
+	12, // 38: share.v1.ShareService.PurchaseShares:output_type -> share.v1.PurchaseSharesResponse
+	14, // 39: share.v1.ShareService.WithdrawShares:output_type -> share.v1.WithdrawSharesResponse
+	16, // 40: share.v1.ShareService.GetShareBalance:output_type -> share.v1.GetShareBalanceResponse
+	18, // 41: share.v1.ShareService.ListShareTransactions:output_type -> share.v1.ListShareTransactionsResponse
+	20, // 42: share.v1.ShareService.GetShareTransaction:output_type -> share.v1.GetShareTransactionResponse
+	24, // 43: share.v1.ShareService.CreateAdjustment:output_type -> share.v1.CreateAdjustmentResponse
+	22, // 44: share.v1.ShareService.ApproveShareAdjustment:output_type -> share.v1.ApproveShareAdjustmentResponse
+	26, // 45: share.v1.ShareService.ReverseShareTransaction:output_type -> share.v1.ReverseShareTransactionResponse
+	35, // [35:46] is the sub-list for method output_type
+	24, // [24:35] is the sub-list for method input_type
+	24, // [24:24] is the sub-list for extension type_name
+	24, // [24:24] is the sub-list for extension extendee
+	0,  // [0:24] is the sub-list for field type_name
 }
 
 func init() { file_share_v1_share_proto_init() }

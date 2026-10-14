@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"math/big"
 	"strconv"
 	"strings"
@@ -17,6 +18,7 @@ import (
 	loanv1 "github.com/yaninyzwitty/caritas-backend/gen/loan/v1"
 	"github.com/yaninyzwitty/caritas-backend/internal/auth"
 	loansqlc "github.com/yaninyzwitty/caritas-backend/internal/loan/repository/sqlc"
+	"github.com/yaninyzwitty/caritas-backend/internal/share"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -54,6 +56,8 @@ func mapServiceError(err error) error {
 		errors.Is(err, ErrInvalidGuaranteedAmount), errors.Is(err, ErrGatewayTransactionID), errors.Is(err, ErrDuplicateGuarantor):
 		return status.Error(codes.InvalidArgument, err.Error())
 	case errors.Is(err, ErrInvalidStatusTransition), errors.Is(err, ErrInvalidGuarantorStatus), errors.Is(err, ErrSelfGuarantee),
+		errors.Is(err, share.ErrGuaranteeCapacity), errors.Is(err, share.ErrContributionHistory), errors.Is(err, share.ErrLoanSecurity),
+		errors.Is(err, share.ErrAccountNotFound), errors.Is(err, share.ErrAccountNotActive),
 		errors.Is(err, ErrTooManyGuarantors), errors.Is(err, ErrInsufficientCollateral),
 		errors.Is(err, ErrPaymentNotAllowed), errors.Is(err, ErrRepaymentScheduleMissing), errors.Is(err, ErrMemberNotActive),
 		errors.Is(err, ErrGuarantorNotActive):
@@ -293,20 +297,33 @@ func (h *Handlers) GetLoan(ctx context.Context, req *loanv1.GetLoanRequest) (*lo
 		return nil, mapServiceError(err)
 	}
 
+	security, err := h.store.GetLoanSecuritySummary(ctx, loan.ID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "could not read loan security")
+	}
+	shortfall := numericToScale(loan.Principal, -4)
+	shortfall.Sub(shortfall, numericToScale(security.ApplicantPledge, -4))
+	shortfall.Sub(shortfall, numericToScale(security.ApprovedGuarantees, -4))
+	if shortfall.Sign() < 0 {
+		shortfall.SetInt64(0)
+	}
 	return &loanv1.GetLoanResponse{
 		Loan: &loanv1.Loan{
-			Id:                    loan.ID.String(),
-			MemberId:              loan.MemberID.String(),
-			BranchId:              strconv.FormatInt(loan.BranchID, 10),
-			Principal:             numericToString(loan.Principal),
-			InterestRate:          numericToString(loan.InterestRate),
-			RepaymentPeriodMonths: loan.RepaymentPeriodMonths,
-			Status:                loanStatusToProto(loan.Status),
-			DisbursedAt:           timestamppb.New(loan.DisbursedAt.Time),
-			CreatedAt:             timestamppb.New(loan.CreatedAt.Time),
-			UpdatedAt:             timestamppb.New(loan.UpdatedAt.Time),
-			UpdatedBy:             loan.UpdatedBy.String(),
-			PreviousStatus:        string(loan.PreviousStatus.LoanStatus),
+			Id:                        loan.ID.String(),
+			MemberId:                  loan.MemberID.String(),
+			BranchId:                  strconv.FormatInt(loan.BranchID, 10),
+			Principal:                 numericToString(loan.Principal),
+			InterestRate:              numericToString(loan.InterestRate),
+			RepaymentPeriodMonths:     loan.RepaymentPeriodMonths,
+			Status:                    loanStatusToProto(loan.Status),
+			DisbursedAt:               timestamppb.New(loan.DisbursedAt.Time),
+			CreatedAt:                 timestamppb.New(loan.CreatedAt.Time),
+			UpdatedAt:                 timestamppb.New(loan.UpdatedAt.Time),
+			UpdatedBy:                 loan.UpdatedBy.String(),
+			PreviousStatus:            string(loan.PreviousStatus.LoanStatus),
+			ApplicantSharePledge:      numericToString(security.ApplicantPledge),
+			ApprovedGuarantorCoverage: numericToString(security.ApprovedGuarantees),
+			CollateralShortfall:       numericToString(pgtype.Numeric{Int: shortfall, Exp: -4, Valid: true}),
 		},
 	}, nil
 
@@ -377,6 +394,9 @@ func (h *Handlers) ListLoans(ctx context.Context, req *loanv1.ListLoansRequest) 
 		branchID := strconv.Itoa(int(loan.Loan.BranchID))
 		loanPrincipal := numericToString(loan.Loan.Principal)
 		outstandingPrincipal := numericToString(loan.OutstandingPrincipal)
+
+		slog.Info("outstanding principal", "principal", outstandingPrincipal)
+
 		interestRate := numericToString(loan.Loan.InterestRate)
 
 		resp.Loans = append(resp.Loans, &loanv1.Loan{
@@ -482,14 +502,16 @@ func (h *Handlers) RemoveGuarantor(ctx context.Context, req *loanv1.RemoveGuaran
 		return nil, status.Error(codes.InvalidArgument, "invalid loan_id")
 	}
 
-	if err := h.service.RemoveGuarantor(ctx, loanID, guarantorID); err != nil {
+	actor, ok := auth.PrincipalFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "authenticated staff member is required")
+	}
+	if err := h.service.RemoveGuarantor(ctx, loanID, guarantorID, actor.ID); err != nil {
 		return nil, mapServiceError(err)
 	}
 
 	return &loanv1.RemoveGuarantorResponse{Success: true}, nil
 }
-
-// TODO-after adding a guarantor, you must approve them, but if the already guaranteed amount is already enough lets say for a loan ie 5k, you have two guarantors, each gives 2.5k, then when another guarantor comes in and wants to give their money, this should reject, because the amount is already sufficient for guaranteeing a loan
 
 func (h *Handlers) ApproveGuarantor(ctx context.Context, req *loanv1.ApproveGuarantorRequest) (*loanv1.ApproveGuarantorResponse, error) {
 	if req.GetGuarantorId() == "" {
@@ -517,7 +539,6 @@ func (h *Handlers) ApproveGuarantor(ctx context.Context, req *loanv1.ApproveGuar
 	if err != nil {
 		return nil, mapServiceError(err)
 	}
-	// TODO-map guarantor approval status well in the client
 
 	return &loanv1.ApproveGuarantorResponse{
 		NewStatus:  guarantorStatusToProto(guarantorApproval.Status),
@@ -587,6 +608,8 @@ func (h *Handlers) ListGuarantors(ctx context.Context, req *loanv1.ListGuarantor
 		resp.Guarantors = append(resp.Guarantors, &loanv1.LoanGuarantor{
 			LoanId:           guarantor.LoanID.String(),
 			GuarantorId:      guarantor.GuarantorID.String(),
+			GuarantorName:    guarantor.GuarantorName,
+			GuarantorNumber:  guarantor.GuarantorNumber,
 			GuaranteedAmount: numericToString(guarantor.GuaranteedAmount),
 			Status:           guarantorStatusToProto(guarantor.Status),
 			ApprovedAt:       timestamppb.New(guarantor.ApprovedAt.Time),

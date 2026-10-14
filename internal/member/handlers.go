@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"math/big"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -151,7 +152,14 @@ func (h *Handlers) ListMembers(
 		cursor = &cursorUUID
 	}
 
-	members, err := h.memberService.ListMembers(ctx, branchID, cursor, limit)
+	statusFilter := ""
+	if req.GetStatusFilter() != memberv1.MemberStatus_MEMBER_STATUS_UNSPECIFIED {
+		statusFilter = statusProtoToString(req.GetStatusFilter())
+	}
+	if len(req.GetSearch()) > 100 {
+		return nil, status.Error(codes.InvalidArgument, "search must be at most 100 characters")
+	}
+	members, err := h.memberService.ListMembers(ctx, branchID, cursor, limit, strings.TrimSpace(req.GetSearch()), statusFilter)
 	if err != nil {
 		return nil, mapServiceError(err)
 	}

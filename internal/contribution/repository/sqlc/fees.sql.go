@@ -18,13 +18,20 @@ FROM members m
 CROSS JOIN (VALUES ('com'::contribution_allocation_type), ('lgom'::contribution_allocation_type)) fee(type)
 WHERE m.id = $2 AND NOT m.is_deleted
   AND m.created_at < $1::date + INTERVAL '1 month'
-  AND COALESCE(
+  -- Charge the full monthly fees when active at month start or activated during it.
+  AND (COALESCE(
       (SELECT h.to_status FROM member_status_history h
        WHERE h.member_id = m.id AND h.created_at <= ($1::timestamp AT TIME ZONE 'Africa/Nairobi')
        ORDER BY h.created_at DESC, h.id DESC LIMIT 1),
       (SELECT h.from_status FROM member_status_history h
        WHERE h.member_id = m.id AND h.created_at > ($1::timestamp AT TIME ZONE 'Africa/Nairobi')
        ORDER BY h.created_at, h.id LIMIT 1), m.status) = 'active'
+    OR EXISTS (
+      SELECT 1 FROM member_status_history h
+      WHERE h.member_id = m.id AND h.to_status = 'active'
+        AND h.created_at >= ($1::timestamp AT TIME ZONE 'Africa/Nairobi')
+        AND h.created_at < (($1::date + INTERVAL '1 month') AT TIME ZONE 'Africa/Nairobi')
+    ))
 ON CONFLICT DO NOTHING
 `
 
@@ -112,13 +119,19 @@ const quoteMonthlyFees = `-- name: QuoteMonthlyFees :many
 WITH eligible AS (
  SELECT m.id FROM members m WHERE m.id = $1 AND NOT m.is_deleted
  AND m.created_at < $2::date + INTERVAL '1 month'
-  AND COALESCE(
+  AND (COALESCE(
       (SELECT h.to_status FROM member_status_history h
        WHERE h.member_id = m.id AND h.created_at <= ($2::timestamp AT TIME ZONE 'Africa/Nairobi')
        ORDER BY h.created_at DESC, h.id DESC LIMIT 1),
       (SELECT h.from_status FROM member_status_history h
        WHERE h.member_id = m.id AND h.created_at > ($2::timestamp AT TIME ZONE 'Africa/Nairobi')
        ORDER BY h.created_at, h.id LIMIT 1), m.status) = 'active'
+    OR EXISTS (
+      SELECT 1 FROM member_status_history h
+      WHERE h.member_id = m.id AND h.to_status = 'active'
+        AND h.created_at >= ($2::timestamp AT TIME ZONE 'Africa/Nairobi')
+        AND h.created_at < (($2::date + INTERVAL '1 month') AT TIME ZONE 'Africa/Nairobi')
+    ))
 ), fee_types AS (SELECT 'com'::contribution_allocation_type AS type UNION ALL SELECT 'lgom'::contribution_allocation_type), assessments AS (
  SELECT fee.type, COALESCE(f.amount, CASE WHEN e.id IS NOT NULL THEN 30 ELSE 0 END)::numeric AS amount
  FROM fee_types fee

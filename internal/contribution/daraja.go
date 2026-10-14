@@ -305,9 +305,10 @@ type allocationPlan struct {
 // explicit shape, bad target IDs or amount strings would reach sqlc as vague
 // database errors.
 type allocationPlanItem struct {
-	Type     contributionsqlc.ContributionAllocationType `json:"type"`
-	TargetID string                                      `json:"target_id"`
-	Amount   string                                      `json:"amount"`
+	Type         contributionsqlc.ContributionAllocationType `json:"type"`
+	TargetID     string                                      `json:"target_id"`
+	Amount       string                                      `json:"amount"`
+	DisplayLabel string                                      `json:"display_label,omitempty"`
 }
 
 // parseAllocationPlan converts the stored immutable JSON plan into the rows
@@ -327,7 +328,7 @@ func parseAllocationPlan(body []byte) ([]AllocationInput, error) {
 		if err := amount.Scan(strings.TrimSpace(item.Amount)); err != nil {
 			return nil, ErrInvalidAllocation
 		}
-		allocation := AllocationInput{Type: item.Type, Amount: amount}
+		allocation := AllocationInput{Type: item.Type, Amount: amount, DisplayLabel: item.DisplayLabel}
 		if strings.TrimSpace(item.TargetID) != "" {
 			if err := allocation.TargetID.Scan(strings.TrimSpace(item.TargetID)); err != nil {
 				return nil, ErrInvalidAllocation
@@ -350,9 +351,10 @@ func buildAllocationPlan(allocations []AllocationInput) ([]byte, error) {
 			targetID = allocation.TargetID.String()
 		}
 		plan.Items = append(plan.Items, allocationPlanItem{
-			Type:     allocation.Type,
-			TargetID: targetID,
-			Amount:   new(big.Rat).SetFrac(amount, big.NewInt(10000)).FloatString(4),
+			Type:         allocation.Type,
+			DisplayLabel: allocation.DisplayLabel,
+			TargetID:     targetID,
+			Amount:       new(big.Rat).SetFrac(amount, big.NewInt(10000)).FloatString(4),
 		})
 	}
 	return json.Marshal(plan)

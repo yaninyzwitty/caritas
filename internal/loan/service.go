@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	loansqlc "github.com/yaninyzwitty/caritas-backend/internal/loan/repository/sqlc"
 	"github.com/yaninyzwitty/caritas-backend/internal/member"
+	"github.com/yaninyzwitty/caritas-backend/internal/share"
 	sharesqlc "github.com/yaninyzwitty/caritas-backend/internal/share/repository/sqlc"
 )
 
@@ -86,36 +87,19 @@ func (s *Service) ApplyForLoan(ctx context.Context, params loansqlc.CreateLoanPa
 	}
 
 	var loan loansqlc.CreateLoanRow
-	err := s.store.ExecCollateralTx(applyLoanCtx, func(q *loansqlc.Queries, shares *sharesqlc.Queries) error {
-		account, err := shares.LockAccountByMemberID(applyLoanCtx, params.MemberID)
-		if err != nil {
-			return ErrInsufficientCollateral
+	err := s.store.ExecCollateralTx(applyLoanCtx, func(q *loansqlc.Queries, shares *sharesqlc.Queries, tx pgx.Tx) error {
+		if err := requireActiveMemberInTx(applyLoanCtx, tx, params.MemberID, params.BranchID, ErrMemberNotActive); err != nil {
+			return err
 		}
-		if account.Status != sharesqlc.ShareAccountStatusActive {
-			return ErrInsufficientCollateral
+		for _, guarantor := range guarantors {
+			if err := requireActiveMemberInTx(applyLoanCtx, tx, guarantor.GuarantorID, params.BranchID, ErrGuarantorNotActive); err != nil {
+				return err
+			}
+			if _, err := share.CheckGuarantorSecurity(applyLoanCtx, shares, guarantor.GuarantorID, guarantor.GuaranteedAmount); err != nil {
+				return err
+			}
 		}
-
-		balance := new(big.Int)
-		latest, err := shares.GetLatestBalance(applyLoanCtx, account.ID)
-		switch {
-		case err == nil:
-			balance = numericToScale(latest, -4)
-		case !errors.Is(err, pgx.ErrNoRows):
-			return fmt.Errorf("read applicant shares: %w", err)
-		}
-		if new(big.Int).Mul(new(big.Int).Set(balance), big.NewInt(3)).Cmp(numericToScale(params.Principal, -4)) < 0 {
-			return ErrInsufficientCollateral
-		}
-		active, err := shares.GetActivePledgedAmount(applyLoanCtx, account.ID)
-		if err != nil {
-			return fmt.Errorf("read active share pledges: %w", err)
-		}
-
-		available := new(big.Int).Sub(balance, numericToScale(active, -4))
-		if available.Cmp(numericToScale(sharePledge, -4)) < 0 {
-			return ErrInsufficientCollateral
-		}
-
+		var err error
 		loan, err = q.CreateLoan(applyLoanCtx, params)
 		if err != nil {
 			return fmt.Errorf("create loan: %w", err)
@@ -131,15 +115,8 @@ func (s *Service) ApplyForLoan(ctx context.Context, params loansqlc.CreateLoanPa
 				return fmt.Errorf("create guarantor: %w", err)
 			}
 		}
-		if numericToScale(sharePledge, -4).Sign() > 0 {
-			if _, err := shares.CreateSharePledge(applyLoanCtx, sharesqlc.CreateSharePledgeParams{
-				ShareAccountID: account.ID,
-				LoanID:         loan.ID,
-				PledgedAmount:  sharePledge,
-				Type:           sharesqlc.SharePledgeTypeApplicantSecurity,
-			}); err != nil {
-				return fmt.Errorf("create applicant share pledge: %w", err)
-			}
+		if err := share.ProposeApplicantSecurity(applyLoanCtx, shares, loan.ID, params.MemberID, params.Principal, sharePledge); err != nil {
+			return err
 		}
 
 		if _, err := q.InsertLoanAuditTrail(applyLoanCtx, loansqlc.InsertLoanAuditTrailParams{
@@ -247,7 +224,7 @@ func (s *Service) AddGuarantor(
 	}
 
 	var guarantor loansqlc.LoanGuarantor
-	err := s.store.ExecTx(ctx, func(q loansqlc.Querier) error {
+	err := s.store.ExecCollateralTx(ctx, func(q *loansqlc.Queries, shares *sharesqlc.Queries, tx pgx.Tx) error {
 		current, err := q.LockLoanByID(ctx, loanID)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
@@ -272,6 +249,9 @@ func (s *Service) AddGuarantor(
 		})
 		switch {
 		case err == nil:
+			if existing.Status == loansqlc.GuarantorStatusRejected || numericToScale(existing.GuaranteedAmount, -4).Cmp(numericToScale(guaranteedAmount, -4)) != 0 {
+				return fmt.Errorf("%w: this member is already attached with a different amount or was removed; choose another guarantor", ErrDuplicateGuarantor)
+			}
 			guarantor = existing
 			return nil
 		case !errors.Is(err, pgx.ErrNoRows):
@@ -289,6 +269,12 @@ func (s *Service) AddGuarantor(
 		// less than 20 guarantors
 		if len(guarantors) >= maxGuarantors {
 			return ErrTooManyGuarantors
+		}
+		if err := requireActiveMemberInTx(ctx, tx, guarantorID, current.BranchID, ErrGuarantorNotActive); err != nil {
+			return err
+		}
+		if _, err := share.CheckGuarantorSecurity(ctx, shares, guarantorID, guaranteedAmount); err != nil {
+			return err
 		}
 
 		guarantor, err = q.CreateLoanGuarantor(ctx, loansqlc.CreateLoanGuarantorParams{
@@ -313,7 +299,14 @@ func (s *Service) ApproveGuarantor(
 	loanID, guarantorID, approvedBy pgtype.UUID,
 ) (loansqlc.LoanGuarantor, error) {
 	var guarantor loansqlc.LoanGuarantor
-	err := s.store.ExecCollateralTx(ctx, func(q *loansqlc.Queries, shares *sharesqlc.Queries) error {
+	err := s.store.ExecCollateralTx(ctx, func(q *loansqlc.Queries, shares *sharesqlc.Queries, tx pgx.Tx) error {
+		loan, err := q.LockLoanByID(ctx, loanID)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrLoanNotFound
+		}
+		if err != nil {
+			return err
+		}
 		current, err := q.LockGuarantor(ctx, loansqlc.LockGuarantorParams{
 			LoanID:      loanID,
 			GuarantorID: guarantorID,
@@ -325,41 +318,22 @@ func (s *Service) ApproveGuarantor(
 			return fmt.Errorf("lock guarantor: %w", err)
 		}
 
+		if current.Status == loansqlc.GuarantorStatusApproved {
+			guarantor = current
+			return nil
+		}
+		if loan.Status != loansqlc.LoanStatusPending {
+			return fmt.Errorf("%w: guarantors can only be approved while the loan is pending", ErrInvalidStatusTransition)
+		}
 		if current.Status != loansqlc.GuarantorStatusPending {
 			return fmt.Errorf("%w: cannot approve %s guarantor", ErrInvalidGuarantorStatus, current.Status)
 		}
 
-		account, err := shares.LockAccountByMemberID(ctx, guarantorID)
-		if err != nil || account.Status != sharesqlc.ShareAccountStatusActive {
-			return ErrInsufficientCollateral
+		if err := requireActiveMemberInTx(ctx, tx, guarantorID, loan.BranchID, ErrGuarantorNotActive); err != nil {
+			return err
 		}
-		balance := new(big.Int)
-		latest, err := shares.GetLatestBalance(ctx, account.ID)
-		switch {
-		case err == nil:
-			balance = numericToScale(latest, -4)
-		case !errors.Is(err, pgx.ErrNoRows):
-			return fmt.Errorf("read guarantor shares: %w", err)
-		}
-		active, err := shares.GetActivePledgedAmount(ctx, account.ID)
-		if err != nil {
-			return fmt.Errorf("read guarantor share pledges: %w", err)
-		}
-		pledged := new(big.Int).Add(numericToScale(active, -4), numericToScale(current.GuaranteedAmount, -4))
-		if new(big.Int).Mul(pledged, big.NewInt(10)).Cmp(new(big.Int).Mul(balance, big.NewInt(3))) > 0 {
-			return ErrInsufficientCollateral
-		}
-		pledge, err := shares.CreateSharePledge(ctx, sharesqlc.CreateSharePledgeParams{
-			ShareAccountID: account.ID,
-			LoanID:         loanID,
-			PledgedAmount:  current.GuaranteedAmount,
-			Type:           sharesqlc.SharePledgeTypeGuarantorSecurity,
-		})
-		if err != nil {
-			return fmt.Errorf("create guarantor share pledge: %w", err)
-		}
-		if _, err := shares.ActivateSharePledge(ctx, sharesqlc.ActivateSharePledgeParams{ID: pledge.ID, ApprovedBy: approvedBy}); err != nil {
-			return fmt.Errorf("activate guarantor share pledge: %w", err)
+		if err := share.ApproveGuarantorSecurity(ctx, shares, loanID, guarantorID, approvedBy, current.GuaranteedAmount); err != nil {
+			return err
 		}
 
 		guarantor, err = q.UpdateGuarantorStatus(ctx, loansqlc.UpdateGuarantorStatusParams{
@@ -393,8 +367,8 @@ func (s *Service) ApproveGuarantor(
 	return guarantor, nil
 }
 
-func (s *Service) RemoveGuarantor(ctx context.Context, loanID, guarantorID pgtype.UUID) error {
-	return s.store.ExecTx(ctx, func(q loansqlc.Querier) error {
+func (s *Service) RemoveGuarantor(ctx context.Context, loanID, guarantorID, removedBy pgtype.UUID) error {
+	return s.store.ExecCollateralTx(ctx, func(q *loansqlc.Queries, shares *sharesqlc.Queries, _ pgx.Tx) error {
 		loan, err := q.LockLoanByID(ctx, loanID)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
@@ -416,6 +390,9 @@ func (s *Service) RemoveGuarantor(ctx context.Context, loanID, guarantorID pgtyp
 			}
 			return fmt.Errorf("lock guarantor: %w", err)
 		}
+		if err := share.ReleaseLoanSecurity(ctx, shares, loanID, guarantorID); err != nil {
+			return err
+		}
 		if current.Status == loansqlc.GuarantorStatusRejected {
 			return nil
 		}
@@ -424,6 +401,7 @@ func (s *Service) RemoveGuarantor(ctx context.Context, loanID, guarantorID pgtyp
 			LoanID:      loanID,
 			Status:      loansqlc.GuarantorStatusRejected,
 			GuarantorID: guarantorID,
+			ApprovedBy:  current.ApprovedBy,
 		})
 		if err != nil {
 			return fmt.Errorf("remove guarantor: %w", err)
@@ -434,7 +412,7 @@ func (s *Service) RemoveGuarantor(ctx context.Context, loanID, guarantorID pgtyp
 			FieldChanged:  "guarantor.status",
 			PreviousValue: text(string(current.Status)),
 			NewValue:      string(loansqlc.GuarantorStatusRejected),
-			ChangedBy:     guarantorID,
+			ChangedBy:     removedBy,
 			ChangeReason:  "guarantor removed",
 		})
 		if err != nil {
@@ -450,7 +428,7 @@ func (s *Service) ApproveLoan(
 	reason string,
 ) (loansqlc.UpdateLoanStatusRow, error) {
 	var loan loansqlc.UpdateLoanStatusRow
-	err := s.store.ExecCollateralTx(ctx, func(q *loansqlc.Queries, shares *sharesqlc.Queries) error {
+	err := s.store.ExecCollateralTx(ctx, func(q *loansqlc.Queries, shares *sharesqlc.Queries, tx pgx.Tx) error {
 		current, err := q.LockLoanByID(ctx, loanID)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
@@ -461,37 +439,7 @@ func (s *Service) ApproveLoan(
 		if current.Status != loansqlc.LoanStatusPending {
 			return fmt.Errorf("%w: cannot approve %s loan", ErrInvalidStatusTransition, current.Status)
 		}
-		pledge, err := shares.GetApplicantSharePledge(ctx, loanID)
-		switch {
-		case err == nil && pledge.Status == sharesqlc.SharePledgeStatusPending:
-			// Every pledge activation and balance reduction locks this account row;
-			// the active sum below therefore cannot race another approval.
-			account, err := shares.LockAndReadAccount(ctx, pledge.ShareAccountID)
-			if err != nil || account.Status != sharesqlc.ShareAccountStatusActive {
-				return ErrInsufficientCollateral
-			}
-			balance := new(big.Int)
-			latest, err := shares.GetLatestBalance(ctx, account.ID)
-			switch {
-			case err == nil:
-				balance = numericToScale(latest, -4)
-			case !errors.Is(err, pgx.ErrNoRows):
-				return fmt.Errorf("read applicant shares: %w", err)
-			}
-			active, err := shares.GetActivePledgedAmount(ctx, account.ID)
-			if err != nil {
-				return fmt.Errorf("read active share pledges: %w", err)
-			}
-			if new(big.Int).Sub(balance, numericToScale(active, -4)).Cmp(numericToScale(pledge.PledgedAmount, -4)) < 0 {
-				return ErrInsufficientCollateral
-			}
-			if _, err := shares.ActivateSharePledge(ctx, sharesqlc.ActivateSharePledgeParams{ID: pledge.ID, ApprovedBy: approvedBy}); err != nil {
-				return fmt.Errorf("activate applicant share pledge: %w", err)
-			}
-		case err != nil && !errors.Is(err, pgx.ErrNoRows):
-			return fmt.Errorf("read applicant share pledge: %w", err)
-		}
-		if err := verifyCollateral(ctx, q, shares, loanID, current.MemberID, current.Principal); err != nil {
+		if err := verifyCollateral(ctx, tx, q, shares, loanID, current.MemberID, current.BranchID, current.Principal, approvedBy); err != nil {
 			return err
 		}
 
@@ -520,7 +468,7 @@ func (s *Service) RejectLoan(
 	reason string,
 ) (loansqlc.UpdateLoanStatusRow, error) {
 	var loan loansqlc.UpdateLoanStatusRow
-	err := s.store.ExecCollateralTx(ctx, func(q *loansqlc.Queries, shares *sharesqlc.Queries) error {
+	err := s.store.ExecCollateralTx(ctx, func(q *loansqlc.Queries, shares *sharesqlc.Queries, _ pgx.Tx) error {
 		current, err := q.LockLoanByID(ctx, loanID)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
@@ -543,8 +491,8 @@ func (s *Service) RejectLoan(
 		if err := insertStatusAudit(ctx, q, loanID, current.Status, loansqlc.LoanStatusRejected, rejectedBy, reason); err != nil {
 			return err
 		}
-		if err := shares.ReleaseApplicantSharePledge(ctx, loanID); err != nil {
-			return fmt.Errorf("release applicant share pledge: %w", err)
+		if err := share.ReleaseLoanSecurity(ctx, shares, loanID, pgtype.UUID{}); err != nil {
+			return fmt.Errorf("release loan share security: %w", err)
 		}
 		return nil
 	})
@@ -562,7 +510,7 @@ func (s *Service) DisburseLoan(
 	var tx loansqlc.LoanTransaction
 	var loan loansqlc.MarkLoanDisbursedRow
 
-	err := s.store.ExecCollateralTx(ctx, func(q *loansqlc.Queries, shares *sharesqlc.Queries) error {
+	err := s.store.ExecCollateralTx(ctx, func(q *loansqlc.Queries, shares *sharesqlc.Queries, dbtx pgx.Tx) error {
 		current, err := q.LockLoanByID(ctx, loanID)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
@@ -584,7 +532,7 @@ func (s *Service) DisburseLoan(
 		if current.Status != loansqlc.LoanStatusApproved {
 			return fmt.Errorf("%w: cannot disburse %s loan", ErrInvalidStatusTransition, current.Status)
 		}
-		if err := verifyCollateral(ctx, q, shares, loanID, current.MemberID, current.Principal); err != nil {
+		if err := verifyCollateral(ctx, dbtx, q, shares, loanID, current.MemberID, current.BranchID, current.Principal, pgtype.UUID{}); err != nil {
 			return err
 		}
 
@@ -674,6 +622,32 @@ func (s *Service) RecordRepayment(
 
 // RecordRepaymentForPeriod uses the contribution month, not the callback arrival month.
 func (s *Service) RecordRepaymentForPeriod(ctx context.Context, loanID pgtype.UUID, amount pgtype.Numeric, gatewayTransactionID string, createdBy pgtype.UUID, period pgtype.Date) (loansqlc.LoanTransaction, error) {
+	var result loansqlc.LoanTransaction
+	err := s.store.ExecCollateralTx(ctx, func(q *loansqlc.Queries, shares *sharesqlc.Queries, _ pgx.Tx) error {
+		var err error
+		result, err = s.RecordRepaymentForPeriodInTx(ctx, q, shares, loanID, amount, gatewayTransactionID, createdBy, period, pgtype.UUID{}, 0)
+		return err
+	})
+	if err != nil {
+		return loansqlc.LoanTransaction{}, err
+	}
+	return result, err
+}
+
+// RecordRepaymentForPeriodInTx lets receipts commit repayments and allocation markers together.
+// The supplied sqlc queries must use the same transaction, including collateral release.
+func (s *Service) RecordRepaymentForPeriodInTx(
+	ctx context.Context,
+	q *loansqlc.Queries,
+	shares *sharesqlc.Queries,
+	loanID pgtype.UUID,
+	amount pgtype.Numeric,
+	gatewayTransactionID string,
+	createdBy pgtype.UUID,
+	period pgtype.Date,
+	memberID pgtype.UUID,
+	branchID int64,
+) (loansqlc.LoanTransaction, error) {
 	if !period.Valid || period.InfinityModifier != pgtype.Finite {
 		return loansqlc.LoanTransaction{}, ErrInvalidRepaymentPeriod
 	}
@@ -691,145 +665,161 @@ func (s *Service) RecordRepaymentForPeriod(ctx context.Context, loanID pgtype.UU
 	}
 
 	var tx loansqlc.LoanTransaction
-	err := s.store.ExecCollateralTx(ctx, func(q *loansqlc.Queries, shares *sharesqlc.Queries) error {
-		current, err := q.LockLoanByID(ctx, loanID)
-		if err != nil {
-			if errors.Is(err, pgx.ErrNoRows) {
-				return ErrLoanNotFound
-			}
-			return fmt.Errorf("lock loan: %w", err)
-		}
-		tx, err = q.GetLoanTransactionByGatewayID(ctx, loansqlc.GetLoanTransactionByGatewayIDParams{
-			LoanID:                      loanID,
-			PaymentGatewayTransactionID: pgtype.Text{String: gatewayTransactionID, Valid: true},
-		})
-		switch {
-		case err == nil:
-			if numericToScale(tx.Amount, -9).Cmp(numericToScale(amount, -9)) != 0 {
-				return ErrRepaymentAmountConflict
-			}
-			return nil
-		case !errors.Is(err, pgx.ErrNoRows):
-			return fmt.Errorf("check existing repayment: %w", err)
-		}
 
-		switch current.Status {
-		case loansqlc.LoanStatusDisbursed, loansqlc.LoanStatusActive, loansqlc.LoanStatusDelinquent:
-		default:
-			return ErrPaymentNotAllowed
+	current, err := q.LockLoanByID(ctx, loanID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return tx, ErrLoanNotFound
 		}
+		return tx, fmt.Errorf("lock loan: %w", err)
+	}
+	if memberID.Valid && (current.MemberID != memberID || current.BranchID != branchID) {
+		return tx, ErrLoanNotFound
+	}
+	tx, err = q.GetLoanTransactionByGatewayID(ctx, loansqlc.GetLoanTransactionByGatewayIDParams{
+		LoanID:                      loanID,
+		PaymentGatewayTransactionID: pgtype.Text{String: gatewayTransactionID, Valid: true},
+	})
+	switch {
+	case err == nil:
+		if numericToScale(tx.Amount, -9).Cmp(numericToScale(amount, -9)) != 0 {
+			return tx, ErrRepaymentAmountConflict
+		}
+		return tx, nil
+	case !errors.Is(err, pgx.ErrNoRows):
+		return tx, fmt.Errorf("check existing repayment: %w", err)
+	}
 
-		schedules, err := q.LockActiveRepaymentSchedulesByLoan(ctx, loanID)
-		if err != nil {
-			return fmt.Errorf("lock repayment schedules: %w", err)
-		}
-		if len(schedules) == 0 {
-			return ErrRepaymentScheduleMissing
-		}
+	switch current.Status {
+	case loansqlc.LoanStatusDisbursed, loansqlc.LoanStatusActive, loansqlc.LoanStatusDelinquent:
+	default:
+		return tx, ErrPaymentNotAllowed
+	}
 
-		totals, err := q.GetLoanRepaymentTotals(ctx, loanID)
-		if err != nil {
-			return fmt.Errorf("sum repayments: %w", err)
-		}
-		latest, err := q.GetLoanInterestPeriod(ctx, loanID)
-		if err != nil {
-			return fmt.Errorf("get interest period: %w", err)
-		}
-		// Backdating would change an opening balance already used for interest.
-		if (latest.Valid && latest.Time.After(period.Time)) ||
-			(totals.LatestPeriod.Valid && totals.LatestPeriod.Time.After(period.Time)) {
-			return ErrInvalidRepaymentPeriod
-		}
-		if current.DisbursedAt.Valid {
-			disbursed := current.DisbursedAt.Time.In(time.FixedZone("EAT", 3*60*60))
-			if period.Time.Before(time.Date(disbursed.Year(), disbursed.Month(), 1, 0, 0, 0, 0, time.UTC)) {
-				return ErrInvalidRepaymentPeriod
-			}
-		}
-		// Start assessment at the first collected period; do not retrospectively
-		// charge legacy loans. Thereafter catch up missed months without compounding.
-		first := period.Time
-		if latest.Valid {
-			first = latest.Time.AddDate(0, 1, 0)
-		}
-		for month := first; !month.After(period.Time); month = month.AddDate(0, 1, 0) {
-			if err := q.AssessLoanInterest(ctx, loansqlc.AssessLoanInterestParams{
-				LoanID: loanID, Period: pgtype.Date{Time: month, Valid: true},
-			}); err != nil {
-				return fmt.Errorf("assess monthly interest: %w", err)
-			}
-		}
-		assessed, err := q.SumLoanInterestDue(ctx, loanID)
-		if err != nil {
-			return fmt.Errorf("sum interest: %w", err)
-		}
-		interestDue := numericToScale(assessed, -4)
-		interestDue.Sub(interestDue, numericToScale(totals.Interest, -4))
-		if interestDue.Sign() < 0 {
-			interestDue.SetInt64(0)
-		}
-		priorApplied := totals.Principal
-		allocation := allocateRepayment(amount, priorApplied, current.Principal, numericFromScale(interestDue))
-		allocation.Period = period.Time.Format("2006-01-02")
-		allocationJSON, err := json.Marshal(allocation)
-		if err != nil {
-			return fmt.Errorf("encode allocation: %w", err)
-		}
+	schedules, err := q.LockActiveRepaymentSchedulesByLoan(ctx, loanID)
+	if err != nil {
+		return tx, fmt.Errorf("lock repayment schedules: %w", err)
+	}
+	if len(schedules) == 0 {
+		return tx, ErrRepaymentScheduleMissing
+	}
 
-		referenceID, err := newUUID()
-		if err != nil {
-			return fmt.Errorf("generate reference id: %w", err)
+	totals, err := q.GetLoanRepaymentTotals(ctx, loanID)
+	if err != nil {
+		return tx, fmt.Errorf("sum repayments: %w", err)
+	}
+	latest, err := q.GetLoanInterestPeriod(ctx, loanID)
+	if err != nil {
+		return tx, fmt.Errorf("get interest period: %w", err)
+	}
+	// Backdating would change an opening balance already used for interest.
+	if (latest.Valid && latest.Time.After(period.Time)) ||
+		(totals.LatestPeriod.Valid && totals.LatestPeriod.Time.After(period.Time)) {
+		return tx, ErrInvalidRepaymentPeriod
+	}
+	if current.DisbursedAt.Valid {
+		disbursed := current.DisbursedAt.Time.In(time.FixedZone("EAT", 3*60*60))
+		if period.Time.Before(time.Date(disbursed.Year(), disbursed.Month(), 1, 0, 0, 0, 0, time.UTC)) {
+			return tx, ErrInvalidRepaymentPeriod
 		}
-		tx, err = q.InsertLoanTransaction(ctx, loansqlc.InsertLoanTransactionParams{
-			LoanID:                      loanID,
-			Type:                        loansqlc.LoanTransactionTypeRepayment,
-			Amount:                      amount,
-			ReferenceID:                 referenceID,
-			PaymentGatewayTransactionID: pgtype.Text{String: gatewayTransactionID, Valid: true},
-			AllocationBreakdown:         allocationJSON,
-			CreatedBy:                   createdBy,
-		})
-		if err != nil {
-			return fmt.Errorf("insert repayment transaction: %w", err)
+	}
+	// Start assessment at the first collected period; do not retrospectively
+	// charge legacy loans. Thereafter catch up missed months without compounding.
+	first := period.Time
+	if latest.Valid {
+		first = latest.Time.AddDate(0, 1, 0)
+	}
+	for month := first; !month.After(period.Time); month = month.AddDate(0, 1, 0) {
+		if err := q.AssessLoanInterest(ctx, loansqlc.AssessLoanInterestParams{
+			LoanID: loanID, Period: pgtype.Date{Time: month, Valid: true},
+		}); err != nil {
+			return tx, fmt.Errorf("assess monthly interest: %w", err)
 		}
+	}
+	assessed, err := q.SumLoanInterestDue(ctx, loanID)
+	if err != nil {
+		return tx, fmt.Errorf("sum interest: %w", err)
+	}
+	interestDue := numericToScale(assessed, -4)
+	interestDue.Sub(interestDue, numericToScale(totals.Interest, -4))
+	if interestDue.Sign() < 0 {
+		interestDue.SetInt64(0)
+	}
+	priorApplied := totals.Principal
+	allocation := allocateRepayment(amount, priorApplied, current.Principal, numericFromScale(interestDue))
+	allocation.Period = period.Time.Format("2006-01-02")
+	allocationJSON, err := json.Marshal(allocation)
+	if err != nil {
+		return tx, fmt.Errorf("encode allocation: %w", err)
+	}
 
-		if allocation.Credit != "0" {
-			if _, err := q.CreateCreditBalance(ctx, loansqlc.CreateCreditBalanceParams{
-				MemberID: current.MemberID,
-				LoanID:   loanID,
-				Amount:   numericFromScale(allocation.creditAmount),
-				Source:   loansqlc.CreditBalanceSourceOverpayment,
-			}); err != nil {
-				return fmt.Errorf("create credit balance: %w", err)
-			}
-		}
-
-		totalApplied := numericToScale(priorApplied, -4)
-		totalApplied.Add(totalApplied, allocation.loanAppliedAmount)
-		if err := updateScheduleStatuses(ctx, q, schedules, totalApplied); err != nil {
-			return err
-		}
-		if allocation.loanClosed {
-			if _, err := q.UpdateLoanStatus(ctx, loansqlc.UpdateLoanStatusParams{
-				ID:        loanID,
-				Status:    loansqlc.LoanStatusClosed,
-				UpdatedBy: createdBy,
-			}); err != nil {
-				return fmt.Errorf("close loan: %w", err)
-			}
-			if err := insertStatusAudit(ctx, q, loanID, current.Status, loansqlc.LoanStatusClosed, createdBy, "loan fully repaid"); err != nil {
-				return err
-			}
-			if err := shares.ReleaseApplicantSharePledge(ctx, loanID); err != nil {
-				return fmt.Errorf("release applicant share pledge: %w", err)
-			}
-		}
-		return nil
+	referenceID, err := newUUID()
+	if err != nil {
+		return tx, fmt.Errorf("generate reference id: %w", err)
+	}
+	tx, err = q.InsertLoanTransaction(ctx, loansqlc.InsertLoanTransactionParams{
+		LoanID:                      loanID,
+		Type:                        loansqlc.LoanTransactionTypeRepayment,
+		Amount:                      amount,
+		ReferenceID:                 referenceID,
+		PaymentGatewayTransactionID: pgtype.Text{String: gatewayTransactionID, Valid: true},
+		AllocationBreakdown:         allocationJSON,
+		CreatedBy:                   createdBy,
 	})
 	if err != nil {
-		return loansqlc.LoanTransaction{}, err
+		return tx, fmt.Errorf("insert repayment transaction: %w", err)
+	}
+
+	if allocation.Credit != "0" {
+		if _, err := q.CreateCreditBalance(ctx, loansqlc.CreateCreditBalanceParams{
+			MemberID: current.MemberID,
+			LoanID:   loanID,
+			Amount:   numericFromScale(allocation.creditAmount),
+			Source:   loansqlc.CreditBalanceSourceOverpayment,
+		}); err != nil {
+			return tx, fmt.Errorf("create credit balance: %w", err)
+		}
+	}
+
+	totalApplied := numericToScale(priorApplied, -4)
+	totalApplied.Add(totalApplied, allocation.loanAppliedAmount)
+	if err := updateScheduleStatuses(ctx, q, schedules, totalApplied); err != nil {
+		return tx, err
+	}
+	if allocation.loanClosed {
+		if _, err := q.UpdateLoanStatus(ctx, loansqlc.UpdateLoanStatusParams{
+			ID:        loanID,
+			Status:    loansqlc.LoanStatusClosed,
+			UpdatedBy: createdBy,
+		}); err != nil {
+			return tx, fmt.Errorf("close loan: %w", err)
+		}
+		if err := insertStatusAudit(ctx, q, loanID, current.Status, loansqlc.LoanStatusClosed, createdBy, "loan fully repaid"); err != nil {
+			return tx, err
+		}
+		if err := share.ReleaseLoanSecurity(ctx, shares, loanID, pgtype.UUID{}); err != nil {
+			return tx, fmt.Errorf("release loan share security: %w", err)
+		}
 	}
 	return tx, nil
+}
+
+// ValidateContributionTarget locks eligibility before a new cash receipt is accepted.
+// Without it, a direct RPC could collect against another member's or a closed loan.
+func (s *Service) ValidateContributionTarget(ctx context.Context, q *loansqlc.Queries, loanID, memberID pgtype.UUID, branchID int64) error {
+	current, err := q.LockLoanByID(ctx, loanID)
+	if errors.Is(err, pgx.ErrNoRows) || (err == nil && (current.MemberID != memberID || current.BranchID != branchID)) {
+		return ErrLoanNotFound
+	}
+	if err != nil {
+		return err
+	}
+	switch current.Status {
+	case loansqlc.LoanStatusDisbursed, loansqlc.LoanStatusActive, loansqlc.LoanStatusDelinquent:
+		return nil
+	default:
+		return ErrPaymentNotAllowed
+	}
 }
 
 func (s *Service) ListGuarantors(
@@ -837,7 +827,7 @@ func (s *Service) ListGuarantors(
 	loanID pgtype.UUID,
 	cursor *LoanCursor,
 	limit int32,
-) ([]loansqlc.LoanGuarantor, error) {
+) ([]loansqlc.ListLoanGuarantorsRow, error) {
 	params := loansqlc.ListLoanGuarantorsParams{
 		LoanID: loanID,
 		Limit:  normalizeLimit(limit),
@@ -972,27 +962,13 @@ func sumScheduleAmountDue(schedules []loansqlc.RepaymentSchedule) *big.Int {
 // verifyCollateral is shared by approval and disbursement so both gates apply
 // the same 3x-share ceiling and coverage calculation. Removing it lets those
 // two financial decisions drift apart.
-func verifyCollateral(ctx context.Context, q *loansqlc.Queries, shares *sharesqlc.Queries, loanID, memberID pgtype.UUID, principal pgtype.Numeric) error {
-	account, err := shares.LockAccountByMemberID(ctx, memberID)
-	if err != nil || account.Status != sharesqlc.ShareAccountStatusActive {
-		return ErrInsufficientCollateral
+func verifyCollateral(ctx context.Context, tx pgx.Tx, q *loansqlc.Queries, shares *sharesqlc.Queries, loanID, memberID pgtype.UUID, branchID int64, principal pgtype.Numeric, approvedBy pgtype.UUID) error {
+	if err := requireActiveMemberInTx(ctx, tx, memberID, branchID, ErrMemberNotActive); err != nil {
+		return err
 	}
-	balance := new(big.Int)
-	latest, err := shares.GetLatestBalance(ctx, account.ID)
-	switch {
-	case err == nil:
-		balance = numericToScale(latest, -4)
-	case !errors.Is(err, pgx.ErrNoRows):
-		return fmt.Errorf("read applicant shares: %w", err)
-	}
-	principalAmount := numericToScale(principal, -4)
-	if new(big.Int).Mul(new(big.Int).Set(balance), big.NewInt(3)).Cmp(principalAmount) < 0 {
-		return ErrInsufficientCollateral
-	}
-
-	total, err := shares.GetActiveApplicantPledgeAmount(ctx, loanID)
+	total, err := share.VerifyApplicantSecurity(ctx, shares, loanID, memberID, approvedBy, principal)
 	if err != nil {
-		return fmt.Errorf("read applicant share pledge: %w", err)
+		return err
 	}
 	coverage := numericToScale(total, -4)
 	guarantors, err := q.ListLoanGuarantors(ctx, loansqlc.ListLoanGuarantorsParams{
@@ -1007,10 +983,16 @@ func verifyCollateral(ctx context.Context, q *loansqlc.Queries, shares *sharesql
 		if guarantor.Status != loansqlc.GuarantorStatusApproved {
 			continue
 		}
+		if err := requireActiveMemberInTx(ctx, tx, guarantor.GuarantorID, branchID, ErrGuarantorNotActive); err != nil {
+			return err
+		}
+		if err := share.VerifyGuarantorSecurity(ctx, shares, loanID, guarantor.GuarantorID, guarantor.GuaranteedAmount); err != nil {
+			return err
+		}
 		coverage.Add(coverage, numericToScale(guarantor.GuaranteedAmount, -4))
 	}
-	if coverage.Cmp(principalAmount) < 0 {
-		return ErrInsufficientCollateral
+	if coverage.Cmp(numericToScale(principal, -4)) < 0 {
+		return fmt.Errorf("%w: approved security is KES %s against principal KES %s. Pending guarantors do not count; approve sufficient guarantees before approving or disbursing the loan", ErrInsufficientCollateral, numericToString(pgtype.Numeric{Int: coverage, Exp: -4, Valid: true}), numericToString(principal))
 	}
 	return nil
 }
@@ -1050,6 +1032,16 @@ func normalizeLimit(limit int32) int32 {
 
 // requireActiveMember keeps member-service errors behind loan-domain errors so
 // callers know whether the applicant or guarantor failed the eligibility gate.
+// requireActiveMemberInTx keeps membership locked through commit and preserves
+// infrastructure errors as internal failures instead of exposing them as validation.
+func requireActiveMemberInTx(ctx context.Context, tx pgx.Tx, memberID pgtype.UUID, branchID int64, inactiveErr error) error {
+	err := member.RequireActiveMemberInTx(ctx, tx, memberID, branchID)
+	if errors.Is(err, member.ErrMemberNotActive) {
+		return inactiveErr
+	}
+	return err
+}
+
 func (s *Service) requireActiveMember(ctx context.Context, memberID pgtype.UUID, inactiveErr error) error {
 	if s.memberService == nil {
 		return inactiveErr

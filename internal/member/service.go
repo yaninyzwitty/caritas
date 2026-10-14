@@ -2,13 +2,25 @@ package member
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/yaninyzwitty/caritas-backend/internal/repository/sqlc"
 )
 
 const DefaultBranchID = 1
+
+// RequireActiveMemberInTx holds eligibility stable until cash acceptance commits.
+// A separate read would allow a member suspension between validation and receipt creation.
+func RequireActiveMemberInTx(ctx context.Context, tx pgx.Tx, memberID pgtype.UUID, branchID int64) error {
+	_, err := sqlc.New(tx).ValidateMemberActiveInBranch(ctx, sqlc.ValidateMemberActiveInBranchParams{ID: memberID, BranchID: branchID})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ErrMemberNotActive
+	}
+	return err
+}
 
 // centralize the status transition rules here so they can be easily referenced and updated in one place.
 var statusTransitions = map[string]map[string]bool{
@@ -106,16 +118,18 @@ func (s *Service) GetMemberByNationalID(ctx context.Context, branchID int64, nat
 	return s.store.GetMemberByID(ctx, existing.ID)
 }
 
-func (s *Service) ListMembers(ctx context.Context, branchID int64, cursor *pgtype.UUID, limit int32) ([]sqlc.ListMembersByBranchCursorRow, error) {
+func (s *Service) ListMembers(ctx context.Context, branchID int64, cursor *pgtype.UUID, limit int32, search, statusFilter string) ([]sqlc.ListMembersByBranchCursorRow, error) {
 	var cursorUUID pgtype.UUID
 	if cursor != nil {
 		cursorUUID = *cursor
 	}
 
 	return s.store.ListMembersByBranchCursor(ctx, sqlc.ListMembersByBranchCursorParams{
-		BranchID: branchID,
-		Column2:  cursorUUID,
-		Limit:    limit,
+		BranchID:     branchID,
+		Column2:      cursorUUID,
+		Limit:        limit,
+		Search:       search,
+		StatusFilter: statusFilter,
 	})
 }
 

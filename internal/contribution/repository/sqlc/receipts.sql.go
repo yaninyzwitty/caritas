@@ -307,6 +307,65 @@ func (q *Queries) ListContributionReceiptsByMember(ctx context.Context, arg List
 	return items, nil
 }
 
+const listPendingContributionReceipts = `-- name: ListPendingContributionReceipts :many
+SELECT id, source_channel, external_transaction_id, checkout_request_id, member_id, branch_id, contribution_period, received_amount, allocation_plan, status, failure_reason, received_by, received_at, is_deleted, created_at, updated_at, deleted_at, deleted_by, deletion_reason, internal_receipt_reference, idempotency_key, cashier_session_id FROM contribution_receipts
+WHERE status IN ('pending', 'processing') AND NOT is_deleted
+  AND updated_at < $1::timestamptz
+  AND ($2::timestamptz IS NULL
+       OR (created_at, id) > ($2, $3::uuid))
+ORDER BY created_at, id
+LIMIT 50
+`
+
+type ListPendingContributionReceiptsParams struct {
+	Cutoff          pgtype.Timestamptz `json:"cutoff"`
+	CursorCreatedAt pgtype.Timestamptz `json:"cursorCreatedAt"`
+	CursorID        pgtype.UUID        `json:"cursorId"`
+}
+
+func (q *Queries) ListPendingContributionReceipts(ctx context.Context, arg ListPendingContributionReceiptsParams) ([]ContributionReceipt, error) {
+	rows, err := q.db.Query(ctx, listPendingContributionReceipts, arg.Cutoff, arg.CursorCreatedAt, arg.CursorID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ContributionReceipt
+	for rows.Next() {
+		var i ContributionReceipt
+		if err := rows.Scan(
+			&i.ID,
+			&i.SourceChannel,
+			&i.ExternalTransactionID,
+			&i.CheckoutRequestID,
+			&i.MemberID,
+			&i.BranchID,
+			&i.ContributionPeriod,
+			&i.ReceivedAmount,
+			&i.AllocationPlan,
+			&i.Status,
+			&i.FailureReason,
+			&i.ReceivedBy,
+			&i.ReceivedAt,
+			&i.IsDeleted,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+			&i.DeletedBy,
+			&i.DeletionReason,
+			&i.InternalReceiptReference,
+			&i.IdempotencyKey,
+			&i.CashierSessionID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const lockContributionReceiptByID = `-- name: LockContributionReceiptByID :one
 SELECT id, source_channel, external_transaction_id, checkout_request_id, member_id, branch_id, contribution_period, received_amount, allocation_plan, status, failure_reason, received_by, received_at, is_deleted, created_at, updated_at, deleted_at, deleted_by, deletion_reason, internal_receipt_reference, idempotency_key, cashier_session_id
 FROM contribution_receipts

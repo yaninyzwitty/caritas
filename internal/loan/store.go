@@ -19,7 +19,7 @@ type Store struct {
 
 // ExecCollateralTx gives loan and share sqlc queries the same transaction.
 // Without it, a loan could be approved while its share pledge fails to activate.
-func (s *Store) ExecCollateralTx(ctx context.Context, fn func(*loansqlc.Queries, *sharesqlc.Queries) error) error {
+func (s *Store) ExecCollateralTx(ctx context.Context, fn func(*loansqlc.Queries, *sharesqlc.Queries, pgx.Tx) error) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("begin tx: %w", err)
@@ -29,7 +29,7 @@ func (s *Store) ExecCollateralTx(ctx context.Context, fn func(*loansqlc.Queries,
 			slog.Error("rollback transaction", "error", err)
 		}
 	}()
-	if err := fn(loansqlc.New(tx), sharesqlc.New(tx)); err != nil {
+	if err := fn(loansqlc.New(tx), sharesqlc.New(tx), tx); err != nil {
 		return fmt.Errorf("exec tx: %w", err)
 	}
 	if err := tx.Commit(ctx); err != nil {
