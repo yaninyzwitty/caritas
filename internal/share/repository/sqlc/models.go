@@ -17,6 +17,7 @@ const (
 	ShareAccountStatusActive  ShareAccountStatus = "active"
 	ShareAccountStatusDormant ShareAccountStatus = "dormant"
 	ShareAccountStatusClosed  ShareAccountStatus = "closed"
+	ShareAccountStatusFrozen  ShareAccountStatus = "frozen"
 )
 
 func (e *ShareAccountStatus) Scan(src interface{}) error {

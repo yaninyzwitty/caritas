@@ -131,6 +131,9 @@ func (s *Service) ApplyForLoan(ctx context.Context, params loansqlc.CreateLoanPa
 		return nil
 	})
 	if err != nil {
+		if errors.Is(err, share.ErrLoanSecurity) {
+			return loansqlc.CreateLoanRow{}, fmt.Errorf("%w: %w", ErrInsufficientCollateral, err)
+		}
 		return loansqlc.CreateLoanRow{}, err
 	}
 	return loan, nil
