@@ -67,3 +67,12 @@ WHERE member_id = $1
 ORDER BY created_at DESC, id DESC
 LIMIT sqlc.arg('limit');
 
+-- name: ListPendingContributionReceipts :many
+SELECT * FROM contribution_receipts
+WHERE status IN ('pending', 'processing') AND NOT is_deleted
+  AND updated_at < sqlc.arg(cutoff)::timestamptz
+  AND (sqlc.narg(cursor_created_at)::timestamptz IS NULL
+       OR (created_at, id) > (sqlc.narg(cursor_created_at), sqlc.narg(cursor_id)::uuid))
+ORDER BY created_at, id
+LIMIT 50;
+

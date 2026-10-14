@@ -220,12 +220,15 @@ type Loan struct {
 	UpdatedBy             string                 `protobuf:"bytes,11,opt,name=updated_by,json=updatedBy,proto3" json:"updated_by,omitempty"`
 	PreviousStatus        string                 `protobuf:"bytes,12,opt,name=previous_status,json=previousStatus,proto3" json:"previous_status,omitempty"`
 	// Keep field 13 for the existing principal balance contract, excluding interest and penalties.
-	OutstandingPrincipal *string `protobuf:"bytes,13,opt,name=outstanding_principal,json=outstandingPrincipal,proto3,oneof" json:"outstanding_principal,omitempty"`
-	MemberName           string  `protobuf:"bytes,14,opt,name=member_name,json=memberName,proto3" json:"member_name,omitempty"`
-	NationalId           string  `protobuf:"bytes,15,opt,name=national_id,json=nationalId,proto3" json:"national_id,omitempty"`
-	MemberNumber         int64   `protobuf:"varint,16,opt,name=member_number,json=memberNumber,proto3" json:"member_number,omitempty"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	OutstandingPrincipal      *string `protobuf:"bytes,13,opt,name=outstanding_principal,json=outstandingPrincipal,proto3,oneof" json:"outstanding_principal,omitempty"`
+	MemberName                string  `protobuf:"bytes,14,opt,name=member_name,json=memberName,proto3" json:"member_name,omitempty"`
+	NationalId                string  `protobuf:"bytes,15,opt,name=national_id,json=nationalId,proto3" json:"national_id,omitempty"`
+	MemberNumber              int64   `protobuf:"varint,16,opt,name=member_number,json=memberNumber,proto3" json:"member_number,omitempty"`
+	ApplicantSharePledge      string  `protobuf:"bytes,17,opt,name=applicant_share_pledge,json=applicantSharePledge,proto3" json:"applicant_share_pledge,omitempty"`
+	ApprovedGuarantorCoverage string  `protobuf:"bytes,18,opt,name=approved_guarantor_coverage,json=approvedGuarantorCoverage,proto3" json:"approved_guarantor_coverage,omitempty"`
+	CollateralShortfall       string  `protobuf:"bytes,19,opt,name=collateral_shortfall,json=collateralShortfall,proto3" json:"collateral_shortfall,omitempty"`
+	unknownFields             protoimpl.UnknownFields
+	sizeCache                 protoimpl.SizeCache
 }
 
 func (x *Loan) Reset() {
@@ -370,6 +373,27 @@ func (x *Loan) GetMemberNumber() int64 {
 	return 0
 }
 
+func (x *Loan) GetApplicantSharePledge() string {
+	if x != nil {
+		return x.ApplicantSharePledge
+	}
+	return ""
+}
+
+func (x *Loan) GetApprovedGuarantorCoverage() string {
+	if x != nil {
+		return x.ApprovedGuarantorCoverage
+	}
+	return ""
+}
+
+func (x *Loan) GetCollateralShortfall() string {
+	if x != nil {
+		return x.CollateralShortfall
+	}
+	return ""
+}
+
 // LoanGuarantor represents a member who guarantees a loan.
 type LoanGuarantor struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
@@ -380,6 +404,8 @@ type LoanGuarantor struct {
 	ApprovedAt       *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=approved_at,json=approvedAt,proto3" json:"approved_at,omitempty"`
 	ApprovedBy       string                 `protobuf:"bytes,6,opt,name=approved_by,json=approvedBy,proto3" json:"approved_by,omitempty"`
 	CreatedAt        *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	GuarantorName    string                 `protobuf:"bytes,8,opt,name=guarantor_name,json=guarantorName,proto3" json:"guarantor_name,omitempty"`
+	GuarantorNumber  int64                  `protobuf:"varint,9,opt,name=guarantor_number,json=guarantorNumber,proto3" json:"guarantor_number,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -461,6 +487,20 @@ func (x *LoanGuarantor) GetCreatedAt() *timestamppb.Timestamp {
 		return x.CreatedAt
 	}
 	return nil
+}
+
+func (x *LoanGuarantor) GetGuarantorName() string {
+	if x != nil {
+		return x.GuarantorName
+	}
+	return ""
+}
+
+func (x *LoanGuarantor) GetGuarantorNumber() int64 {
+	if x != nil {
+		return x.GuarantorNumber
+	}
+	return 0
 }
 
 // CreditBalance represents overpayment tracking for a loan.
@@ -1921,7 +1961,7 @@ var File_loan_v1_loan_proto protoreflect.FileDescriptor
 
 const file_loan_v1_loan_proto_rawDesc = "" +
 	"\n" +
-	"\x12loan/v1/loan.proto\x12\aloan.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16member/v1/member.proto\"\xb0\x05\n" +
+	"\x12loan/v1/loan.proto\x12\aloan.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16member/v1/member.proto\"\xd9\x06\n" +
 	"\x04Loan\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tmember_id\x18\x02 \x01(\tR\bmemberId\x12\x1b\n" +
@@ -1944,8 +1984,11 @@ const file_loan_v1_loan_proto_rawDesc = "" +
 	"memberName\x12\x1f\n" +
 	"\vnational_id\x18\x0f \x01(\tR\n" +
 	"nationalId\x12#\n" +
-	"\rmember_number\x18\x10 \x01(\x03R\fmemberNumberB\x18\n" +
-	"\x16_outstanding_principal\"\xc3\x02\n" +
+	"\rmember_number\x18\x10 \x01(\x03R\fmemberNumber\x124\n" +
+	"\x16applicant_share_pledge\x18\x11 \x01(\tR\x14applicantSharePledge\x12>\n" +
+	"\x1bapproved_guarantor_coverage\x18\x12 \x01(\tR\x19approvedGuarantorCoverage\x121\n" +
+	"\x14collateral_shortfall\x18\x13 \x01(\tR\x13collateralShortfallB\x18\n" +
+	"\x16_outstanding_principal\"\x95\x03\n" +
 	"\rLoanGuarantor\x12\x17\n" +
 	"\aloan_id\x18\x01 \x01(\tR\x06loanId\x12!\n" +
 	"\fguarantor_id\x18\x02 \x01(\tR\vguarantorId\x12+\n" +
@@ -1956,7 +1999,9 @@ const file_loan_v1_loan_proto_rawDesc = "" +
 	"\vapproved_by\x18\x06 \x01(\tR\n" +
 	"approvedBy\x129\n" +
 	"\n" +
-	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"\xb5\x02\n" +
+	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12%\n" +
+	"\x0eguarantor_name\x18\b \x01(\tR\rguarantorName\x12)\n" +
+	"\x10guarantor_number\x18\t \x01(\x03R\x0fguarantorNumber\"\xb5\x02\n" +
 	"\rCreditBalance\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tmember_id\x18\x02 \x01(\tR\bmemberId\x12\x17\n" +

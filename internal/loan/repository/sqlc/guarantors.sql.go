@@ -152,11 +152,14 @@ func (q *Queries) ListGuarantorLoans(ctx context.Context, guarantorID pgtype.UUI
 }
 
 const listLoanGuarantors = `-- name: ListLoanGuarantors :many
-SELECT loan_id, guarantor_id, guaranteed_amount, status, approved_at, approved_by, created_at
-FROM loan_guarantors
-WHERE loan_id = $1
-  AND ($2::timestamptz IS NULL OR created_at < $2 OR (created_at = $2 AND guarantor_id < $3))
-ORDER BY created_at DESC, guarantor_id DESC
+SELECT lg.loan_id, lg.guarantor_id, lg.guaranteed_amount, lg.status, lg.approved_at, lg.approved_by, lg.created_at,
+       m.member_number AS guarantor_number, COALESCE(mp.full_name, '')::text AS guarantor_name
+FROM loan_guarantors lg
+JOIN members m ON m.id = lg.guarantor_id
+LEFT JOIN member_profiles mp ON mp.member_id = m.id
+WHERE lg.loan_id = $1
+  AND ($2::timestamptz IS NULL OR lg.created_at < $2 OR (lg.created_at = $2 AND lg.guarantor_id < $3))
+ORDER BY lg.created_at DESC, lg.guarantor_id DESC
 LIMIT $4
 `
 
@@ -167,7 +170,19 @@ type ListLoanGuarantorsParams struct {
 	Limit       int32              `json:"limit"`
 }
 
-func (q *Queries) ListLoanGuarantors(ctx context.Context, arg ListLoanGuarantorsParams) ([]LoanGuarantor, error) {
+type ListLoanGuarantorsRow struct {
+	LoanID           pgtype.UUID        `json:"loanId"`
+	GuarantorID      pgtype.UUID        `json:"guarantorId"`
+	GuaranteedAmount pgtype.Numeric     `json:"guaranteedAmount"`
+	Status           GuarantorStatus    `json:"status"`
+	ApprovedAt       pgtype.Timestamptz `json:"approvedAt"`
+	ApprovedBy       pgtype.UUID        `json:"approvedBy"`
+	CreatedAt        pgtype.Timestamptz `json:"createdAt"`
+	GuarantorNumber  int64              `json:"guarantorNumber"`
+	GuarantorName    string             `json:"guarantorName"`
+}
+
+func (q *Queries) ListLoanGuarantors(ctx context.Context, arg ListLoanGuarantorsParams) ([]ListLoanGuarantorsRow, error) {
 	rows, err := q.db.Query(ctx, listLoanGuarantors,
 		arg.LoanID,
 		arg.Column2,
@@ -178,9 +193,9 @@ func (q *Queries) ListLoanGuarantors(ctx context.Context, arg ListLoanGuarantors
 		return nil, err
 	}
 	defer rows.Close()
-	var items []LoanGuarantor
+	var items []ListLoanGuarantorsRow
 	for rows.Next() {
-		var i LoanGuarantor
+		var i ListLoanGuarantorsRow
 		if err := rows.Scan(
 			&i.LoanID,
 			&i.GuarantorID,
@@ -189,6 +204,8 @@ func (q *Queries) ListLoanGuarantors(ctx context.Context, arg ListLoanGuarantors
 			&i.ApprovedAt,
 			&i.ApprovedBy,
 			&i.CreatedAt,
+			&i.GuarantorNumber,
+			&i.GuarantorName,
 		); err != nil {
 			return nil, err
 		}

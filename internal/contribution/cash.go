@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"math/big"
+	"sort"
 	"strings"
 	"time"
 
@@ -12,6 +14,9 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	contributionsqlc "github.com/yaninyzwitty/caritas-backend/internal/contribution/repository/sqlc"
+	loansqlc "github.com/yaninyzwitty/caritas-backend/internal/loan/repository/sqlc"
+	"github.com/yaninyzwitty/caritas-backend/internal/member"
+	sharesqlc "github.com/yaninyzwitty/caritas-backend/internal/share/repository/sqlc"
 )
 
 func (s *Service) OpenCashierSession(ctx context.Context, branchID int64, cashierID pgtype.UUID) (contributionsqlc.CashierSession, error) {
@@ -33,13 +38,16 @@ func (s *Service) OpenCashierSession(ctx context.Context, branchID int64, cashie
 }
 
 func (s *Service) CreateCashReceipt(ctx context.Context, params contributionsqlc.InsertContributionReceiptParams, allocations []AllocationInput) (CreatedReceipt, error) {
+	ctx, cancel := context.WithTimeout(ctx, 8*time.Second)
+	defer cancel()
 	params.SourceChannel = contributionsqlc.ContributionSourceChannelCash
 	params.IdempotencyKey = text(strings.TrimSpace(params.IdempotencyKey.String))
 	params.InternalReceiptReference = text("CASH-" + uuid.NewString())
 	params.ReceivedAt = pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true}
 
 	var result CreatedReceipt
-	err := s.store.ExecTx(ctx, func(q contributionsqlc.Querier) error {
+	err := s.store.ExecReceiptTx(ctx, func(tx pgx.Tx) error {
+		q := contributionsqlc.New(tx)
 		session, err := q.LockCashierSession(ctx, params.CashierSessionID)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ErrCashierSessionNotFound
@@ -78,6 +86,9 @@ func (s *Service) CreateCashReceipt(ctx context.Context, params contributionsqlc
 		if session.Status != contributionsqlc.CashierSessionStatusOpen || session.CashierID != params.ReceivedBy || session.BranchID != params.BranchID {
 			return ErrCashierSessionState
 		}
+		if err := member.RequireActiveMemberInTx(ctx, tx, params.MemberID, params.BranchID); err != nil {
+			return err
+		}
 		fees, err := monthlyFees(ctx, q, params.MemberID, params.ContributionPeriod, pgtype.UUID{})
 		if err != nil {
 			return err
@@ -86,6 +97,33 @@ func (s *Service) CreateCashReceipt(ctx context.Context, params contributionsqlc
 		if err != nil {
 			return err
 		}
+		if err := validateChargeAllocations(ctx, q, params.MemberID, params.BranchID, allocations, pgtype.UUID{}); err != nil {
+			return err
+		}
+		// Snapshot only cash receipt wording; it must not affect STK retry comparisons.
+		var chargeIDs []pgtype.UUID
+		for _, item := range allocations {
+			if item.Type == contributionsqlc.ContributionAllocationTypeOtherCharge || item.Type == contributionsqlc.ContributionAllocationTypePenalty {
+				chargeIDs = append(chargeIDs, item.TargetID)
+			}
+		}
+		if len(chargeIDs) > 0 {
+			charges, err := q.LockContributionCharges(ctx, chargeIDs)
+			if err != nil {
+				return fmt.Errorf("snapshot cash receipt charges: %w", err)
+			}
+			for _, charge := range charges {
+				label := map[string]string{
+					"literature": "Literature", "caritas_registration": "Caritas registration",
+					"lsf": "LSF", "laptop": "Laptop", "penalty": "Non-loan penalty", "other": "Other charge",
+				}[charge.Category]
+				for i := range allocations {
+					if allocations[i].TargetID == charge.ID {
+						allocations[i].DisplayLabel = label + " · " + charge.Reason
+					}
+				}
+			}
+		}
 		params.AllocationPlan, err = buildAllocationPlan(allocations)
 		if err != nil {
 			return err
@@ -93,8 +131,30 @@ func (s *Service) CreateCashReceipt(ctx context.Context, params contributionsqlc
 		if err := validateReceipt(params, allocations); err != nil {
 			return err
 		}
-		if err := validateChargeAllocations(ctx, q, params.MemberID, params.BranchID, allocations, pgtype.UUID{}); err != nil {
-			return err
+		// Lock loan targets before shares, matching receipt processing and loan collateral operations.
+		targets := append([]AllocationInput(nil), allocations...)
+		sort.Slice(targets, func(i, j int) bool {
+			if targets[i].Type != targets[j].Type {
+				return targets[i].Type < targets[j].Type
+			}
+			return targets[i].TargetID.String() < targets[j].TargetID.String()
+		})
+		for _, target := range targets {
+			switch target.Type {
+			case contributionsqlc.ContributionAllocationTypeSharePurchase:
+				if s.shareService == nil {
+					return ErrOwningServiceMissing
+				}
+				err = s.shareService.ValidateContributionTarget(ctx, sharesqlc.New(tx), target.TargetID, params.MemberID, params.BranchID)
+			case contributionsqlc.ContributionAllocationTypeLoanPrincipal:
+				if s.loanService == nil {
+					return ErrOwningServiceMissing
+				}
+				err = s.loanService.ValidateContributionTarget(ctx, loansqlc.New(tx), target.TargetID, params.MemberID, params.BranchID)
+			}
+			if err != nil {
+				return err
+			}
 		}
 		result, err = s.createReceipt(ctx, q, params, allocations)
 		return err
@@ -108,7 +168,12 @@ func (s *Service) CreateCashReceipt(ctx context.Context, params contributionsqlc
 	if processErr != nil && processed.Receipt.ID.Valid {
 		return processed, nil
 	}
-	return processed, processErr
+	if processErr != nil {
+		// Cash acceptance already committed; recovery will retry its pending allocation plan.
+		slog.Warn("cash receipt processing deferred", "receipt_id", result.Receipt.ID.String(), "error", processErr)
+		return result, nil
+	}
+	return processed, nil
 }
 
 func (s *Service) CloseCashierSession(ctx context.Context, id, cashierID pgtype.UUID, counted pgtype.Numeric, reason string) (contributionsqlc.CashierSession, error) {

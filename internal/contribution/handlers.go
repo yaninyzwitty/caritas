@@ -8,11 +8,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	contributionv1 "github.com/yaninyzwitty/caritas-backend/gen/contribution/v1"
 	memberv1 "github.com/yaninyzwitty/caritas-backend/gen/member/v1"
 	"github.com/yaninyzwitty/caritas-backend/internal/auth"
 	contributionsqlc "github.com/yaninyzwitty/caritas-backend/internal/contribution/repository/sqlc"
+	"github.com/yaninyzwitty/caritas-backend/internal/loan"
+	"github.com/yaninyzwitty/caritas-backend/internal/member"
+	"github.com/yaninyzwitty/caritas-backend/internal/share"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -420,6 +424,13 @@ func paymentRequestStatusToProto(status contributionsqlc.ContributionPaymentRequ
 // it, callers would see every validation or idempotency outcome as an internal
 // server failure.
 func mapContributionError(err error) error {
+	var databaseError *pgconn.PgError
+	if errors.As(err, &databaseError) {
+		switch databaseError.Code {
+		case "55P03", "40P01", "40001", "57014":
+			return status.Error(codes.Unavailable, "cash service is busy; retry the same payment reference")
+		}
+	}
 	switch {
 	case errors.Is(err, ErrInvalidCharge),
 		errors.Is(err, ErrChargeConflict),
@@ -435,7 +446,10 @@ func mapContributionError(err error) error {
 		return status.Error(codes.AlreadyExists, err.Error())
 	case errors.Is(err, ErrCashierSessionNotFound), errors.Is(err, ErrReceiptNotFound):
 		return status.Error(codes.NotFound, err.Error())
-	case errors.Is(err, ErrChargeOverpayment),
+	case errors.Is(err, member.ErrMemberNotActive),
+		errors.Is(err, share.ErrAccountNotFound), errors.Is(err, share.ErrAccountNotActive),
+		errors.Is(err, loan.ErrLoanNotFound), errors.Is(err, loan.ErrPaymentNotAllowed),
+		errors.Is(err, ErrChargeOverpayment),
 		errors.Is(err, ErrMembershipFeeMismatch),
 		errors.Is(err, ErrCashierSessionState),
 		errors.Is(err, ErrCashSeparationOfDuties),

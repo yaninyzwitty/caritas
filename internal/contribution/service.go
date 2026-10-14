@@ -5,14 +5,19 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"math/big"
+	"sort"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	contributionsqlc "github.com/yaninyzwitty/caritas-backend/internal/contribution/repository/sqlc"
 	"github.com/yaninyzwitty/caritas-backend/internal/loan"
+	loansqlc "github.com/yaninyzwitty/caritas-backend/internal/loan/repository/sqlc"
 	"github.com/yaninyzwitty/caritas-backend/internal/share"
+	sharesqlc "github.com/yaninyzwitty/caritas-backend/internal/share/repository/sqlc"
 )
 
 type Service struct {
@@ -33,6 +38,8 @@ type AllocationInput struct {
 	Type     contributionsqlc.ContributionAllocationType
 	TargetID pgtype.UUID
 	Amount   pgtype.Numeric
+	// DisplayLabel snapshots charge wording so later edits cannot change cash reprints.
+	DisplayLabel string
 }
 
 type CreatedReceipt struct {
@@ -170,10 +177,19 @@ func (s *Service) GetReceipt(ctx context.Context, id pgtype.UUID) (contributions
 // Without this gate, webhooks and manual entries could mark receipts completed
 // before Shares or Loans has accepted the money, which the final spec forbids.
 func (s *Service) ProcessReceipt(ctx context.Context, receiptID, processedBy pgtype.UUID) (CreatedReceipt, error) {
+	// One atomic receipt performs multiple database round trips; recovery needs
+	// enough time to reach Shares/Loans and commit, rather than restart every 5s.
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+	started := time.Now()
+	defer func() {
+		slog.Info("process contribution receipt", "receipt_id", receiptID.String(), "duration", time.Since(started))
+	}()
 	var result CreatedReceipt
 	var processErr error
 
-	err := s.store.ExecTx(ctx, func(q contributionsqlc.Querier) error {
+	err := s.store.ExecReceiptTx(ctx, func(tx pgx.Tx) error {
+		q := contributionsqlc.New(tx)
 		receipt, err := q.LockContributionReceiptByID(ctx, receiptID)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
@@ -209,15 +225,23 @@ func (s *Service) ProcessReceipt(ctx context.Context, receiptID, processedBy pgt
 			return nil
 		}
 
+		// Roll back all new postings before recording a business failure.
+		if _, err := tx.Exec(ctx, "SAVEPOINT receipt_posting"); err != nil {
+			return fmt.Errorf("begin receipt posting: %w", err)
+		}
 		if len(allocations) == 0 {
 			processErr = ErrAllocationRequired
-			return failReceipt(ctx, q, receipt.ID, receiptFailureStatus(receipt), processErr, &result)
+			return failReceipt(ctx, tx, q, receipt.ID, receiptFailureStatus(receipt), processErr, &result)
 		}
 
-		// Validate both fees before any owning service commits a payment.
+		// Validate fees before posting into this transaction.
 		// Excluding this receipt makes a retry safe after a partial posting.
 		fees, err := monthlyFees(ctx, q, receipt.MemberID, receipt.ContributionPeriod, receipt.ID)
 		if err != nil {
+			if receiptBusinessError(err) {
+				processErr = err
+				return failReceipt(ctx, tx, q, receipt.ID, receiptFailureStatus(receipt), processErr, &result)
+			}
 			return err
 		}
 		input := make([]AllocationInput, 0, len(allocations))
@@ -230,13 +254,23 @@ func (s *Service) ProcessReceipt(ctx context.Context, receiptID, processedBy pgt
 		}
 		if err != nil {
 			processErr = fmt.Errorf("%w: %v", ErrMembershipFeeMismatch, err)
-			return failReceipt(ctx, q, receipt.ID, receiptFailureStatus(receipt), processErr, &result)
+			return failReceipt(ctx, tx, q, receipt.ID, receiptFailureStatus(receipt), processErr, &result)
 		}
 		if err := validateChargeAllocations(ctx, q, receipt.MemberID, receipt.BranchID, input, receipt.ID); err != nil {
+			if !receiptBusinessError(err) {
+				return err
+			}
 			processErr = err
-			return failReceipt(ctx, q, receipt.ID, receiptFailureStatus(receipt), processErr, &result)
+			return failReceipt(ctx, tx, q, receipt.ID, receiptFailureStatus(receipt), processErr, &result)
 		}
-		result.Allocations = result.Allocations[:0]
+		// Keep target lock order consistent across receipts.
+		sort.Slice(allocations, func(i, j int) bool {
+			if allocations[i].Type != allocations[j].Type {
+				return allocations[i].Type < allocations[j].Type
+			}
+			return allocations[i].TargetID.String() < allocations[j].TargetID.String()
+		})
+		result.Allocations = make([]contributionsqlc.ContributionAllocation, 0, len(allocations))
 		for _, allocation := range allocations {
 			switch allocation.Status {
 			case contributionsqlc.ContributionAllocationStatusCompleted:
@@ -245,19 +279,18 @@ func (s *Service) ProcessReceipt(ctx context.Context, receiptID, processedBy pgt
 			case contributionsqlc.ContributionAllocationStatusPending:
 			default:
 				processErr = ErrReceiptNotProcessable
-				return failReceipt(ctx, q, receipt.ID, receiptFailureStatus(receipt), processErr, &result)
+				return failReceipt(ctx, tx, q, receipt.ID, receiptFailureStatus(receipt), processErr, &result)
 			}
 
-			referenceID, externalReference, err := s.processAllocation(ctx, receipt, allocation, receipt.ReceivedBy)
+			started := time.Now()
+			referenceID, externalReference, err := s.processAllocation(ctx, tx, receipt, allocation, receipt.ReceivedBy)
+			slog.Info("post contribution allocation", "receipt_id", receipt.ID.String(), "allocation_id", allocation.ID.String(), "type", allocation.Type, "duration", time.Since(started), "error", err)
 			if err != nil {
 				processErr = fmt.Errorf("%w: %s", err, allocation.Type)
-				if _, updateErr := q.UpdateContributionAllocationFailed(ctx, contributionsqlc.UpdateContributionAllocationFailedParams{
-					ID:            allocation.ID,
-					FailureReason: text(processErr.Error()),
-				}); updateErr != nil {
-					return fmt.Errorf("mark allocation failed: %w", updateErr)
+				if !receiptBusinessError(err) {
+					return processErr
 				}
-				return failReceipt(ctx, q, receipt.ID, receiptFailureStatus(receipt), processErr, &result)
+				return failReceipt(ctx, tx, q, receipt.ID, receiptFailureStatus(receipt), processErr, &result)
 			}
 
 			allocation, err = q.UpdateContributionAllocationCompleted(ctx, contributionsqlc.UpdateContributionAllocationCompletedParams{
@@ -297,6 +330,7 @@ func (s *Service) ProcessReceipt(ctx context.Context, receiptID, processedBy pgt
 // state transitions harder to audit.
 func (s *Service) processAllocation(
 	ctx context.Context,
+	tx pgx.Tx,
 	receipt contributionsqlc.ContributionReceipt,
 	allocation contributionsqlc.ContributionAllocation,
 	processedBy pgtype.UUID,
@@ -314,43 +348,51 @@ func (s *Service) processAllocation(
 		if s.shareService == nil {
 			return pgtype.UUID{}, pgtype.Text{}, ErrOwningServiceMissing
 		}
-		tx, err := s.shareService.PurchaseShares(
-			ctx,
+		posted, err := s.shareService.PurchaseSharesInTx(
+			ctx, sharesqlc.New(tx),
 			allocation.TargetID,
 			allocation.Amount,
 			allocation.ID,
 			processedBy,
-			"contribution receipt "+receipt.ID.String(),
+			"contribution receipt "+receipt.ID.String(), receipt.MemberID, receipt.BranchID,
 		)
 		if err != nil {
 			return pgtype.UUID{}, pgtype.Text{}, err
 		}
-		return tx.ID, externalReference, nil
+		return posted.ID, externalReference, nil
 	case contributionsqlc.ContributionAllocationTypeLoanPrincipal:
 		if s.loanService == nil {
 			return pgtype.UUID{}, pgtype.Text{}, ErrOwningServiceMissing
 		}
-		tx, err := s.loanService.RecordRepaymentForPeriod(ctx, allocation.TargetID, allocation.Amount, allocation.ID.String(), processedBy, receipt.ContributionPeriod)
+		posted, err := s.loanService.RecordRepaymentForPeriodInTx(ctx, loansqlc.New(tx), sharesqlc.New(tx), allocation.TargetID, allocation.Amount, allocation.ID.String(), processedBy, receipt.ContributionPeriod, receipt.MemberID, receipt.BranchID)
 		if err != nil {
 			return pgtype.UUID{}, pgtype.Text{}, err
 		}
-		return tx.ID, externalReference, nil
+		return posted.ID, externalReference, nil
 	default:
 		return pgtype.UUID{}, pgtype.Text{}, ErrAllocationNotSupported
 	}
 }
 
-// failReceipt commits a terminal failed status before ProcessReceipt returns
-// the domain error. Returning that error directly from inside ExecTx would roll
-// back the failure marker and leave reconciliation blind to the partial run.
+// failReceipt rolls back new ledger postings while retaining the receipt lock.
+// Without the savepoint, a rejected allocation could commit earlier postings.
 func failReceipt(
 	ctx context.Context,
+	tx pgx.Tx,
 	q contributionsqlc.Querier,
 	receiptID pgtype.UUID,
 	status contributionsqlc.ContributionReceiptStatus,
 	cause error,
 	result *CreatedReceipt,
 ) error {
+	if _, err := tx.Exec(ctx, "ROLLBACK TO SAVEPOINT receipt_posting"); err != nil {
+		return fmt.Errorf("rollback receipt postings: %w", err)
+	}
+	allocations, err := q.ListContributionAllocationsByReceipt(ctx, receiptID)
+	if err != nil {
+		return fmt.Errorf("read rolled back allocations: %w", err)
+	}
+	result.Allocations = allocations
 	receipt, err := q.UpdateContributionReceiptStatus(ctx, contributionsqlc.UpdateContributionReceiptStatusParams{
 		ID:            receiptID,
 		Status:        status,
@@ -361,6 +403,20 @@ func failReceipt(
 	}
 	result.Receipt = receipt
 	return nil
+}
+
+// receiptBusinessError separates rejected allocations from temporary database failures.
+// Unknown infrastructure errors must leave the persisted receipt available for retry.
+func receiptBusinessError(err error) bool {
+	return errors.Is(err, ErrInvalidPayment) || errors.Is(err, ErrAllocationRequired) || errors.Is(err, ErrReceiptNotProcessable) ||
+		errors.Is(err, ErrMembershipFeeMismatch) || errors.Is(err, ErrInvalidCharge) ||
+		errors.Is(err, ErrChargeOverpayment) || errors.Is(err, ErrInvalidAllocation) ||
+		errors.Is(err, ErrDuplicateAllocation) || errors.Is(err, ErrAllocationNotSupported) ||
+		errors.Is(err, share.ErrAccountNotFound) || errors.Is(err, share.ErrAccountNotActive) ||
+		errors.Is(err, share.ErrDuplicateReference) || errors.Is(err, loan.ErrLoanNotFound) ||
+		errors.Is(err, loan.ErrPaymentNotAllowed) || errors.Is(err, loan.ErrInvalidRepaymentPeriod) ||
+		errors.Is(err, loan.ErrInvalidLoanAmount) || errors.Is(err, loan.ErrRepaymentAmountConflict) ||
+		errors.Is(err, loan.ErrRepaymentScheduleMissing) || errors.Is(err, loan.ErrGatewayTransactionID)
 }
 
 // receiptFailureStatus keeps accepted cash visible to till reconciliation.

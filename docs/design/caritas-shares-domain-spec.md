@@ -184,6 +184,16 @@ Loans may request pledge creation, release or availability checks through the Sh
 
 Guarantor approval belongs to the Loans workflow, but share reservation belongs to the Shares domain.
 
+For guarantor security, the additional amount must fit within 30% of the current
+share balance minus all active pledges (including applicant security). Round the
+allowance down to the four-decimal ledger precision and clamp it to zero.
+The balance response reports the active pledged total and current guarantor
+allowance so loan forms can explain the same policy before submission.
+
+Loans uses transaction-aware Shares operations to propose, approve, verify and
+release security in the same transaction as the loan decision. Removal releases
+one guarantor's pledge; loan rejection and full repayment release all pledges.
+
 ## 8. Dividends
 
 Dividend calculation is defined by the cross-domain spec. Dividend posting to the share ledger is owned by the Shares domain.

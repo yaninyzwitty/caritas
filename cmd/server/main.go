@@ -97,6 +97,9 @@ func main() {
 	loanServer := loan.NewHandlers(loanStore, loanService)
 	contributionStore := contribution.NewStore(pool)
 	contributionService := contribution.NewService(contributionStore, shareService, loanService)
+	recoveryCtx, stopRecovery := context.WithCancel(ctx)
+	defer stopRecovery()
+	go contributionService.RecoverPendingReceipts(recoveryCtx)
 	darajaClient, err := newDarajaClient(*cfg)
 	exitOnError("failed to configure Daraja STK initiator", err)
 	contributionServer := contribution.NewHandlers(contributionService, darajaClient)
@@ -197,6 +200,7 @@ func main() {
 	sig := <-sigCh
 
 	slog.Info("received shutdown signal", "signal", sig)
+	stopRecovery()
 
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer shutdownCancel()

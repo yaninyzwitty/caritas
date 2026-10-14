@@ -3,6 +3,9 @@ package share
 import "errors"
 
 var (
+	ErrGuaranteeCapacity    = errors.New("guarantee exceeds the 30% share limit")
+	ErrContributionHistory  = errors.New("loan approval requires share purchases in at least six different months")
+	ErrLoanSecurity         = errors.New("loan share security is insufficient")
 	ErrAccountNotFound      = errors.New("share account not found")
 	ErrAccountAlreadyExists = errors.New("share account already exists for member")
 	ErrAccountNotActive     = errors.New("share account is not active")

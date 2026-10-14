@@ -306,15 +306,20 @@ FROM members m
 LEFT JOIN member_profiles p ON p.member_id = m.id
 WHERE m.branch_id = $1
   AND NOT m.is_deleted
+  AND ($4::text = '' OR m.status = $4)
+  AND ($5::text = '' OR strpos(lower(COALESCE(p.full_name, '')), lower($5)) > 0
+       OR m.member_number::text = $5 OR m.national_id = $5)
   AND ($2::uuid IS NULL OR m.id < COALESCE($2::uuid, 'FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF'::uuid))
 ORDER BY m.id DESC
 LIMIT $3
 `
 
 type ListMembersByBranchCursorParams struct {
-	BranchID int64       `json:"branchId"`
-	Column2  pgtype.UUID `json:"column2"`
-	Limit    int32       `json:"limit"`
+	BranchID     int64       `json:"branchId"`
+	Column2      pgtype.UUID `json:"column2"`
+	Limit        int32       `json:"limit"`
+	StatusFilter string      `json:"statusFilter"`
+	Search       string      `json:"search"`
 }
 
 type ListMembersByBranchCursorRow struct {
@@ -342,7 +347,13 @@ type ListMembersByBranchCursorRow struct {
 }
 
 func (q *Queries) ListMembersByBranchCursor(ctx context.Context, arg ListMembersByBranchCursorParams) ([]ListMembersByBranchCursorRow, error) {
-	rows, err := q.db.Query(ctx, listMembersByBranchCursor, arg.BranchID, arg.Column2, arg.Limit)
+	rows, err := q.db.Query(ctx, listMembersByBranchCursor,
+		arg.BranchID,
+		arg.Column2,
+		arg.Limit,
+		arg.StatusFilter,
+		arg.Search,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -531,6 +542,7 @@ const validateMemberActiveInBranch = `-- name: ValidateMemberActiveInBranch :one
 SELECT id, branch_id, status
 FROM members
 WHERE id = $1 AND branch_id = $2 AND status = 'active' AND is_deleted = FALSE
+FOR SHARE
 `
 
 type ValidateMemberActiveInBranchParams struct {

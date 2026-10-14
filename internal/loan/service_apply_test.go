@@ -49,9 +49,9 @@ func TestApplyForLoanStoresProposedGuarantorAmounts(t *testing.T) {
 	firstGuarantorID := createLoanMember(t, ctx, pool, 106, "active")
 	secondGuarantorID := createLoanMember(t, ctx, pool, 107, "active")
 
-	loan, err := service.ApplyForLoan(ctx, applyParams(t, applicantID), mustNumeric(t, "0"), []ProposedGuarantor{
-		{GuarantorID: firstGuarantorID, GuaranteedAmount: mustNumeric(t, "300")},
-		{GuarantorID: secondGuarantorID, GuaranteedAmount: mustNumeric(t, "200")},
+	loan, err := service.ApplyForLoan(ctx, applyParams(t, applicantID), mustNumeric(t, "250"), []ProposedGuarantor{
+		{GuarantorID: firstGuarantorID, GuaranteedAmount: mustNumeric(t, "150")},
+		{GuarantorID: secondGuarantorID, GuaranteedAmount: mustNumeric(t, "100")},
 	})
 	if err != nil {
 		t.Fatalf("apply for loan: %v", err)
@@ -69,7 +69,7 @@ func TestApplyForLoanStoresProposedGuarantorAmounts(t *testing.T) {
 	for _, guarantor := range guarantors {
 		amounts[guarantor.GuarantorID] = numericToString(guarantor.GuaranteedAmount)
 	}
-	if amounts[firstGuarantorID] != "300" || amounts[secondGuarantorID] != "200" {
+	if amounts[firstGuarantorID] != "150" || amounts[secondGuarantorID] != "100" {
 		t.Fatalf("guarantor amounts = %v", amounts)
 	}
 }
@@ -214,8 +214,11 @@ func createLoanMember(t *testing.T, ctx context.Context, pool *pgxpool.Pool, num
 		t.Fatalf("insert share account: %v", err)
 	}
 	_, err = pool.Exec(ctx, `
-		INSERT INTO share_transactions (share_account_id, type, amount, balance_after, reference_id, originator_id)
-		VALUES ($1, 'purchase', 500, 500, $2, $2)
+		INSERT INTO share_transactions (share_account_id, type, amount, balance_after, reference_id, originator_id, created_at)
+		SELECT $1, 'purchase', CASE WHEN n = 6 THEN 100 ELSE 80 END,
+		       CASE WHEN n = 6 THEN 500 ELSE n * 80 END, gen_random_uuid(), $2,
+		       NOW() - (6 - n) * INTERVAL '1 month'
+		FROM generate_series(1, 6) n
 	`, accountID, id)
 	if err != nil {
 		t.Fatalf("insert share balance: %v", err)

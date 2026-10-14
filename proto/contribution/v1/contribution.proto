@@ -330,6 +330,8 @@ message CashReceiptAllocation {
   member.v1.Money            amount                     = 3;
   string                     status                     = 4;
   string                     authoritative_reference_id = 5;
+  // Charge wording captured when cash was recorded; absent on older receipts.
+  string                     display_label              = 6;
 }
 
 message ListCashierSessionsRequest {

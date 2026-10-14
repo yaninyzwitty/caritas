@@ -170,6 +170,27 @@ Approval requires:
 
 Eligibility must be checked at approval time and re-checked before disbursement.
 
+Qualifying contribution history means positive, unreversed share purchases in
+at least six distinct calendar months, measured in Africa/Nairobi time. Multiple
+purchases in one month count once; dividends and adjustments do not count.
+
+Guarantor capacity is checked at application, addition and approval:
+
+```text
+new_guarantee <= max(0, 30% * current_guarantor_share_balance - all_active_pledges)
+```
+
+The allowance is rounded down to four decimal places. Active pledges include the
+guarantor's own loan security and guarantees for other loans. Proposals do not
+reserve shares; approval reserves them atomically with the guarantee decision.
+An identical repeat approval returns the original approved commitment.
+
+Only approved guarantees backed by sufficient active pledges count toward loan
+coverage. Extra pending guarantees do not block approval when security already
+covers the principal. Guarantors may be added, approved or removed only while
+the loan is Pending. Removal releases that guarantor's security; rejection and
+full repayment release all security for the loan. Historical decisions remain.
+
 Collateral rule:
 
 ```text

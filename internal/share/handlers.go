@@ -5,13 +5,13 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"math/big"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
-	memberv1 "github.com/yaninyzwitty/caritas-backend/gen/member/v1"
 	sharev1 "github.com/yaninyzwitty/caritas-backend/gen/share/v1"
 	"github.com/yaninyzwitty/caritas-backend/internal/auth"
 	sharesqlc "github.com/yaninyzwitty/caritas-backend/internal/share/repository/sqlc"
@@ -322,23 +322,39 @@ func (h *Handlers) GetShareBalance(ctx context.Context, req *sharev1.GetShareBal
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid account_id: %v", err)
 	}
-	if _, err := h.store.GetAccountByID(ctx, accountID); err != nil {
+	result := &sharev1.GetShareBalanceResponse{}
+	err = h.store.ExecTx(ctx, func(q sharesqlc.Querier) error {
+		account, err := q.LockAndReadAccount(ctx, accountID)
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, mapServiceError(ErrAccountNotFound)
+			return ErrAccountNotFound
 		}
-		return nil, status.Error(codes.Internal, "failed to get account")
+		if err != nil {
+			return err
+		}
+		balance := new(big.Int)
+		latest, err := q.GetLatestBalance(ctx, accountID)
+		if err == nil {
+			balance = numericToNanos(latest)
+		} else if !errors.Is(err, pgx.ErrNoRows) {
+			return err
+		}
+		pledged, err := q.GetActivePledgedAmount(ctx, accountID)
+		if err != nil {
+			return err
+		}
+		available := guaranteeAvailable(balance, numericToNanos(pledged))
+		if account.Status != sharesqlc.ShareAccountStatusActive {
+			available.SetInt64(0)
+		}
+		result.Balance = numericToMoney(pgtype.Numeric{Int: balance, Exp: -9, Valid: true})
+		result.ActivePledgedAmount = numericToMoney(pledged)
+		result.GuarantorAvailableAmount = numericToMoney(pgtype.Numeric{Int: available, Exp: -9, Valid: true})
+		return nil
+	})
+	if err != nil {
+		return nil, mapServiceError(err)
 	}
-
-	balance := &memberv1.Money{CurrencyCode: "KES"}
-	if latest, err := h.store.GetLatestBalance(ctx, accountID); err == nil {
-		balance = numericToMoney(latest)
-	} else if !errors.Is(err, pgx.ErrNoRows) {
-		return nil, status.Error(codes.Internal, "failed to get latest balance")
-	}
-
-	return &sharev1.GetShareBalanceResponse{
-		Balance: balance,
-	}, nil
+	return result, nil
 }
 
 // ListShareTransactions handles cursor-paginated transaction history for an

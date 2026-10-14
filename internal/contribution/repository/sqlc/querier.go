@@ -41,6 +41,7 @@ type Querier interface {
 	ListContributionAllocationsByReceipt(ctx context.Context, receiptID pgtype.UUID) ([]ContributionAllocation, error)
 	ListContributionCharges(ctx context.Context, arg ListContributionChargesParams) ([]ListContributionChargesRow, error)
 	ListContributionReceiptsByMember(ctx context.Context, arg ListContributionReceiptsByMemberParams) ([]ContributionReceipt, error)
+	ListPendingContributionReceipts(ctx context.Context, arg ListPendingContributionReceiptsParams) ([]ContributionReceipt, error)
 	LockCashierSession(ctx context.Context, id pgtype.UUID) (CashierSession, error)
 	LockCashierSessions(ctx context.Context, dollar_1 []pgtype.UUID) ([]CashierSession, error)
 	LockContributionAllocationsByReceipt(ctx context.Context, receiptID pgtype.UUID) ([]ContributionAllocation, error)

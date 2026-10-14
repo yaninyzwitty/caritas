@@ -12,6 +12,7 @@ import (
 
 type Querier interface {
 	ActivateSharePledge(ctx context.Context, arg ActivateSharePledgeParams) (SharePledge, error)
+	CountQualifyingContributionMonths(ctx context.Context, shareAccountID pgtype.UUID) (int64, error)
 	CreateShareAccount(ctx context.Context, arg CreateShareAccountParams) (ShareAccount, error)
 	CreateSharePledge(ctx context.Context, arg CreateSharePledgeParams) (SharePledge, error)
 	GetAccountByID(ctx context.Context, id pgtype.UUID) (GetAccountByIDRow, error)
@@ -22,6 +23,7 @@ type Querier interface {
 	GetAdjustmentByReference(ctx context.Context, arg GetAdjustmentByReferenceParams) (ShareAdjustment, error)
 	GetAdjustmentByTransactionID(ctx context.Context, shareTransactionID pgtype.UUID) (ShareAdjustment, error)
 	GetApplicantSharePledge(ctx context.Context, loanID pgtype.UUID) (SharePledge, error)
+	GetGuarantorSharePledge(ctx context.Context, arg GetGuarantorSharePledgeParams) (SharePledge, error)
 	GetLatestBalance(ctx context.Context, shareAccountID pgtype.UUID) (pgtype.Numeric, error)
 	GetReversalTransactions(ctx context.Context, reversalOf pgtype.UUID) ([]ShareTransaction, error)
 	GetTransactionByID(ctx context.Context, id pgtype.UUID) (ShareTransaction, error)
@@ -34,7 +36,9 @@ type Querier interface {
 	LockAdjustmentByID(ctx context.Context, id pgtype.UUID) (ShareAdjustment, error)
 	LockAndGetLatestBalance(ctx context.Context, shareAccountID pgtype.UUID) (pgtype.Numeric, error)
 	LockAndReadAccount(ctx context.Context, id pgtype.UUID) (ShareAccount, error)
+	LockLoanShareAccounts(ctx context.Context, arg LockLoanShareAccountsParams) ([]pgtype.UUID, error)
 	ReleaseApplicantSharePledge(ctx context.Context, loanID pgtype.UUID) error
+	ReleaseLoanSharePledges(ctx context.Context, arg ReleaseLoanSharePledgesParams) error
 	UpdateAccountStatus(ctx context.Context, arg UpdateAccountStatusParams) (ShareAccount, error)
 	UpdateAdjustmentApproved(ctx context.Context, arg UpdateAdjustmentApprovedParams) (ShareAdjustment, error)
 }

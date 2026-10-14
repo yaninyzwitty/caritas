@@ -1,7 +1,8 @@
 -- name: ValidateMemberActiveInBranch :one
 SELECT id, branch_id, status
 FROM members
-WHERE id = $1 AND branch_id = $2 AND status = 'active' AND is_deleted = FALSE;
+WHERE id = $1 AND branch_id = $2 AND status = 'active' AND is_deleted = FALSE
+FOR SHARE;
 
 -- name: MemberExistsByBranchAndNationalID :one
 SELECT id, status
@@ -35,6 +36,9 @@ FROM members m
 LEFT JOIN member_profiles p ON p.member_id = m.id
 WHERE m.branch_id = $1
   AND NOT m.is_deleted
+  AND (sqlc.arg(status_filter)::text = '' OR m.status = sqlc.arg(status_filter))
+  AND (sqlc.arg(search)::text = '' OR strpos(lower(COALESCE(p.full_name, '')), lower(sqlc.arg(search))) > 0
+       OR m.member_number::text = sqlc.arg(search) OR m.national_id = sqlc.arg(search))
   AND ($2::uuid IS NULL OR m.id < COALESCE($2::uuid, 'FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF'::uuid))
 ORDER BY m.id DESC
 LIMIT $3;

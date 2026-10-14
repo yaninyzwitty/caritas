@@ -163,6 +163,8 @@ message GetShareBalanceRequest {
 
 message GetShareBalanceResponse {
   member.v1.Money balance = 1;
+  member.v1.Money active_pledged_amount = 2;
+  member.v1.Money guarantor_available_amount = 3;
 }
 
 message ListShareTransactionsRequest {
