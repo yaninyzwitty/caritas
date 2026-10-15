@@ -40,6 +40,50 @@ type DarajaClient struct {
 	config     DarajaClientConfig
 }
 
+// QuerySTK checks an existing checkout without issuing another debit. Without
+// it, a lost callback leaves the request permanently unconfirmed.
+func (c *DarajaClient) QuerySTK(ctx context.Context, checkoutID string) (string, string, error) {
+	if c == nil {
+		return "", "", ErrDarajaClientMissing
+	}
+	token, err := c.accessToken(ctx)
+	if err != nil {
+		return "", "", err
+	}
+	timestamp := time.Now().UTC().Add(3 * time.Hour).Format("20060102150405")
+	body, err := json.Marshal(map[string]string{
+		"BusinessShortCode": c.config.BusinessShortCode,
+		"Password":          base64.StdEncoding.EncodeToString([]byte(c.config.BusinessShortCode + c.config.Passkey + timestamp)),
+		"Timestamp":         timestamp, "CheckoutRequestID": checkoutID,
+	})
+	if err != nil {
+		return "", "", err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, strings.TrimRight(c.config.BaseURL, "/")+"/mpesa/stkpushquery/v1/query", bytes.NewReader(body))
+	if err != nil {
+		return "", "", err
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return "", "", err
+	}
+	defer resp.Body.Close()
+	var result struct {
+		CheckoutRequestID string          `json:"CheckoutRequestID"`
+		ResultCode        json.RawMessage `json:"ResultCode"`
+		ResultDesc        string          `json:"ResultDesc"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return "", "", err
+	}
+	if resp.StatusCode != http.StatusOK || result.CheckoutRequestID != checkoutID || len(result.ResultCode) == 0 {
+		return "", "", fmt.Errorf("daraja query returned no verified checkout result")
+	}
+	return strings.Trim(string(result.ResultCode), "\""), result.ResultDesc, nil
+}
+
 // NewDarajaClient keeps provider configuration at the application edge.
 // Without this constructor, Daraja credentials would be pulled from global
 // state inside the contribution service.
@@ -59,7 +103,7 @@ func (c *DarajaClient) InitiateSTK(ctx context.Context, request DarajaSTKInitiat
 		return "", err
 	}
 
-	timestamp := time.Now().Format("20060102150405")
+	timestamp := time.Now().UTC().Add(3 * time.Hour).Format("20060102150405")
 	password := base64.StdEncoding.EncodeToString([]byte(c.config.BusinessShortCode + c.config.Passkey + timestamp))
 	body, err := json.Marshal(map[string]any{
 		"BusinessShortCode": c.config.BusinessShortCode,
@@ -104,6 +148,9 @@ func (c *DarajaClient) InitiateSTK(ctx context.Context, request DarajaSTKInitiat
 		return "", err
 	}
 	if resp.StatusCode < 200 || resp.StatusCode > 299 || payload.ResponseCode != "0" {
+		if payload.ErrorCode != "" {
+			return "", ErrDarajaRejected
+		}
 		return "", fmt.Errorf("daraja stk rejected: %s %s", payload.ErrorCode, payload.ErrorMessage)
 	}
 	if strings.TrimSpace(payload.CheckoutRequestID) == "" {

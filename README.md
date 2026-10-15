@@ -102,3 +102,37 @@ See `docs/design/`:
 - caritas-loans-domain-spec.md
 
 Read the relevant spec before touching a domain.
+
+## M-Pesa recovery and member credit
+
+Apply `20261015100000_daraja_recovery.sql` and
+`20261015110000_credit_operations.sql` with the existing Goose migration process
+before starting the updated server. No balances or old payment outcomes are
+changed by these migrations.
+
+For local callbacks, tunnel the backend HTTP port and set
+`DARAJA_CALLBACK_URL=https://<your-ngrok-host>/webhooks/daraja/stk`, then restart
+the backend after changing this setting. Keep the tunnel running while testing.
+
+Callbacks are saved before acknowledgement. The server resumes saved callbacks
+and queries unresolved checkouts with bounded backoff after restarts. An
+initiation timeout remains unconfirmed; retrying a saved request never sends
+another prompt. Query success without receipt metadata requires reconciliation
+against the M-Pesa business statement; the system never invents a receipt number.
+
+In Contributions → M-Pesa → M-Pesa recovery, cashiers can request a provider
+check. Managers can reconcile a missing receipt with its verified M-Pesa
+reference, amount, payment time, business-record evidence and reason, or retry
+posting after resolving an allocation error. Each received payment retains its
+own receipt. Do not enter recovered M-Pesa payments as cash. If an old request
+has no checkout ID, obtain the actual checkout ID from the original provider
+response or callback before attaching it; do not guess by phone or amount.
+
+Credit is created automatically by loan overpayments. The loan credit panel
+shows original, available, reserved and used money. Staff record a retained
+member instruction for partial share transfers, eligible loan payments or refund
+requests. Refunds reserve funds immediately, require another authorized officer's
+approval, and remain reserved until a verified external payout is recorded.
+Rejected requests release their reservation. This implementation does not send
+refund payouts through Daraja. Credit operations and payment recovery actions
+retain their actors, reasons and verification evidence for audit.

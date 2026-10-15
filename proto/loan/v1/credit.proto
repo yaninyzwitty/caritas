@@ -8,6 +8,12 @@ import "loan/v1/loan.proto";
 
 // CreditService manages credit balance operations for overpayment handling.
 service CreditService {
+  rpc ManageCredit(ManageCreditRequest) returns (ManageCreditResponse) {
+    option (google.api.http) = {post: "/api/v1/credits/manage" body: "*"};
+  }
+  rpc ListCreditOperations(ListCreditOperationsRequest) returns (ListCreditOperationsResponse) {
+    option (google.api.http) = {get: "/api/v1/credits/operations"};
+  }
   // GetCreditBalance retrieves the credit balance for a member.
   rpc GetCreditBalance(GetCreditBalanceRequest) returns (GetCreditBalanceResponse) {
     option (google.api.http) = {post: "/api/v1/credits/balance" body: "*"};
@@ -36,6 +42,8 @@ message RequestCreditWithdrawalRequest {
   string amount           = 2;  // decimal.Decimal as string to withdraw
   string reason           = 3;
   string requested_by     = 4;  // Member ID requesting withdrawal
+  string idempotency_key = 5;
+  string consent_reference = 6;
 }
 
 // RequestCreditWithdrawalResponse confirms the withdrawal request was submitted.
@@ -43,4 +51,40 @@ message RequestCreditWithdrawalResponse {
   bool                      success       = 1;
   string                    request_id    = 2;
   google.protobuf.Timestamp submitted_at = 3;
+}
+
+// The operation ID is client-generated and reused after uncertain responses.
+message ManageCreditRequest {
+  string operation_id = 1;
+  string credit_balance_id = 2;
+  string action = 3; // transfer_shares, apply_loan, request_refund, approve_refund, reject_refund, record_refund
+  string amount = 4;
+  string target_id = 5;
+  string contribution_period = 6;
+  string reason = 7;
+  string consent_reference = 8;
+  string payout_reference = 9;
+  string payout_evidence = 10;
+}
+message ManageCreditResponse { CreditOperation operation = 1; }
+message CreditOperation {
+  string id = 1;
+  string credit_balance_id = 2;
+  string amount = 3;
+  string action = 4;
+  string target_id = 5;
+  string status = 6;
+  string reason = 7;
+  string consent_reference = 8;
+  string requested_by = 9;
+  string payout_reference = 10;
+  google.protobuf.Timestamp created_at = 11;
+}
+message ListCreditOperationsRequest {
+  string credit_balance_id = 1;
+  string page_token = 2;
+}
+message ListCreditOperationsResponse {
+  repeated CreditOperation operations = 1;
+  string next_page_token = 2;
 }

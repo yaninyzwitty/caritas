@@ -12,7 +12,7 @@ import (
 )
 
 const getContributionPaymentRequestByCheckoutID = `-- name: GetContributionPaymentRequestByCheckoutID :one
-SELECT id, checkout_request_id, member_id, branch_id, contribution_period, expected_amount, allocation_plan, status, receipt_id, failure_reason, requested_by, created_at, updated_at, idempotency_key
+SELECT id, checkout_request_id, member_id, branch_id, contribution_period, expected_amount, allocation_plan, status, receipt_id, failure_reason, requested_by, created_at, updated_at, idempotency_key, phone_number, recovery_status, query_attempts, next_query_at, provider_result
 FROM contribution_payment_requests
 WHERE checkout_request_id = $1
 `
@@ -35,12 +35,17 @@ func (q *Queries) GetContributionPaymentRequestByCheckoutID(ctx context.Context,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.IdempotencyKey,
+		&i.PhoneNumber,
+		&i.RecoveryStatus,
+		&i.QueryAttempts,
+		&i.NextQueryAt,
+		&i.ProviderResult,
 	)
 	return i, err
 }
 
 const getContributionPaymentRequestByIdempotencyKey = `-- name: GetContributionPaymentRequestByIdempotencyKey :one
-SELECT id, checkout_request_id, member_id, branch_id, contribution_period, expected_amount, allocation_plan, status, receipt_id, failure_reason, requested_by, created_at, updated_at, idempotency_key
+SELECT id, checkout_request_id, member_id, branch_id, contribution_period, expected_amount, allocation_plan, status, receipt_id, failure_reason, requested_by, created_at, updated_at, idempotency_key, phone_number, recovery_status, query_attempts, next_query_at, provider_result
 FROM contribution_payment_requests
 WHERE idempotency_key = $1
 `
@@ -63,6 +68,11 @@ func (q *Queries) GetContributionPaymentRequestByIdempotencyKey(ctx context.Cont
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.IdempotencyKey,
+		&i.PhoneNumber,
+		&i.RecoveryStatus,
+		&i.QueryAttempts,
+		&i.NextQueryAt,
+		&i.ProviderResult,
 	)
 	return i, err
 }
@@ -76,7 +86,8 @@ INSERT INTO contribution_payment_requests (
     contribution_period,
     expected_amount,
     allocation_plan,
-    requested_by
+    requested_by,
+    phone_number
 ) VALUES (
     $1,
     $2,
@@ -85,10 +96,11 @@ INSERT INTO contribution_payment_requests (
     $5,
     $6,
     $7,
-    $8
+    $8,
+    $9
 )
 ON CONFLICT DO NOTHING
-RETURNING id, checkout_request_id, member_id, branch_id, contribution_period, expected_amount, allocation_plan, status, receipt_id, failure_reason, requested_by, created_at, updated_at, idempotency_key
+RETURNING id, checkout_request_id, member_id, branch_id, contribution_period, expected_amount, allocation_plan, status, receipt_id, failure_reason, requested_by, created_at, updated_at, idempotency_key, phone_number, recovery_status, query_attempts, next_query_at, provider_result
 `
 
 type InsertContributionPaymentRequestParams struct {
@@ -100,6 +112,7 @@ type InsertContributionPaymentRequestParams struct {
 	ExpectedAmount     pgtype.Numeric `json:"expectedAmount"`
 	AllocationPlan     []byte         `json:"allocationPlan"`
 	RequestedBy        pgtype.UUID    `json:"requestedBy"`
+	PhoneNumber        string         `json:"phoneNumber"`
 }
 
 func (q *Queries) InsertContributionPaymentRequest(ctx context.Context, arg InsertContributionPaymentRequestParams) (ContributionPaymentRequest, error) {
@@ -112,6 +125,7 @@ func (q *Queries) InsertContributionPaymentRequest(ctx context.Context, arg Inse
 		arg.ExpectedAmount,
 		arg.AllocationPlan,
 		arg.RequestedBy,
+		arg.PhoneNumber,
 	)
 	var i ContributionPaymentRequest
 	err := row.Scan(
@@ -129,12 +143,17 @@ func (q *Queries) InsertContributionPaymentRequest(ctx context.Context, arg Inse
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.IdempotencyKey,
+		&i.PhoneNumber,
+		&i.RecoveryStatus,
+		&i.QueryAttempts,
+		&i.NextQueryAt,
+		&i.ProviderResult,
 	)
 	return i, err
 }
 
 const lockContributionPaymentRequestByCheckoutID = `-- name: LockContributionPaymentRequestByCheckoutID :one
-SELECT id, checkout_request_id, member_id, branch_id, contribution_period, expected_amount, allocation_plan, status, receipt_id, failure_reason, requested_by, created_at, updated_at, idempotency_key
+SELECT id, checkout_request_id, member_id, branch_id, contribution_period, expected_amount, allocation_plan, status, receipt_id, failure_reason, requested_by, created_at, updated_at, idempotency_key, phone_number, recovery_status, query_attempts, next_query_at, provider_result
 FROM contribution_payment_requests
 WHERE checkout_request_id = $1
 FOR UPDATE
@@ -158,13 +177,18 @@ func (q *Queries) LockContributionPaymentRequestByCheckoutID(ctx context.Context
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.IdempotencyKey,
+		&i.PhoneNumber,
+		&i.RecoveryStatus,
+		&i.QueryAttempts,
+		&i.NextQueryAt,
+		&i.ProviderResult,
 	)
 	return i, err
 }
 
 const lookupContributionPaymentRequest = `-- name: LookupContributionPaymentRequest :one
 SELECT p.id, p.status, p.expected_amount, p.contribution_period,
-       p.created_at, p.failure_reason,
+       p.created_at, p.failure_reason, p.checkout_request_id, p.recovery_status, p.query_attempts,
        r.id AS receipt_id, COALESCE(r.status::text, '')::text AS receipt_status,
        r.received_amount, r.external_transaction_id, r.received_at
 FROM contribution_payment_requests p
@@ -188,6 +212,9 @@ type LookupContributionPaymentRequestRow struct {
 	ContributionPeriod    pgtype.Date                      `json:"contributionPeriod"`
 	CreatedAt             pgtype.Timestamptz               `json:"createdAt"`
 	FailureReason         pgtype.Text                      `json:"failureReason"`
+	CheckoutRequestID     pgtype.Text                      `json:"checkoutRequestId"`
+	RecoveryStatus        string                           `json:"recoveryStatus"`
+	QueryAttempts         int32                            `json:"queryAttempts"`
 	ReceiptID             pgtype.UUID                      `json:"receiptId"`
 	ReceiptStatus         string                           `json:"receiptStatus"`
 	ReceivedAmount        pgtype.Numeric                   `json:"receivedAmount"`
@@ -205,6 +232,9 @@ func (q *Queries) LookupContributionPaymentRequest(ctx context.Context, arg Look
 		&i.ContributionPeriod,
 		&i.CreatedAt,
 		&i.FailureReason,
+		&i.CheckoutRequestID,
+		&i.RecoveryStatus,
+		&i.QueryAttempts,
 		&i.ReceiptID,
 		&i.ReceiptStatus,
 		&i.ReceivedAmount,
@@ -219,7 +249,7 @@ UPDATE contribution_payment_requests
 SET checkout_request_id = $2,
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, checkout_request_id, member_id, branch_id, contribution_period, expected_amount, allocation_plan, status, receipt_id, failure_reason, requested_by, created_at, updated_at, idempotency_key
+RETURNING id, checkout_request_id, member_id, branch_id, contribution_period, expected_amount, allocation_plan, status, receipt_id, failure_reason, requested_by, created_at, updated_at, idempotency_key, phone_number, recovery_status, query_attempts, next_query_at, provider_result
 `
 
 type UpdateContributionPaymentRequestCheckoutIDParams struct {
@@ -245,6 +275,11 @@ func (q *Queries) UpdateContributionPaymentRequestCheckoutID(ctx context.Context
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.IdempotencyKey,
+		&i.PhoneNumber,
+		&i.RecoveryStatus,
+		&i.QueryAttempts,
+		&i.NextQueryAt,
+		&i.ProviderResult,
 	)
 	return i, err
 }
@@ -252,11 +287,12 @@ func (q *Queries) UpdateContributionPaymentRequestCheckoutID(ctx context.Context
 const updateContributionPaymentRequestCompleted = `-- name: UpdateContributionPaymentRequestCompleted :one
 UPDATE contribution_payment_requests
 SET status = 'completed',
+    recovery_status = 'received',
     receipt_id = $2,
     failure_reason = NULL,
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, checkout_request_id, member_id, branch_id, contribution_period, expected_amount, allocation_plan, status, receipt_id, failure_reason, requested_by, created_at, updated_at, idempotency_key
+RETURNING id, checkout_request_id, member_id, branch_id, contribution_period, expected_amount, allocation_plan, status, receipt_id, failure_reason, requested_by, created_at, updated_at, idempotency_key, phone_number, recovery_status, query_attempts, next_query_at, provider_result
 `
 
 type UpdateContributionPaymentRequestCompletedParams struct {
@@ -282,6 +318,11 @@ func (q *Queries) UpdateContributionPaymentRequestCompleted(ctx context.Context,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.IdempotencyKey,
+		&i.PhoneNumber,
+		&i.RecoveryStatus,
+		&i.QueryAttempts,
+		&i.NextQueryAt,
+		&i.ProviderResult,
 	)
 	return i, err
 }
@@ -289,10 +330,11 @@ func (q *Queries) UpdateContributionPaymentRequestCompleted(ctx context.Context,
 const updateContributionPaymentRequestFailed = `-- name: UpdateContributionPaymentRequestFailed :one
 UPDATE contribution_payment_requests
 SET status = 'failed',
+    recovery_status = 'provider_failed',
     failure_reason = $2,
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, checkout_request_id, member_id, branch_id, contribution_period, expected_amount, allocation_plan, status, receipt_id, failure_reason, requested_by, created_at, updated_at, idempotency_key
+RETURNING id, checkout_request_id, member_id, branch_id, contribution_period, expected_amount, allocation_plan, status, receipt_id, failure_reason, requested_by, created_at, updated_at, idempotency_key, phone_number, recovery_status, query_attempts, next_query_at, provider_result
 `
 
 type UpdateContributionPaymentRequestFailedParams struct {
@@ -318,6 +360,11 @@ func (q *Queries) UpdateContributionPaymentRequestFailed(ctx context.Context, ar
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.IdempotencyKey,
+		&i.PhoneNumber,
+		&i.RecoveryStatus,
+		&i.QueryAttempts,
+		&i.NextQueryAt,
+		&i.ProviderResult,
 	)
 	return i, err
 }

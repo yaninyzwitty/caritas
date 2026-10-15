@@ -92,6 +92,21 @@ Loan transactions are append-only. They are never updated or deleted.
 
 Overpayments are tracked separately from loan principal.
 
+Credit creation is automatic. Partial use requires a retained member instruction:
+transfer into the member's active share account, repayment of an eligible loan,
+or a refund request. Credit operations retain their original amount, actor,
+reason, instruction reference and destination. Available credit is the original
+amount less completed uses and pending or approved refund reservations. A credit
+row lock serializes reservations and uses; a stable operation UUID makes retries
+idempotent. Shares and Loans post through their existing owning logic in the
+same database transaction as credit consumption.
+
+Refund requests reserve funds immediately. Another officer with credit approval
+permission must approve or reject them. Rejection releases the reservation;
+approval retains it until a verified external payout reference and business
+evidence are recorded. Frozen credit cannot be transferred, approved or paid.
+Daraja refund disbursement is not automated.
+
 - `id`
 - `member_id`
 - `loan_id`, nullable
@@ -471,4 +486,4 @@ These must be settled before implementation:
 - Does the 1% monthly interest apply to all active loans, or only specific loan products?
 - Can repayment periods ever exceed 36 months after board-approved restructuring?
 - What precise approval role can authorize monthly principal below `principal / 36`?
-- Are overpayment credit withdrawals allowed at all, or should credit only offset future obligations?
+- Credit refund requests are allowed under the independent approval and verified settlement rules above.

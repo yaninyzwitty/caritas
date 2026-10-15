@@ -7,6 +7,12 @@ import "google/protobuf/timestamp.proto";
 import "member/v1/member.proto";
 
 service ContributionService {
+  rpc ListDarajaPayments(ListDarajaPaymentsRequest) returns (ListDarajaPaymentsResponse) {
+    option (google.api.http) = {get: "/api/v1/contributions/daraja-payments"};
+  }
+  rpc RecoverDarajaPayment(RecoverDarajaPaymentRequest) returns (RecoverDarajaPaymentResponse) {
+    option (google.api.http) = {post: "/api/v1/contributions/recover-daraja" body: "*"};
+  }
   rpc GetCashContext(GetCashContextRequest) returns (GetCashContextResponse) {
     option (google.api.http) = {get: "/api/v1/contributions/cash-context"};
   }
@@ -145,6 +151,8 @@ message GetContributionPaymentResponse {
   google.protobuf.Timestamp        created_at          = 5;
   string                           failure_reason      = 6;
   ContributionPaymentReceipt       receipt             = 7;
+  string checkout_request_id = 8;
+  string recovery_status = 9;
 }
 
 // The receipt's own status prevents collected money being mistaken for a posted contribution.
@@ -308,6 +316,7 @@ message GetCashContextResponse {
   int64  branch_id   = 2;
   bool   can_record  = 3;
   bool   can_approve = 4;
+  bool   can_approve_credit = 5;
 }
 
 message GetContributionQuoteRequest {
@@ -365,3 +374,35 @@ message GetCashReceiptResponse {
 message GetCashDepositResponse {
   CashDeposit deposit = 1;
 }
+
+// Recovery lists persist across browsers; the cursor is the last creation time and ID.
+message ListDarajaPaymentsRequest { string page_token = 1; }
+message ListDarajaPaymentsResponse {
+  repeated DarajaPayment payments = 1;
+  string next_page_token = 2;
+}
+message DarajaPayment {
+  string payment_request_id = 1;
+  string member_id = 2;
+  string checkout_request_id = 3;
+  member.v1.Money amount = 4;
+  string status = 5;
+  string recovery_status = 6;
+  string receipt_status = 7;
+  string mpesa_reference = 8;
+  string last_error = 9;
+  google.protobuf.Timestamp created_at = 10;
+  string provider_result = 11;
+}
+// Reconciliation requires verified business records; query and retry never initiate STK.
+message RecoverDarajaPaymentRequest {
+  string payment_request_id = 1;
+  string action = 2; // query, reconcile, retry_posting
+  string checkout_request_id = 3;
+  string mpesa_reference = 4;
+  member.v1.Money amount = 5;
+  google.protobuf.Timestamp received_at = 6;
+  string evidence = 7;
+  string reason = 8;
+}
+message RecoverDarajaPaymentResponse { GetContributionPaymentResponse payment = 1; }

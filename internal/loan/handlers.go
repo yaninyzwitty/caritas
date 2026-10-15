@@ -766,6 +766,10 @@ func (h *Handlers) GetPaymentHistory(ctx context.Context, req *loanv1.GetPayment
 }
 
 func (h *Handlers) GetCreditBalance(ctx context.Context, req *loanv1.GetCreditBalanceRequest) (*loanv1.GetCreditBalanceResponse, error) {
+	actor, ok := auth.PrincipalFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "authenticated staff required")
+	}
 	if req.GetMemberId() == "" {
 		return nil, status.Error(codes.InvalidArgument, "member id is required")
 	}
@@ -773,6 +777,10 @@ func (h *Handlers) GetCreditBalance(ctx context.Context, req *loanv1.GetCreditBa
 	memberID, err := stringToUUID(req.GetMemberId())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid member_id")
+	}
+	branch, err := h.store.GetCreditMemberBranch(ctx, memberID)
+	if err != nil || branch != actor.BranchID {
+		return nil, status.Error(codes.NotFound, "member not found")
 	}
 
 	var loanID pgtype.UUID
@@ -795,15 +803,33 @@ func (h *Handlers) GetCreditBalance(ctx context.Context, req *loanv1.GetCreditBa
 		if loanID.Valid && !sameUUID(credit.LoanID, loanID) {
 			continue
 		}
-		resp.Credits = append(resp.Credits, creditBalanceToProto(credit))
+		funds, err := h.store.GetCreditFunds(ctx, credit.ID)
+		if err != nil {
+			return nil, mapServiceError(err)
+		}
+		row := creditBalanceToProto(credit)
+		available := numericToScale(funds.Amount, -4)
+		available.Sub(available, numericToScale(funds.Reserved, -4))
+		available.Sub(available, numericToScale(funds.Used, -4))
+		if credit.Status != loansqlc.CreditBalanceStatusAvailable {
+			available.SetInt64(0)
+		}
+		row.AvailableAmount = decimalStringFromScale(available, -4)
+		row.ReservedAmount = numericToString(funds.Reserved)
+		row.UsedAmount = numericToString(funds.Used)
+		resp.Credits = append(resp.Credits, row)
 	}
 	return &resp, nil
 }
 
-// TODO--implement disbursement, using the disbursement daraja API (CODEX DO NOT IMPLEMENT THIS, till i say so)
-
-func (h *Handlers) RequestCreditWithdrawal(context.Context, *loanv1.RequestCreditWithdrawalRequest) (*loanv1.RequestCreditWithdrawalResponse, error) {
-	return nil, status.Error(codes.Unimplemented, ErrUnsupportedLoanOperation.Error())
+// RequestCreditWithdrawal preserves the existing API while sharing reservation rules.
+// Without delegation, old callers could bypass the same credit spending lock.
+func (h *Handlers) RequestCreditWithdrawal(ctx context.Context, req *loanv1.RequestCreditWithdrawalRequest) (*loanv1.RequestCreditWithdrawalResponse, error) {
+	operation, err := h.ManageCredit(ctx, &loanv1.ManageCreditRequest{OperationId: req.GetIdempotencyKey(), CreditBalanceId: req.GetCreditBalanceId(), Amount: req.GetAmount(), Reason: req.GetReason(), ConsentReference: req.GetConsentReference(), Action: "request_refund"})
+	if err != nil {
+		return nil, err
+	}
+	return &loanv1.RequestCreditWithdrawalResponse{Success: true, RequestId: operation.Operation.Id, SubmittedAt: operation.Operation.CreatedAt}, nil
 }
 
 func stringToUUID(id string) (pgtype.UUID, error) {

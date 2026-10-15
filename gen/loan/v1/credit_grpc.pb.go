@@ -19,6 +19,8 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
+	CreditService_ManageCredit_FullMethodName            = "/loan.v1.CreditService/ManageCredit"
+	CreditService_ListCreditOperations_FullMethodName    = "/loan.v1.CreditService/ListCreditOperations"
 	CreditService_GetCreditBalance_FullMethodName        = "/loan.v1.CreditService/GetCreditBalance"
 	CreditService_RequestCreditWithdrawal_FullMethodName = "/loan.v1.CreditService/RequestCreditWithdrawal"
 )
@@ -29,6 +31,8 @@ const (
 //
 // CreditService manages credit balance operations for overpayment handling.
 type CreditServiceClient interface {
+	ManageCredit(ctx context.Context, in *ManageCreditRequest, opts ...grpc.CallOption) (*ManageCreditResponse, error)
+	ListCreditOperations(ctx context.Context, in *ListCreditOperationsRequest, opts ...grpc.CallOption) (*ListCreditOperationsResponse, error)
 	// GetCreditBalance retrieves the credit balance for a member.
 	GetCreditBalance(ctx context.Context, in *GetCreditBalanceRequest, opts ...grpc.CallOption) (*GetCreditBalanceResponse, error)
 	// RequestCreditWithdrawal submits a request to withdraw available credit.
@@ -41,6 +45,26 @@ type creditServiceClient struct {
 
 func NewCreditServiceClient(cc grpc.ClientConnInterface) CreditServiceClient {
 	return &creditServiceClient{cc}
+}
+
+func (c *creditServiceClient) ManageCredit(ctx context.Context, in *ManageCreditRequest, opts ...grpc.CallOption) (*ManageCreditResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ManageCreditResponse)
+	err := c.cc.Invoke(ctx, CreditService_ManageCredit_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *creditServiceClient) ListCreditOperations(ctx context.Context, in *ListCreditOperationsRequest, opts ...grpc.CallOption) (*ListCreditOperationsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListCreditOperationsResponse)
+	err := c.cc.Invoke(ctx, CreditService_ListCreditOperations_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *creditServiceClient) GetCreditBalance(ctx context.Context, in *GetCreditBalanceRequest, opts ...grpc.CallOption) (*GetCreditBalanceResponse, error) {
@@ -69,6 +93,8 @@ func (c *creditServiceClient) RequestCreditWithdrawal(ctx context.Context, in *R
 //
 // CreditService manages credit balance operations for overpayment handling.
 type CreditServiceServer interface {
+	ManageCredit(context.Context, *ManageCreditRequest) (*ManageCreditResponse, error)
+	ListCreditOperations(context.Context, *ListCreditOperationsRequest) (*ListCreditOperationsResponse, error)
 	// GetCreditBalance retrieves the credit balance for a member.
 	GetCreditBalance(context.Context, *GetCreditBalanceRequest) (*GetCreditBalanceResponse, error)
 	// RequestCreditWithdrawal submits a request to withdraw available credit.
@@ -83,6 +109,12 @@ type CreditServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedCreditServiceServer struct{}
 
+func (UnimplementedCreditServiceServer) ManageCredit(context.Context, *ManageCreditRequest) (*ManageCreditResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ManageCredit not implemented")
+}
+func (UnimplementedCreditServiceServer) ListCreditOperations(context.Context, *ListCreditOperationsRequest) (*ListCreditOperationsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListCreditOperations not implemented")
+}
 func (UnimplementedCreditServiceServer) GetCreditBalance(context.Context, *GetCreditBalanceRequest) (*GetCreditBalanceResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetCreditBalance not implemented")
 }
@@ -108,6 +140,42 @@ func RegisterCreditServiceServer(s grpc.ServiceRegistrar, srv CreditServiceServe
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&CreditService_ServiceDesc, srv)
+}
+
+func _CreditService_ManageCredit_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ManageCreditRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CreditServiceServer).ManageCredit(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CreditService_ManageCredit_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CreditServiceServer).ManageCredit(ctx, req.(*ManageCreditRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CreditService_ListCreditOperations_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListCreditOperationsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CreditServiceServer).ListCreditOperations(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CreditService_ListCreditOperations_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CreditServiceServer).ListCreditOperations(ctx, req.(*ListCreditOperationsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _CreditService_GetCreditBalance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -153,6 +221,14 @@ var CreditService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "loan.v1.CreditService",
 	HandlerType: (*CreditServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "ManageCredit",
+			Handler:    _CreditService_ManageCredit_Handler,
+		},
+		{
+			MethodName: "ListCreditOperations",
+			Handler:    _CreditService_ListCreditOperations_Handler,
+		},
 		{
 			MethodName: "GetCreditBalance",
 			Handler:    _CreditService_GetCreditBalance_Handler,
