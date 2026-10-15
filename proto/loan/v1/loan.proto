@@ -142,6 +142,9 @@ message CreditBalance {
   CreditStatus              status           = 6;
   google.protobuf.Timestamp created_at       = 7;
   google.protobuf.Timestamp last_activity_at = 8;
+  string available_amount = 9;
+  string reserved_amount = 10;
+  string used_amount = 11;
 }
 
 // ProposedGuarantor captures the amount a guarantor commits to this loan.

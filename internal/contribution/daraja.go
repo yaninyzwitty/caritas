@@ -53,6 +53,9 @@ func (s *Service) InitiateDarajaSTKPayment(ctx context.Context, params InitiateD
 	if err != nil || !created {
 		return request, err
 	}
+	// Once the prompt may be sent, a browser disconnect must not discard its checkout ID.
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 45*time.Second)
+	defer cancel()
 
 	amount, err := darajaWholeAmount(params.Amount)
 	if err != nil {
@@ -67,10 +70,13 @@ func (s *Service) InitiateDarajaSTKPayment(ctx context.Context, params InitiateD
 		Amount:      amount,
 	})
 	if err != nil {
-		_, _ = s.store.UpdateContributionPaymentRequestFailed(ctx, contributionsqlc.UpdateContributionPaymentRequestFailedParams{
-			ID:            request.ID,
-			FailureReason: text(err.Error()),
-		})
+		// A network timeout cannot prove that Safaricom rejected the prompt.
+		// Retain the request so retries cannot charge the member again.
+		if errors.Is(err, ErrDarajaRejected) {
+			if _, saveErr := s.store.UpdateContributionPaymentRequestFailed(ctx, contributionsqlc.UpdateContributionPaymentRequestFailedParams{ID: request.ID, FailureReason: text("M-Pesa rejected the prompt request")}); saveErr != nil {
+				return contributionsqlc.ContributionPaymentRequest{}, saveErr
+			}
+		}
 		return contributionsqlc.ContributionPaymentRequest{}, err
 	}
 	return s.store.UpdateContributionPaymentRequestCheckoutID(ctx, contributionsqlc.UpdateContributionPaymentRequestCheckoutIDParams{
@@ -105,6 +111,7 @@ func (s *Service) createContributionPaymentRequest(ctx context.Context, params I
 				return err
 			}
 			if existing.MemberID != params.MemberID || existing.BranchID != params.BranchID ||
+				(existing.PhoneNumber != "" && existing.PhoneNumber != params.PhoneNumber) ||
 				existing.ContributionPeriod != params.ContributionPeriod ||
 				numericToScale(existing.ExpectedAmount, -4).Cmp(numericToScale(params.Amount, -4)) != 0 ||
 				string(plan) != string(storedPlan) {
@@ -144,6 +151,7 @@ func (s *Service) createContributionPaymentRequest(ctx context.Context, params I
 			IdempotencyKey: params.IdempotencyKey, MemberID: params.MemberID, BranchID: params.BranchID,
 			ContributionPeriod: params.ContributionPeriod, ExpectedAmount: params.Amount,
 			AllocationPlan: plan, RequestedBy: params.RequestedBy,
+			PhoneNumber: params.PhoneNumber,
 		})
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ErrPaymentRequestInProgress
@@ -159,7 +167,7 @@ func (s *Service) createContributionPaymentRequest(ctx context.Context, params I
 // idempotency and request matching into the HTTP handler.
 func (s *Service) ProcessDarajaSTKPayment(ctx context.Context, payment DarajaSTKPayment) (CreatedReceipt, error) {
 	checkoutID := strings.TrimSpace(payment.CheckoutRequestID)
-	mpesaReceipt := strings.TrimSpace(payment.MpesaReceipt)
+	mpesaReceipt := strings.ToUpper(strings.TrimSpace(payment.MpesaReceipt))
 	if checkoutID == "" || mpesaReceipt == "" || !positive(payment.Amount) {
 		return CreatedReceipt{}, ErrInvalidPayment
 	}
@@ -175,16 +183,20 @@ func (s *Service) ProcessDarajaSTKPayment(ctx context.Context, payment DarajaSTK
 			}
 			return fmt.Errorf("lock payment request: %w", err)
 		}
-		if request.Status == contributionsqlc.ContributionPaymentRequestStatusFailed {
-			return ErrReceiptNotProcessable
-		}
-
 		if request.Status == contributionsqlc.ContributionPaymentRequestStatusCompleted {
 			if !request.ReceiptID.Valid {
 				return fmt.Errorf("%w: completed payment request %s has no receipt ID", ErrReceiptNotProcessable, request.ID)
 			}
 
 			receiptID = request.ReceiptID
+			existing, err := q.GetContributionReceiptByID(ctx, receiptID)
+			if err != nil {
+				return err
+			}
+			if existing.ExternalTransactionID.String != mpesaReceipt || numericToScale(existing.ReceivedAmount, -4).Cmp(numericToScale(payment.Amount, -4)) != 0 {
+				return ErrInconsistentReceipt
+			}
+			result.Receipt = existing
 			return nil
 		}
 
@@ -192,9 +204,8 @@ func (s *Service) ProcessDarajaSTKPayment(ctx context.Context, payment DarajaSTK
 		// The amounts are scaled to 4 decimal places for comparison.
 		if numericToScale(request.ExpectedAmount, -4).Cmp(numericToScale(payment.Amount, -4)) != 0 {
 			processErr = ErrPaymentAmountMismatch
-			if _, err := q.UpdateContributionPaymentRequestFailed(ctx, contributionsqlc.UpdateContributionPaymentRequestFailedParams{
-				ID:            request.ID,
-				FailureReason: text(processErr.Error()),
+			if err := q.RecordDarajaQueryResult(ctx, contributionsqlc.RecordDarajaQueryResultParams{
+				ID: request.ID, ProviderResult: text(processErr.Error()), RecoveryStatus: "received_needs_review",
 			}); err != nil {
 				return fmt.Errorf("mark payment request failed: %w", err)
 			}
@@ -204,9 +215,8 @@ func (s *Service) ProcessDarajaSTKPayment(ctx context.Context, payment DarajaSTK
 		allocations, err := parseAllocationPlan(request.AllocationPlan)
 		if err != nil {
 			processErr = err
-			if _, updateErr := q.UpdateContributionPaymentRequestFailed(ctx, contributionsqlc.UpdateContributionPaymentRequestFailedParams{
-				ID:            request.ID,
-				FailureReason: text(err.Error()),
+			if updateErr := q.RecordDarajaQueryResult(ctx, contributionsqlc.RecordDarajaQueryResultParams{
+				ID: request.ID, ProviderResult: text(err.Error()), RecoveryStatus: "received_needs_review",
 			}); updateErr != nil {
 				return fmt.Errorf("mark payment request failed: %w", updateErr)
 			}
@@ -231,9 +241,8 @@ func (s *Service) ProcessDarajaSTKPayment(ctx context.Context, payment DarajaSTK
 		}
 		if err := validateReceipt(params, allocations); err != nil {
 			processErr = err
-			if _, updateErr := q.UpdateContributionPaymentRequestFailed(ctx, contributionsqlc.UpdateContributionPaymentRequestFailedParams{
-				ID:            request.ID,
-				FailureReason: text(err.Error()),
+			if updateErr := q.RecordDarajaQueryResult(ctx, contributionsqlc.RecordDarajaQueryResultParams{
+				ID: request.ID, ProviderResult: text(err.Error()), RecoveryStatus: "received_needs_review",
 			}); updateErr != nil {
 				return fmt.Errorf("mark payment request failed: %w", updateErr)
 			}
@@ -281,6 +290,9 @@ func (s *Service) MarkDarajaSTKPaymentFailed(ctx context.Context, checkoutID, re
 			return fmt.Errorf("lock payment request: %w", err)
 		}
 		if request.Status == contributionsqlc.ContributionPaymentRequestStatusCompleted {
+			return nil
+		}
+		if strings.HasPrefix(request.RecoveryStatus, "received") {
 			return nil
 		}
 		_, err = q.UpdateContributionPaymentRequestFailed(ctx, contributionsqlc.UpdateContributionPaymentRequestFailedParams{

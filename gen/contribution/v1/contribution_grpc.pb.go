@@ -19,6 +19,8 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
+	ContributionService_ListDarajaPayments_FullMethodName            = "/contribution.v1.ContributionService/ListDarajaPayments"
+	ContributionService_RecoverDarajaPayment_FullMethodName          = "/contribution.v1.ContributionService/RecoverDarajaPayment"
 	ContributionService_GetCashContext_FullMethodName                = "/contribution.v1.ContributionService/GetCashContext"
 	ContributionService_GetContributionPayment_FullMethodName        = "/contribution.v1.ContributionService/GetContributionPayment"
 	ContributionService_GetContributionQuote_FullMethodName          = "/contribution.v1.ContributionService/GetContributionQuote"
@@ -41,6 +43,8 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ContributionServiceClient interface {
+	ListDarajaPayments(ctx context.Context, in *ListDarajaPaymentsRequest, opts ...grpc.CallOption) (*ListDarajaPaymentsResponse, error)
+	RecoverDarajaPayment(ctx context.Context, in *RecoverDarajaPaymentRequest, opts ...grpc.CallOption) (*RecoverDarajaPaymentResponse, error)
 	GetCashContext(ctx context.Context, in *GetCashContextRequest, opts ...grpc.CallOption) (*GetCashContextResponse, error)
 	GetContributionPayment(ctx context.Context, in *GetContributionPaymentRequest, opts ...grpc.CallOption) (*GetContributionPaymentResponse, error)
 	GetContributionQuote(ctx context.Context, in *GetContributionQuoteRequest, opts ...grpc.CallOption) (*GetContributionQuoteResponse, error)
@@ -65,6 +69,26 @@ type contributionServiceClient struct {
 
 func NewContributionServiceClient(cc grpc.ClientConnInterface) ContributionServiceClient {
 	return &contributionServiceClient{cc}
+}
+
+func (c *contributionServiceClient) ListDarajaPayments(ctx context.Context, in *ListDarajaPaymentsRequest, opts ...grpc.CallOption) (*ListDarajaPaymentsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListDarajaPaymentsResponse)
+	err := c.cc.Invoke(ctx, ContributionService_ListDarajaPayments_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *contributionServiceClient) RecoverDarajaPayment(ctx context.Context, in *RecoverDarajaPaymentRequest, opts ...grpc.CallOption) (*RecoverDarajaPaymentResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RecoverDarajaPaymentResponse)
+	err := c.cc.Invoke(ctx, ContributionService_RecoverDarajaPayment_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *contributionServiceClient) GetCashContext(ctx context.Context, in *GetCashContextRequest, opts ...grpc.CallOption) (*GetCashContextResponse, error) {
@@ -231,6 +255,8 @@ func (c *contributionServiceClient) VerifyCashDeposit(ctx context.Context, in *V
 // All implementations must embed UnimplementedContributionServiceServer
 // for forward compatibility.
 type ContributionServiceServer interface {
+	ListDarajaPayments(context.Context, *ListDarajaPaymentsRequest) (*ListDarajaPaymentsResponse, error)
+	RecoverDarajaPayment(context.Context, *RecoverDarajaPaymentRequest) (*RecoverDarajaPaymentResponse, error)
 	GetCashContext(context.Context, *GetCashContextRequest) (*GetCashContextResponse, error)
 	GetContributionPayment(context.Context, *GetContributionPaymentRequest) (*GetContributionPaymentResponse, error)
 	GetContributionQuote(context.Context, *GetContributionQuoteRequest) (*GetContributionQuoteResponse, error)
@@ -257,6 +283,12 @@ type ContributionServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedContributionServiceServer struct{}
 
+func (UnimplementedContributionServiceServer) ListDarajaPayments(context.Context, *ListDarajaPaymentsRequest) (*ListDarajaPaymentsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListDarajaPayments not implemented")
+}
+func (UnimplementedContributionServiceServer) RecoverDarajaPayment(context.Context, *RecoverDarajaPaymentRequest) (*RecoverDarajaPaymentResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RecoverDarajaPayment not implemented")
+}
 func (UnimplementedContributionServiceServer) GetCashContext(context.Context, *GetCashContextRequest) (*GetCashContextResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetCashContext not implemented")
 }
@@ -324,6 +356,42 @@ func RegisterContributionServiceServer(s grpc.ServiceRegistrar, srv Contribution
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&ContributionService_ServiceDesc, srv)
+}
+
+func _ContributionService_ListDarajaPayments_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListDarajaPaymentsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ContributionServiceServer).ListDarajaPayments(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ContributionService_ListDarajaPayments_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ContributionServiceServer).ListDarajaPayments(ctx, req.(*ListDarajaPaymentsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ContributionService_RecoverDarajaPayment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RecoverDarajaPaymentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ContributionServiceServer).RecoverDarajaPayment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ContributionService_RecoverDarajaPayment_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ContributionServiceServer).RecoverDarajaPayment(ctx, req.(*RecoverDarajaPaymentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _ContributionService_GetCashContext_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -621,6 +689,14 @@ var ContributionService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "contribution.v1.ContributionService",
 	HandlerType: (*ContributionServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "ListDarajaPayments",
+			Handler:    _ContributionService_ListDarajaPayments_Handler,
+		},
+		{
+			MethodName: "RecoverDarajaPayment",
+			Handler:    _ContributionService_RecoverDarajaPayment_Handler,
+		},
 		{
 			MethodName: "GetCashContext",
 			Handler:    _ContributionService_GetCashContext_Handler,

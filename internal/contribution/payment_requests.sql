@@ -7,7 +7,8 @@ INSERT INTO contribution_payment_requests (
     contribution_period,
     expected_amount,
     allocation_plan,
-    requested_by
+    requested_by,
+    phone_number
 ) VALUES (
     sqlc.arg(idempotency_key),
     sqlc.narg(checkout_request_id),
@@ -16,7 +17,8 @@ INSERT INTO contribution_payment_requests (
     sqlc.arg(contribution_period),
     sqlc.arg(expected_amount),
     sqlc.arg(allocation_plan),
-    sqlc.arg(requested_by)
+    sqlc.arg(requested_by),
+    sqlc.arg(phone_number)
 )
 ON CONFLICT DO NOTHING
 RETURNING *;
@@ -33,7 +35,7 @@ WHERE checkout_request_id = $1;
 
 -- name: LookupContributionPaymentRequest :one
 SELECT p.id, p.status, p.expected_amount, p.contribution_period,
-       p.created_at, p.failure_reason,
+       p.created_at, p.failure_reason, p.checkout_request_id, p.recovery_status, p.query_attempts,
        r.id AS receipt_id, COALESCE(r.status::text, '')::text AS receipt_status,
        r.received_amount, r.external_transaction_id, r.received_at
 FROM contribution_payment_requests p
@@ -59,6 +61,7 @@ RETURNING *;
 -- name: UpdateContributionPaymentRequestCompleted :one
 UPDATE contribution_payment_requests
 SET status = 'completed',
+    recovery_status = 'received',
     receipt_id = $2,
     failure_reason = NULL,
     updated_at = NOW()
@@ -68,6 +71,7 @@ RETURNING *;
 -- name: UpdateContributionPaymentRequestFailed :one
 UPDATE contribution_payment_requests
 SET status = 'failed',
+    recovery_status = 'provider_failed',
     failure_reason = $2,
     updated_at = NOW()
 WHERE id = $1

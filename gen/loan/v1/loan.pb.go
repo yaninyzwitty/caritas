@@ -505,17 +505,20 @@ func (x *LoanGuarantor) GetGuarantorNumber() int64 {
 
 // CreditBalance represents overpayment tracking for a loan.
 type CreditBalance struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	MemberId       string                 `protobuf:"bytes,2,opt,name=member_id,json=memberId,proto3" json:"member_id,omitempty"`
-	LoanId         string                 `protobuf:"bytes,3,opt,name=loan_id,json=loanId,proto3" json:"loan_id,omitempty"` // Nullable. Credit can be general or loan-specific
-	Amount         string                 `protobuf:"bytes,4,opt,name=amount,proto3" json:"amount,omitempty"`               // decimal.Decimal as string (current balance)
-	Source         string                 `protobuf:"bytes,5,opt,name=source,proto3" json:"source,omitempty"`               // How credit was accumulated: "overpayment", "refund", "adjustment"
-	Status         CreditStatus           `protobuf:"varint,6,opt,name=status,proto3,enum=loan.v1.CreditStatus" json:"status,omitempty"`
-	CreatedAt      *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	LastActivityAt *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=last_activity_at,json=lastActivityAt,proto3" json:"last_activity_at,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Id              string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	MemberId        string                 `protobuf:"bytes,2,opt,name=member_id,json=memberId,proto3" json:"member_id,omitempty"`
+	LoanId          string                 `protobuf:"bytes,3,opt,name=loan_id,json=loanId,proto3" json:"loan_id,omitempty"` // Nullable. Credit can be general or loan-specific
+	Amount          string                 `protobuf:"bytes,4,opt,name=amount,proto3" json:"amount,omitempty"`               // decimal.Decimal as string (current balance)
+	Source          string                 `protobuf:"bytes,5,opt,name=source,proto3" json:"source,omitempty"`               // How credit was accumulated: "overpayment", "refund", "adjustment"
+	Status          CreditStatus           `protobuf:"varint,6,opt,name=status,proto3,enum=loan.v1.CreditStatus" json:"status,omitempty"`
+	CreatedAt       *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	LastActivityAt  *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=last_activity_at,json=lastActivityAt,proto3" json:"last_activity_at,omitempty"`
+	AvailableAmount string                 `protobuf:"bytes,9,opt,name=available_amount,json=availableAmount,proto3" json:"available_amount,omitempty"`
+	ReservedAmount  string                 `protobuf:"bytes,10,opt,name=reserved_amount,json=reservedAmount,proto3" json:"reserved_amount,omitempty"`
+	UsedAmount      string                 `protobuf:"bytes,11,opt,name=used_amount,json=usedAmount,proto3" json:"used_amount,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *CreditBalance) Reset() {
@@ -602,6 +605,27 @@ func (x *CreditBalance) GetLastActivityAt() *timestamppb.Timestamp {
 		return x.LastActivityAt
 	}
 	return nil
+}
+
+func (x *CreditBalance) GetAvailableAmount() string {
+	if x != nil {
+		return x.AvailableAmount
+	}
+	return ""
+}
+
+func (x *CreditBalance) GetReservedAmount() string {
+	if x != nil {
+		return x.ReservedAmount
+	}
+	return ""
+}
+
+func (x *CreditBalance) GetUsedAmount() string {
+	if x != nil {
+		return x.UsedAmount
+	}
+	return ""
 }
 
 // ProposedGuarantor captures the amount a guarantor commits to this loan.
@@ -2001,7 +2025,7 @@ const file_loan_v1_loan_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12%\n" +
 	"\x0eguarantor_name\x18\b \x01(\tR\rguarantorName\x12)\n" +
-	"\x10guarantor_number\x18\t \x01(\x03R\x0fguarantorNumber\"\xb5\x02\n" +
+	"\x10guarantor_number\x18\t \x01(\x03R\x0fguarantorNumber\"\xaa\x03\n" +
 	"\rCreditBalance\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tmember_id\x18\x02 \x01(\tR\bmemberId\x12\x17\n" +
@@ -2011,7 +2035,12 @@ const file_loan_v1_loan_proto_rawDesc = "" +
 	"\x06status\x18\x06 \x01(\x0e2\x15.loan.v1.CreditStatusR\x06status\x129\n" +
 	"\n" +
 	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12D\n" +
-	"\x10last_activity_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\x0elastActivityAt\"c\n" +
+	"\x10last_activity_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\x0elastActivityAt\x12)\n" +
+	"\x10available_amount\x18\t \x01(\tR\x0favailableAmount\x12'\n" +
+	"\x0freserved_amount\x18\n" +
+	" \x01(\tR\x0ereservedAmount\x12\x1f\n" +
+	"\vused_amount\x18\v \x01(\tR\n" +
+	"usedAmount\"c\n" +
 	"\x11ProposedGuarantor\x12!\n" +
 	"\fguarantor_id\x18\x01 \x01(\tR\vguarantorId\x12+\n" +
 	"\x11guaranteed_amount\x18\x02 \x01(\tR\x10guaranteedAmount\"\xfa\x02\n" +

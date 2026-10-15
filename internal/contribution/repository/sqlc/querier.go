@@ -13,9 +13,12 @@ import (
 type Querier interface {
 	AcceptCashHandover(ctx context.Context, arg AcceptCashHandoverParams) (CashierSession, error)
 	AssessMonthlyFees(ctx context.Context, arg AssessMonthlyFeesParams) error
+	ClaimDarajaCallback(ctx context.Context) (DarajaCallback, error)
+	ClaimDarajaQuery(ctx context.Context) (ContributionPaymentRequest, error)
 	CloseCashierSession(ctx context.Context, arg CloseCashierSessionParams) (CashierSession, error)
 	ContributionMemberExists(ctx context.Context, arg ContributionMemberExistsParams) (bool, error)
 	CreateContributionCharge(ctx context.Context, arg CreateContributionChargeParams) (ContributionCharge, error)
+	FinishDarajaCallback(ctx context.Context, arg FinishDarajaCallbackParams) error
 	GetCashDepositByBankReference(ctx context.Context, bankReference string) (CashDeposit, error)
 	GetCashDepositByID(ctx context.Context, id pgtype.UUID) (CashDeposit, error)
 	GetCashStaffNames(ctx context.Context, arg GetCashStaffNamesParams) ([]GetCashStaffNamesRow, error)
@@ -29,12 +32,16 @@ type Querier interface {
 	GetContributionReceiptByID(ctx context.Context, id pgtype.UUID) (ContributionReceipt, error)
 	GetContributionReceiptByIdempotencyKey(ctx context.Context, idempotencyKey pgtype.Text) (ContributionReceipt, error)
 	GetOpenCashierSession(ctx context.Context, cashierID pgtype.UUID) (CashierSession, error)
+	GetPaymentReconciliation(ctx context.Context, externalTransactionID string) (PaymentReconciliation, error)
 	InsertCashDeposit(ctx context.Context, arg InsertCashDepositParams) (CashDeposit, error)
 	InsertCashDepositSession(ctx context.Context, arg InsertCashDepositSessionParams) (CashDepositSession, error)
 	InsertCashierSession(ctx context.Context, arg InsertCashierSessionParams) (CashierSession, error)
 	InsertContributionAllocation(ctx context.Context, arg InsertContributionAllocationParams) (ContributionAllocation, error)
 	InsertContributionPaymentRequest(ctx context.Context, arg InsertContributionPaymentRequestParams) (ContributionPaymentRequest, error)
 	InsertContributionReceipt(ctx context.Context, arg InsertContributionReceiptParams) (ContributionReceipt, error)
+	InsertDarajaCallback(ctx context.Context, arg InsertDarajaCallbackParams) error
+	InsertPaymentReconciliation(ctx context.Context, arg InsertPaymentReconciliationParams) (PaymentReconciliation, error)
+	InsertPaymentRecoveryAction(ctx context.Context, arg InsertPaymentRecoveryActionParams) error
 	ListCashDepositSessions(ctx context.Context, depositID pgtype.UUID) ([]pgtype.UUID, error)
 	ListCashDeposits(ctx context.Context, arg ListCashDepositsParams) ([]CashDeposit, error)
 	ListCashierSessions(ctx context.Context, arg ListCashierSessionsParams) ([]CashierSession, error)
@@ -42,18 +49,24 @@ type Querier interface {
 	ListContributionCharges(ctx context.Context, arg ListContributionChargesParams) ([]ListContributionChargesRow, error)
 	ListContributionReceiptsByMember(ctx context.Context, arg ListContributionReceiptsByMemberParams) ([]ContributionReceipt, error)
 	ListPendingContributionReceipts(ctx context.Context, arg ListPendingContributionReceiptsParams) ([]ContributionReceipt, error)
+	ListUnresolvedDarajaPayments(ctx context.Context, arg ListUnresolvedDarajaPaymentsParams) ([]ListUnresolvedDarajaPaymentsRow, error)
 	LockCashierSession(ctx context.Context, id pgtype.UUID) (CashierSession, error)
 	LockCashierSessions(ctx context.Context, dollar_1 []pgtype.UUID) ([]CashierSession, error)
 	LockContributionAllocationsByReceipt(ctx context.Context, receiptID pgtype.UUID) ([]ContributionAllocation, error)
 	LockContributionCharges(ctx context.Context, ids []pgtype.UUID) ([]ContributionCharge, error)
 	LockContributionPaymentRequestByCheckoutID(ctx context.Context, checkoutRequestID pgtype.Text) (ContributionPaymentRequest, error)
 	LockContributionReceiptByID(ctx context.Context, id pgtype.UUID) (ContributionReceipt, error)
+	LockDarajaRequest(ctx context.Context, arg LockDarajaRequestParams) (ContributionPaymentRequest, error)
 	LockMonthlyFees(ctx context.Context, arg LockMonthlyFeesParams) ([]ContributionMonthlyFee, error)
 	LookupContributionPaymentRequest(ctx context.Context, arg LookupContributionPaymentRequestParams) (LookupContributionPaymentRequestRow, error)
 	MarkCashierSessionDeposited(ctx context.Context, id pgtype.UUID) (CashierSession, error)
 	// Read-only mirror of AssessMonthlyFees eligibility and the schema default (KES 30).
 	// Keep them together when changing fee policy, or the cashier quote and posting will disagree.
 	QuoteMonthlyFees(ctx context.Context, arg QuoteMonthlyFeesParams) ([]QuoteMonthlyFeesRow, error)
+	RecordDarajaQueryResult(ctx context.Context, arg RecordDarajaQueryResultParams) error
+	RequeueDarajaCallbacks(ctx context.Context, checkoutRequestID string) error
+	RetryDarajaReceipt(ctx context.Context, arg RetryDarajaReceiptParams) error
+	ScheduleDarajaQuery(ctx context.Context, arg ScheduleDarajaQueryParams) error
 	SumCashReceiptsBySession(ctx context.Context, cashierSessionID pgtype.UUID) (pgtype.Numeric, error)
 	SumContributionChargePayments(ctx context.Context, arg SumContributionChargePaymentsParams) (pgtype.Numeric, error)
 	SumMonthlyFeePayments(ctx context.Context, arg SumMonthlyFeePaymentsParams) (pgtype.Numeric, error)

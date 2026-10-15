@@ -461,6 +461,8 @@ type GetContributionPaymentResponse struct {
 	CreatedAt          *timestamppb.Timestamp           `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	FailureReason      string                           `protobuf:"bytes,6,opt,name=failure_reason,json=failureReason,proto3" json:"failure_reason,omitempty"`
 	Receipt            *ContributionPaymentReceipt      `protobuf:"bytes,7,opt,name=receipt,proto3" json:"receipt,omitempty"`
+	CheckoutRequestId  string                           `protobuf:"bytes,8,opt,name=checkout_request_id,json=checkoutRequestId,proto3" json:"checkout_request_id,omitempty"`
+	RecoveryStatus     string                           `protobuf:"bytes,9,opt,name=recovery_status,json=recoveryStatus,proto3" json:"recovery_status,omitempty"`
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -542,6 +544,20 @@ func (x *GetContributionPaymentResponse) GetReceipt() *ContributionPaymentReceip
 		return x.Receipt
 	}
 	return nil
+}
+
+func (x *GetContributionPaymentResponse) GetCheckoutRequestId() string {
+	if x != nil {
+		return x.CheckoutRequestId
+	}
+	return ""
+}
+
+func (x *GetContributionPaymentResponse) GetRecoveryStatus() string {
+	if x != nil {
+		return x.RecoveryStatus
+	}
+	return ""
 }
 
 // The receipt's own status prevents collected money being mistaken for a posted contribution.
@@ -1990,13 +2006,14 @@ func (x *ListContributionChargesResponse) GetNextPageToken() string {
 }
 
 type GetCashContextResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	StaffId       string                 `protobuf:"bytes,1,opt,name=staff_id,json=staffId,proto3" json:"staff_id,omitempty"`
-	BranchId      int64                  `protobuf:"varint,2,opt,name=branch_id,json=branchId,proto3" json:"branch_id,omitempty"`
-	CanRecord     bool                   `protobuf:"varint,3,opt,name=can_record,json=canRecord,proto3" json:"can_record,omitempty"`
-	CanApprove    bool                   `protobuf:"varint,4,opt,name=can_approve,json=canApprove,proto3" json:"can_approve,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	StaffId          string                 `protobuf:"bytes,1,opt,name=staff_id,json=staffId,proto3" json:"staff_id,omitempty"`
+	BranchId         int64                  `protobuf:"varint,2,opt,name=branch_id,json=branchId,proto3" json:"branch_id,omitempty"`
+	CanRecord        bool                   `protobuf:"varint,3,opt,name=can_record,json=canRecord,proto3" json:"can_record,omitempty"`
+	CanApprove       bool                   `protobuf:"varint,4,opt,name=can_approve,json=canApprove,proto3" json:"can_approve,omitempty"`
+	CanApproveCredit bool                   `protobuf:"varint,5,opt,name=can_approve_credit,json=canApproveCredit,proto3" json:"can_approve_credit,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *GetCashContextResponse) Reset() {
@@ -2053,6 +2070,13 @@ func (x *GetCashContextResponse) GetCanRecord() bool {
 func (x *GetCashContextResponse) GetCanApprove() bool {
 	if x != nil {
 		return x.CanApprove
+	}
+	return false
+}
+
+func (x *GetCashContextResponse) GetCanApproveCredit() bool {
+	if x != nil {
+		return x.CanApproveCredit
 	}
 	return false
 }
@@ -2630,6 +2654,372 @@ func (x *GetCashDepositResponse) GetDeposit() *CashDeposit {
 	return nil
 }
 
+// Recovery lists persist across browsers; the cursor is the last creation time and ID.
+type ListDarajaPaymentsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	PageToken     string                 `protobuf:"bytes,1,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListDarajaPaymentsRequest) Reset() {
+	*x = ListDarajaPaymentsRequest{}
+	mi := &file_contribution_v1_contribution_proto_msgTypes[39]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListDarajaPaymentsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListDarajaPaymentsRequest) ProtoMessage() {}
+
+func (x *ListDarajaPaymentsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_contribution_v1_contribution_proto_msgTypes[39]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListDarajaPaymentsRequest.ProtoReflect.Descriptor instead.
+func (*ListDarajaPaymentsRequest) Descriptor() ([]byte, []int) {
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{39}
+}
+
+func (x *ListDarajaPaymentsRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
+type ListDarajaPaymentsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Payments      []*DarajaPayment       `protobuf:"bytes,1,rep,name=payments,proto3" json:"payments,omitempty"`
+	NextPageToken string                 `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListDarajaPaymentsResponse) Reset() {
+	*x = ListDarajaPaymentsResponse{}
+	mi := &file_contribution_v1_contribution_proto_msgTypes[40]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListDarajaPaymentsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListDarajaPaymentsResponse) ProtoMessage() {}
+
+func (x *ListDarajaPaymentsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_contribution_v1_contribution_proto_msgTypes[40]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListDarajaPaymentsResponse.ProtoReflect.Descriptor instead.
+func (*ListDarajaPaymentsResponse) Descriptor() ([]byte, []int) {
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{40}
+}
+
+func (x *ListDarajaPaymentsResponse) GetPayments() []*DarajaPayment {
+	if x != nil {
+		return x.Payments
+	}
+	return nil
+}
+
+func (x *ListDarajaPaymentsResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
+}
+
+type DarajaPayment struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	PaymentRequestId  string                 `protobuf:"bytes,1,opt,name=payment_request_id,json=paymentRequestId,proto3" json:"payment_request_id,omitempty"`
+	MemberId          string                 `protobuf:"bytes,2,opt,name=member_id,json=memberId,proto3" json:"member_id,omitempty"`
+	CheckoutRequestId string                 `protobuf:"bytes,3,opt,name=checkout_request_id,json=checkoutRequestId,proto3" json:"checkout_request_id,omitempty"`
+	Amount            *v1.Money              `protobuf:"bytes,4,opt,name=amount,proto3" json:"amount,omitempty"`
+	Status            string                 `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"`
+	RecoveryStatus    string                 `protobuf:"bytes,6,opt,name=recovery_status,json=recoveryStatus,proto3" json:"recovery_status,omitempty"`
+	ReceiptStatus     string                 `protobuf:"bytes,7,opt,name=receipt_status,json=receiptStatus,proto3" json:"receipt_status,omitempty"`
+	MpesaReference    string                 `protobuf:"bytes,8,opt,name=mpesa_reference,json=mpesaReference,proto3" json:"mpesa_reference,omitempty"`
+	LastError         string                 `protobuf:"bytes,9,opt,name=last_error,json=lastError,proto3" json:"last_error,omitempty"`
+	CreatedAt         *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	ProviderResult    string                 `protobuf:"bytes,11,opt,name=provider_result,json=providerResult,proto3" json:"provider_result,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *DarajaPayment) Reset() {
+	*x = DarajaPayment{}
+	mi := &file_contribution_v1_contribution_proto_msgTypes[41]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DarajaPayment) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DarajaPayment) ProtoMessage() {}
+
+func (x *DarajaPayment) ProtoReflect() protoreflect.Message {
+	mi := &file_contribution_v1_contribution_proto_msgTypes[41]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DarajaPayment.ProtoReflect.Descriptor instead.
+func (*DarajaPayment) Descriptor() ([]byte, []int) {
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{41}
+}
+
+func (x *DarajaPayment) GetPaymentRequestId() string {
+	if x != nil {
+		return x.PaymentRequestId
+	}
+	return ""
+}
+
+func (x *DarajaPayment) GetMemberId() string {
+	if x != nil {
+		return x.MemberId
+	}
+	return ""
+}
+
+func (x *DarajaPayment) GetCheckoutRequestId() string {
+	if x != nil {
+		return x.CheckoutRequestId
+	}
+	return ""
+}
+
+func (x *DarajaPayment) GetAmount() *v1.Money {
+	if x != nil {
+		return x.Amount
+	}
+	return nil
+}
+
+func (x *DarajaPayment) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *DarajaPayment) GetRecoveryStatus() string {
+	if x != nil {
+		return x.RecoveryStatus
+	}
+	return ""
+}
+
+func (x *DarajaPayment) GetReceiptStatus() string {
+	if x != nil {
+		return x.ReceiptStatus
+	}
+	return ""
+}
+
+func (x *DarajaPayment) GetMpesaReference() string {
+	if x != nil {
+		return x.MpesaReference
+	}
+	return ""
+}
+
+func (x *DarajaPayment) GetLastError() string {
+	if x != nil {
+		return x.LastError
+	}
+	return ""
+}
+
+func (x *DarajaPayment) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *DarajaPayment) GetProviderResult() string {
+	if x != nil {
+		return x.ProviderResult
+	}
+	return ""
+}
+
+// Reconciliation requires verified business records; query and retry never initiate STK.
+type RecoverDarajaPaymentRequest struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	PaymentRequestId  string                 `protobuf:"bytes,1,opt,name=payment_request_id,json=paymentRequestId,proto3" json:"payment_request_id,omitempty"`
+	Action            string                 `protobuf:"bytes,2,opt,name=action,proto3" json:"action,omitempty"` // query, reconcile, retry_posting
+	CheckoutRequestId string                 `protobuf:"bytes,3,opt,name=checkout_request_id,json=checkoutRequestId,proto3" json:"checkout_request_id,omitempty"`
+	MpesaReference    string                 `protobuf:"bytes,4,opt,name=mpesa_reference,json=mpesaReference,proto3" json:"mpesa_reference,omitempty"`
+	Amount            *v1.Money              `protobuf:"bytes,5,opt,name=amount,proto3" json:"amount,omitempty"`
+	ReceivedAt        *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=received_at,json=receivedAt,proto3" json:"received_at,omitempty"`
+	Evidence          string                 `protobuf:"bytes,7,opt,name=evidence,proto3" json:"evidence,omitempty"`
+	Reason            string                 `protobuf:"bytes,8,opt,name=reason,proto3" json:"reason,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *RecoverDarajaPaymentRequest) Reset() {
+	*x = RecoverDarajaPaymentRequest{}
+	mi := &file_contribution_v1_contribution_proto_msgTypes[42]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RecoverDarajaPaymentRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RecoverDarajaPaymentRequest) ProtoMessage() {}
+
+func (x *RecoverDarajaPaymentRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_contribution_v1_contribution_proto_msgTypes[42]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RecoverDarajaPaymentRequest.ProtoReflect.Descriptor instead.
+func (*RecoverDarajaPaymentRequest) Descriptor() ([]byte, []int) {
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{42}
+}
+
+func (x *RecoverDarajaPaymentRequest) GetPaymentRequestId() string {
+	if x != nil {
+		return x.PaymentRequestId
+	}
+	return ""
+}
+
+func (x *RecoverDarajaPaymentRequest) GetAction() string {
+	if x != nil {
+		return x.Action
+	}
+	return ""
+}
+
+func (x *RecoverDarajaPaymentRequest) GetCheckoutRequestId() string {
+	if x != nil {
+		return x.CheckoutRequestId
+	}
+	return ""
+}
+
+func (x *RecoverDarajaPaymentRequest) GetMpesaReference() string {
+	if x != nil {
+		return x.MpesaReference
+	}
+	return ""
+}
+
+func (x *RecoverDarajaPaymentRequest) GetAmount() *v1.Money {
+	if x != nil {
+		return x.Amount
+	}
+	return nil
+}
+
+func (x *RecoverDarajaPaymentRequest) GetReceivedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ReceivedAt
+	}
+	return nil
+}
+
+func (x *RecoverDarajaPaymentRequest) GetEvidence() string {
+	if x != nil {
+		return x.Evidence
+	}
+	return ""
+}
+
+func (x *RecoverDarajaPaymentRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+type RecoverDarajaPaymentResponse struct {
+	state         protoimpl.MessageState          `protogen:"open.v1"`
+	Payment       *GetContributionPaymentResponse `protobuf:"bytes,1,opt,name=payment,proto3" json:"payment,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RecoverDarajaPaymentResponse) Reset() {
+	*x = RecoverDarajaPaymentResponse{}
+	mi := &file_contribution_v1_contribution_proto_msgTypes[43]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RecoverDarajaPaymentResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RecoverDarajaPaymentResponse) ProtoMessage() {}
+
+func (x *RecoverDarajaPaymentResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_contribution_v1_contribution_proto_msgTypes[43]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RecoverDarajaPaymentResponse.ProtoReflect.Descriptor instead.
+func (*RecoverDarajaPaymentResponse) Descriptor() ([]byte, []int) {
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{43}
+}
+
+func (x *RecoverDarajaPaymentResponse) GetPayment() *GetContributionPaymentResponse {
+	if x != nil {
+		return x.Payment
+	}
+	return nil
+}
+
 var File_contribution_v1_contribution_proto protoreflect.FileDescriptor
 
 const file_contribution_v1_contribution_proto_rawDesc = "" +
@@ -2656,7 +3046,7 @@ const file_contribution_v1_contribution_proto_rawDesc = "" +
 	"\x1dGetContributionPaymentRequest\x12.\n" +
 	"\x12payment_request_id\x18\x01 \x01(\tH\x00R\x10paymentRequestId\x12)\n" +
 	"\x0fidempotency_key\x18\x02 \x01(\tH\x00R\x0eidempotencyKeyB\b\n" +
-	"\x06lookup\"\x9d\x03\n" +
+	"\x06lookup\"\xf6\x03\n" +
 	"\x1eGetContributionPaymentResponse\x12,\n" +
 	"\x12payment_request_id\x18\x01 \x01(\tR\x10paymentRequestId\x12I\n" +
 	"\x06status\x18\x02 \x01(\x0e21.contribution.v1.ContributionPaymentRequestStatusR\x06status\x12(\n" +
@@ -2665,7 +3055,9 @@ const file_contribution_v1_contribution_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12%\n" +
 	"\x0efailure_reason\x18\x06 \x01(\tR\rfailureReason\x12E\n" +
-	"\areceipt\x18\a \x01(\v2+.contribution.v1.ContributionPaymentReceiptR\areceipt\"\xd4\x01\n" +
+	"\areceipt\x18\a \x01(\v2+.contribution.v1.ContributionPaymentReceiptR\areceipt\x12.\n" +
+	"\x13checkout_request_id\x18\b \x01(\tR\x11checkoutRequestId\x12'\n" +
+	"\x0frecovery_status\x18\t \x01(\tR\x0erecoveryStatus\"\xd4\x01\n" +
 	"\x1aContributionPaymentReceipt\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06status\x18\x02 \x01(\tR\x06status\x12(\n" +
@@ -2787,14 +3179,15 @@ const file_contribution_v1_contribution_proto_rawDesc = "" +
 	"page_token\x18\x03 \x01(\tR\tpageToken\"\x88\x01\n" +
 	"\x1fListContributionChargesResponse\x12=\n" +
 	"\acharges\x18\x01 \x03(\v2#.contribution.v1.ContributionChargeR\acharges\x12&\n" +
-	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"\x90\x01\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"\xbe\x01\n" +
 	"\x16GetCashContextResponse\x12\x19\n" +
 	"\bstaff_id\x18\x01 \x01(\tR\astaffId\x12\x1b\n" +
 	"\tbranch_id\x18\x02 \x01(\x03R\bbranchId\x12\x1d\n" +
 	"\n" +
 	"can_record\x18\x03 \x01(\bR\tcanRecord\x12\x1f\n" +
 	"\vcan_approve\x18\x04 \x01(\bR\n" +
-	"canApprove\"k\n" +
+	"canApprove\x12,\n" +
+	"\x12can_approve_credit\x18\x05 \x01(\bR\x10canApproveCredit\"k\n" +
 	"\x1bGetContributionQuoteRequest\x12\x1b\n" +
 	"\tmember_id\x18\x01 \x01(\tR\bmemberId\x12/\n" +
 	"\x13contribution_period\x18\x02 \x01(\tR\x12contributionPeriod\"`\n" +
@@ -2831,7 +3224,40 @@ const file_contribution_v1_contribution_proto_rawDesc = "" +
 	"\x16GetCashReceiptResponse\x12B\n" +
 	"\areceipt\x18\x01 \x01(\v2(.contribution.v1.CashContributionReceiptR\areceipt\"P\n" +
 	"\x16GetCashDepositResponse\x126\n" +
-	"\adeposit\x18\x01 \x01(\v2\x1c.contribution.v1.CashDepositR\adeposit*\xeb\x01\n" +
+	"\adeposit\x18\x01 \x01(\v2\x1c.contribution.v1.CashDepositR\adeposit\":\n" +
+	"\x19ListDarajaPaymentsRequest\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x01 \x01(\tR\tpageToken\"\x80\x01\n" +
+	"\x1aListDarajaPaymentsResponse\x12:\n" +
+	"\bpayments\x18\x01 \x03(\v2\x1e.contribution.v1.DarajaPaymentR\bpayments\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"\xc8\x03\n" +
+	"\rDarajaPayment\x12,\n" +
+	"\x12payment_request_id\x18\x01 \x01(\tR\x10paymentRequestId\x12\x1b\n" +
+	"\tmember_id\x18\x02 \x01(\tR\bmemberId\x12.\n" +
+	"\x13checkout_request_id\x18\x03 \x01(\tR\x11checkoutRequestId\x12(\n" +
+	"\x06amount\x18\x04 \x01(\v2\x10.member.v1.MoneyR\x06amount\x12\x16\n" +
+	"\x06status\x18\x05 \x01(\tR\x06status\x12'\n" +
+	"\x0frecovery_status\x18\x06 \x01(\tR\x0erecoveryStatus\x12%\n" +
+	"\x0ereceipt_status\x18\a \x01(\tR\rreceiptStatus\x12'\n" +
+	"\x0fmpesa_reference\x18\b \x01(\tR\x0empesaReference\x12\x1d\n" +
+	"\n" +
+	"last_error\x18\t \x01(\tR\tlastError\x129\n" +
+	"\n" +
+	"created_at\x18\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12'\n" +
+	"\x0fprovider_result\x18\v \x01(\tR\x0eproviderResult\"\xd7\x02\n" +
+	"\x1bRecoverDarajaPaymentRequest\x12,\n" +
+	"\x12payment_request_id\x18\x01 \x01(\tR\x10paymentRequestId\x12\x16\n" +
+	"\x06action\x18\x02 \x01(\tR\x06action\x12.\n" +
+	"\x13checkout_request_id\x18\x03 \x01(\tR\x11checkoutRequestId\x12'\n" +
+	"\x0fmpesa_reference\x18\x04 \x01(\tR\x0empesaReference\x12(\n" +
+	"\x06amount\x18\x05 \x01(\v2\x10.member.v1.MoneyR\x06amount\x12;\n" +
+	"\vreceived_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"receivedAt\x12\x1a\n" +
+	"\bevidence\x18\a \x01(\tR\bevidence\x12\x16\n" +
+	"\x06reason\x18\b \x01(\tR\x06reason\"i\n" +
+	"\x1cRecoverDarajaPaymentResponse\x12I\n" +
+	"\apayment\x18\x01 \x01(\v2/.contribution.v1.GetContributionPaymentResponseR\apayment*\xeb\x01\n" +
 	" ContributionPaymentRequestStatus\x123\n" +
 	"/CONTRIBUTION_PAYMENT_REQUEST_STATUS_UNSPECIFIED\x10\x00\x12/\n" +
 	"+CONTRIBUTION_PAYMENT_REQUEST_STATUS_PENDING\x10\x01\x121\n" +
@@ -2846,8 +3272,10 @@ const file_contribution_v1_contribution_proto_rawDesc = "" +
 	"*CONTRIBUTION_ALLOCATION_TYPE_LOAN_INTEREST\x10\x05\x12(\n" +
 	"$CONTRIBUTION_ALLOCATION_TYPE_PENALTY\x10\x06\x12-\n" +
 	")CONTRIBUTION_ALLOCATION_TYPE_OTHER_CHARGE\x10\a\x123\n" +
-	"/CONTRIBUTION_ALLOCATION_TYPE_OVERPAYMENT_CREDIT\x10\b2\xc7\x14\n" +
-	"\x13ContributionService\x12\x8d\x01\n" +
+	"/CONTRIBUTION_ALLOCATION_TYPE_OVERPAYMENT_CREDIT\x10\b2\x8d\x17\n" +
+	"\x13ContributionService\x12\x9c\x01\n" +
+	"\x12ListDarajaPayments\x12*.contribution.v1.ListDarajaPaymentsRequest\x1a+.contribution.v1.ListDarajaPaymentsResponse\"-\x82\xd3\xe4\x93\x02'\x12%/api/v1/contributions/daraja-payments\x12\xa4\x01\n" +
+	"\x14RecoverDarajaPayment\x12,.contribution.v1.RecoverDarajaPaymentRequest\x1a-.contribution.v1.RecoverDarajaPaymentResponse\"/\x82\xd3\xe4\x93\x02):\x01*\"$/api/v1/contributions/recover-daraja\x12\x8d\x01\n" +
 	"\x0eGetCashContext\x12&.contribution.v1.GetCashContextRequest\x1a'.contribution.v1.GetCashContextResponse\"*\x82\xd3\xe4\x93\x02$\x12\"/api/v1/contributions/cash-context\x12\xa8\x01\n" +
 	"\x16GetContributionPayment\x12..contribution.v1.GetContributionPaymentRequest\x1a/.contribution.v1.GetContributionPaymentResponse\"-\x82\xd3\xe4\x93\x02'\x12%/api/v1/contributions/payment-request\x12\x98\x01\n" +
 	"\x14GetContributionQuote\x12,.contribution.v1.GetContributionQuoteRequest\x1a-.contribution.v1.GetContributionQuoteResponse\"#\x82\xd3\xe4\x93\x02\x1d\x12\x1b/api/v1/contributions/quote\x12\x8d\x01\n" +
@@ -2879,7 +3307,7 @@ func file_contribution_v1_contribution_proto_rawDescGZIP() []byte {
 }
 
 var file_contribution_v1_contribution_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_contribution_v1_contribution_proto_msgTypes = make([]protoimpl.MessageInfo, 39)
+var file_contribution_v1_contribution_proto_msgTypes = make([]protoimpl.MessageInfo, 44)
 var file_contribution_v1_contribution_proto_goTypes = []any{
 	(ContributionPaymentRequestStatus)(0),         // 0: contribution.v1.ContributionPaymentRequestStatus
 	(ContributionAllocationType)(0),               // 1: contribution.v1.ContributionAllocationType
@@ -2922,96 +3350,111 @@ var file_contribution_v1_contribution_proto_goTypes = []any{
 	(*GetCashDepositRequest)(nil),                 // 38: contribution.v1.GetCashDepositRequest
 	(*GetCashReceiptResponse)(nil),                // 39: contribution.v1.GetCashReceiptResponse
 	(*GetCashDepositResponse)(nil),                // 40: contribution.v1.GetCashDepositResponse
-	(*v1.Money)(nil),                              // 41: member.v1.Money
-	(*timestamppb.Timestamp)(nil),                 // 42: google.protobuf.Timestamp
+	(*ListDarajaPaymentsRequest)(nil),             // 41: contribution.v1.ListDarajaPaymentsRequest
+	(*ListDarajaPaymentsResponse)(nil),            // 42: contribution.v1.ListDarajaPaymentsResponse
+	(*DarajaPayment)(nil),                         // 43: contribution.v1.DarajaPayment
+	(*RecoverDarajaPaymentRequest)(nil),           // 44: contribution.v1.RecoverDarajaPaymentRequest
+	(*RecoverDarajaPaymentResponse)(nil),          // 45: contribution.v1.RecoverDarajaPaymentResponse
+	(*v1.Money)(nil),                              // 46: member.v1.Money
+	(*timestamppb.Timestamp)(nil),                 // 47: google.protobuf.Timestamp
 }
 var file_contribution_v1_contribution_proto_depIdxs = []int32{
 	1,  // 0: contribution.v1.ContributionAllocationInput.type:type_name -> contribution.v1.ContributionAllocationType
-	41, // 1: contribution.v1.ContributionAllocationInput.amount:type_name -> member.v1.Money
-	41, // 2: contribution.v1.InitiateDarajaSTKContributionRequest.amount:type_name -> member.v1.Money
+	46, // 1: contribution.v1.ContributionAllocationInput.amount:type_name -> member.v1.Money
+	46, // 2: contribution.v1.InitiateDarajaSTKContributionRequest.amount:type_name -> member.v1.Money
 	2,  // 3: contribution.v1.InitiateDarajaSTKContributionRequest.allocations:type_name -> contribution.v1.ContributionAllocationInput
 	0,  // 4: contribution.v1.InitiateDarajaSTKContributionResponse.status:type_name -> contribution.v1.ContributionPaymentRequestStatus
-	42, // 5: contribution.v1.InitiateDarajaSTKContributionResponse.created_at:type_name -> google.protobuf.Timestamp
+	47, // 5: contribution.v1.InitiateDarajaSTKContributionResponse.created_at:type_name -> google.protobuf.Timestamp
 	0,  // 6: contribution.v1.GetContributionPaymentResponse.status:type_name -> contribution.v1.ContributionPaymentRequestStatus
-	41, // 7: contribution.v1.GetContributionPaymentResponse.amount:type_name -> member.v1.Money
-	42, // 8: contribution.v1.GetContributionPaymentResponse.created_at:type_name -> google.protobuf.Timestamp
+	46, // 7: contribution.v1.GetContributionPaymentResponse.amount:type_name -> member.v1.Money
+	47, // 8: contribution.v1.GetContributionPaymentResponse.created_at:type_name -> google.protobuf.Timestamp
 	7,  // 9: contribution.v1.GetContributionPaymentResponse.receipt:type_name -> contribution.v1.ContributionPaymentReceipt
-	41, // 10: contribution.v1.ContributionPaymentReceipt.amount:type_name -> member.v1.Money
-	42, // 11: contribution.v1.ContributionPaymentReceipt.received_at:type_name -> google.protobuf.Timestamp
+	46, // 10: contribution.v1.ContributionPaymentReceipt.amount:type_name -> member.v1.Money
+	47, // 11: contribution.v1.ContributionPaymentReceipt.received_at:type_name -> google.protobuf.Timestamp
 	11, // 12: contribution.v1.OpenCashierSessionResponse.session:type_name -> contribution.v1.CashierSession
-	41, // 13: contribution.v1.CashierSession.expected_amount:type_name -> member.v1.Money
-	41, // 14: contribution.v1.CashierSession.counted_amount:type_name -> member.v1.Money
-	41, // 15: contribution.v1.CashierSession.variance:type_name -> member.v1.Money
-	42, // 16: contribution.v1.CashierSession.opened_at:type_name -> google.protobuf.Timestamp
-	42, // 17: contribution.v1.CashierSession.closed_at:type_name -> google.protobuf.Timestamp
-	42, // 18: contribution.v1.CashierSession.handed_over_at:type_name -> google.protobuf.Timestamp
-	42, // 19: contribution.v1.CashierSession.deposited_at:type_name -> google.protobuf.Timestamp
-	41, // 20: contribution.v1.CreateCashContributionRequest.amount:type_name -> member.v1.Money
+	46, // 13: contribution.v1.CashierSession.expected_amount:type_name -> member.v1.Money
+	46, // 14: contribution.v1.CashierSession.counted_amount:type_name -> member.v1.Money
+	46, // 15: contribution.v1.CashierSession.variance:type_name -> member.v1.Money
+	47, // 16: contribution.v1.CashierSession.opened_at:type_name -> google.protobuf.Timestamp
+	47, // 17: contribution.v1.CashierSession.closed_at:type_name -> google.protobuf.Timestamp
+	47, // 18: contribution.v1.CashierSession.handed_over_at:type_name -> google.protobuf.Timestamp
+	47, // 19: contribution.v1.CashierSession.deposited_at:type_name -> google.protobuf.Timestamp
+	46, // 20: contribution.v1.CreateCashContributionRequest.amount:type_name -> member.v1.Money
 	2,  // 21: contribution.v1.CreateCashContributionRequest.allocations:type_name -> contribution.v1.ContributionAllocationInput
-	41, // 22: contribution.v1.CashContributionReceipt.amount:type_name -> member.v1.Money
-	42, // 23: contribution.v1.CashContributionReceipt.received_at:type_name -> google.protobuf.Timestamp
+	46, // 22: contribution.v1.CashContributionReceipt.amount:type_name -> member.v1.Money
+	47, // 23: contribution.v1.CashContributionReceipt.received_at:type_name -> google.protobuf.Timestamp
 	33, // 24: contribution.v1.CashContributionReceipt.allocations:type_name -> contribution.v1.CashReceiptAllocation
 	13, // 25: contribution.v1.CreateCashContributionResponse.receipt:type_name -> contribution.v1.CashContributionReceipt
-	41, // 26: contribution.v1.CloseCashierSessionRequest.counted_amount:type_name -> member.v1.Money
+	46, // 26: contribution.v1.CloseCashierSessionRequest.counted_amount:type_name -> member.v1.Money
 	11, // 27: contribution.v1.CloseCashierSessionResponse.session:type_name -> contribution.v1.CashierSession
 	11, // 28: contribution.v1.AcceptCashHandoverResponse.session:type_name -> contribution.v1.CashierSession
-	41, // 29: contribution.v1.RecordCashDepositRequest.amount:type_name -> member.v1.Money
-	41, // 30: contribution.v1.CashDeposit.amount:type_name -> member.v1.Money
-	42, // 31: contribution.v1.CashDeposit.recorded_at:type_name -> google.protobuf.Timestamp
-	42, // 32: contribution.v1.CashDeposit.verified_at:type_name -> google.protobuf.Timestamp
+	46, // 29: contribution.v1.RecordCashDepositRequest.amount:type_name -> member.v1.Money
+	46, // 30: contribution.v1.CashDeposit.amount:type_name -> member.v1.Money
+	47, // 31: contribution.v1.CashDeposit.recorded_at:type_name -> google.protobuf.Timestamp
+	47, // 32: contribution.v1.CashDeposit.verified_at:type_name -> google.protobuf.Timestamp
 	20, // 33: contribution.v1.RecordCashDepositResponse.deposit:type_name -> contribution.v1.CashDeposit
 	20, // 34: contribution.v1.VerifyCashDepositResponse.deposit:type_name -> contribution.v1.CashDeposit
-	41, // 35: contribution.v1.ContributionCharge.amount:type_name -> member.v1.Money
-	41, // 36: contribution.v1.ContributionCharge.paid:type_name -> member.v1.Money
-	41, // 37: contribution.v1.ContributionCharge.outstanding:type_name -> member.v1.Money
-	42, // 38: contribution.v1.ContributionCharge.created_at:type_name -> google.protobuf.Timestamp
-	41, // 39: contribution.v1.CreateContributionChargeRequest.amount:type_name -> member.v1.Money
+	46, // 35: contribution.v1.ContributionCharge.amount:type_name -> member.v1.Money
+	46, // 36: contribution.v1.ContributionCharge.paid:type_name -> member.v1.Money
+	46, // 37: contribution.v1.ContributionCharge.outstanding:type_name -> member.v1.Money
+	47, // 38: contribution.v1.ContributionCharge.created_at:type_name -> google.protobuf.Timestamp
+	46, // 39: contribution.v1.CreateContributionChargeRequest.amount:type_name -> member.v1.Money
 	24, // 40: contribution.v1.CreateContributionChargeResponse.charge:type_name -> contribution.v1.ContributionCharge
 	24, // 41: contribution.v1.ListContributionChargesResponse.charges:type_name -> contribution.v1.ContributionCharge
 	2,  // 42: contribution.v1.GetContributionQuoteResponse.fees:type_name -> contribution.v1.ContributionAllocationInput
 	1,  // 43: contribution.v1.CashReceiptAllocation.type:type_name -> contribution.v1.ContributionAllocationType
-	41, // 44: contribution.v1.CashReceiptAllocation.amount:type_name -> member.v1.Money
+	46, // 44: contribution.v1.CashReceiptAllocation.amount:type_name -> member.v1.Money
 	11, // 45: contribution.v1.ListCashierSessionsResponse.sessions:type_name -> contribution.v1.CashierSession
 	20, // 46: contribution.v1.ListCashDepositsResponse.deposits:type_name -> contribution.v1.CashDeposit
 	13, // 47: contribution.v1.GetCashReceiptResponse.receipt:type_name -> contribution.v1.CashContributionReceipt
 	20, // 48: contribution.v1.GetCashDepositResponse.deposit:type_name -> contribution.v1.CashDeposit
-	9,  // 49: contribution.v1.ContributionService.GetCashContext:input_type -> contribution.v1.GetCashContextRequest
-	5,  // 50: contribution.v1.ContributionService.GetContributionPayment:input_type -> contribution.v1.GetContributionPaymentRequest
-	30, // 51: contribution.v1.ContributionService.GetContributionQuote:input_type -> contribution.v1.GetContributionQuoteRequest
-	32, // 52: contribution.v1.ContributionService.GetCashReceipt:input_type -> contribution.v1.GetCashReceiptRequest
-	34, // 53: contribution.v1.ContributionService.ListCashierSessions:input_type -> contribution.v1.ListCashierSessionsRequest
-	36, // 54: contribution.v1.ContributionService.ListCashDeposits:input_type -> contribution.v1.ListCashDepositsRequest
-	38, // 55: contribution.v1.ContributionService.GetCashDeposit:input_type -> contribution.v1.GetCashDepositRequest
-	25, // 56: contribution.v1.ContributionService.CreateContributionCharge:input_type -> contribution.v1.CreateContributionChargeRequest
-	27, // 57: contribution.v1.ContributionService.ListContributionCharges:input_type -> contribution.v1.ListContributionChargesRequest
-	3,  // 58: contribution.v1.ContributionService.InitiateDarajaSTKContribution:input_type -> contribution.v1.InitiateDarajaSTKContributionRequest
-	8,  // 59: contribution.v1.ContributionService.OpenCashierSession:input_type -> contribution.v1.OpenCashierSessionRequest
-	12, // 60: contribution.v1.ContributionService.CreateCashContribution:input_type -> contribution.v1.CreateCashContributionRequest
-	15, // 61: contribution.v1.ContributionService.CloseCashierSession:input_type -> contribution.v1.CloseCashierSessionRequest
-	17, // 62: contribution.v1.ContributionService.AcceptCashHandover:input_type -> contribution.v1.AcceptCashHandoverRequest
-	19, // 63: contribution.v1.ContributionService.RecordCashDeposit:input_type -> contribution.v1.RecordCashDepositRequest
-	22, // 64: contribution.v1.ContributionService.VerifyCashDeposit:input_type -> contribution.v1.VerifyCashDepositRequest
-	29, // 65: contribution.v1.ContributionService.GetCashContext:output_type -> contribution.v1.GetCashContextResponse
-	6,  // 66: contribution.v1.ContributionService.GetContributionPayment:output_type -> contribution.v1.GetContributionPaymentResponse
-	31, // 67: contribution.v1.ContributionService.GetContributionQuote:output_type -> contribution.v1.GetContributionQuoteResponse
-	39, // 68: contribution.v1.ContributionService.GetCashReceipt:output_type -> contribution.v1.GetCashReceiptResponse
-	35, // 69: contribution.v1.ContributionService.ListCashierSessions:output_type -> contribution.v1.ListCashierSessionsResponse
-	37, // 70: contribution.v1.ContributionService.ListCashDeposits:output_type -> contribution.v1.ListCashDepositsResponse
-	40, // 71: contribution.v1.ContributionService.GetCashDeposit:output_type -> contribution.v1.GetCashDepositResponse
-	26, // 72: contribution.v1.ContributionService.CreateContributionCharge:output_type -> contribution.v1.CreateContributionChargeResponse
-	28, // 73: contribution.v1.ContributionService.ListContributionCharges:output_type -> contribution.v1.ListContributionChargesResponse
-	4,  // 74: contribution.v1.ContributionService.InitiateDarajaSTKContribution:output_type -> contribution.v1.InitiateDarajaSTKContributionResponse
-	10, // 75: contribution.v1.ContributionService.OpenCashierSession:output_type -> contribution.v1.OpenCashierSessionResponse
-	14, // 76: contribution.v1.ContributionService.CreateCashContribution:output_type -> contribution.v1.CreateCashContributionResponse
-	16, // 77: contribution.v1.ContributionService.CloseCashierSession:output_type -> contribution.v1.CloseCashierSessionResponse
-	18, // 78: contribution.v1.ContributionService.AcceptCashHandover:output_type -> contribution.v1.AcceptCashHandoverResponse
-	21, // 79: contribution.v1.ContributionService.RecordCashDeposit:output_type -> contribution.v1.RecordCashDepositResponse
-	23, // 80: contribution.v1.ContributionService.VerifyCashDeposit:output_type -> contribution.v1.VerifyCashDepositResponse
-	65, // [65:81] is the sub-list for method output_type
-	49, // [49:65] is the sub-list for method input_type
-	49, // [49:49] is the sub-list for extension type_name
-	49, // [49:49] is the sub-list for extension extendee
-	0,  // [0:49] is the sub-list for field type_name
+	43, // 49: contribution.v1.ListDarajaPaymentsResponse.payments:type_name -> contribution.v1.DarajaPayment
+	46, // 50: contribution.v1.DarajaPayment.amount:type_name -> member.v1.Money
+	47, // 51: contribution.v1.DarajaPayment.created_at:type_name -> google.protobuf.Timestamp
+	46, // 52: contribution.v1.RecoverDarajaPaymentRequest.amount:type_name -> member.v1.Money
+	47, // 53: contribution.v1.RecoverDarajaPaymentRequest.received_at:type_name -> google.protobuf.Timestamp
+	6,  // 54: contribution.v1.RecoverDarajaPaymentResponse.payment:type_name -> contribution.v1.GetContributionPaymentResponse
+	41, // 55: contribution.v1.ContributionService.ListDarajaPayments:input_type -> contribution.v1.ListDarajaPaymentsRequest
+	44, // 56: contribution.v1.ContributionService.RecoverDarajaPayment:input_type -> contribution.v1.RecoverDarajaPaymentRequest
+	9,  // 57: contribution.v1.ContributionService.GetCashContext:input_type -> contribution.v1.GetCashContextRequest
+	5,  // 58: contribution.v1.ContributionService.GetContributionPayment:input_type -> contribution.v1.GetContributionPaymentRequest
+	30, // 59: contribution.v1.ContributionService.GetContributionQuote:input_type -> contribution.v1.GetContributionQuoteRequest
+	32, // 60: contribution.v1.ContributionService.GetCashReceipt:input_type -> contribution.v1.GetCashReceiptRequest
+	34, // 61: contribution.v1.ContributionService.ListCashierSessions:input_type -> contribution.v1.ListCashierSessionsRequest
+	36, // 62: contribution.v1.ContributionService.ListCashDeposits:input_type -> contribution.v1.ListCashDepositsRequest
+	38, // 63: contribution.v1.ContributionService.GetCashDeposit:input_type -> contribution.v1.GetCashDepositRequest
+	25, // 64: contribution.v1.ContributionService.CreateContributionCharge:input_type -> contribution.v1.CreateContributionChargeRequest
+	27, // 65: contribution.v1.ContributionService.ListContributionCharges:input_type -> contribution.v1.ListContributionChargesRequest
+	3,  // 66: contribution.v1.ContributionService.InitiateDarajaSTKContribution:input_type -> contribution.v1.InitiateDarajaSTKContributionRequest
+	8,  // 67: contribution.v1.ContributionService.OpenCashierSession:input_type -> contribution.v1.OpenCashierSessionRequest
+	12, // 68: contribution.v1.ContributionService.CreateCashContribution:input_type -> contribution.v1.CreateCashContributionRequest
+	15, // 69: contribution.v1.ContributionService.CloseCashierSession:input_type -> contribution.v1.CloseCashierSessionRequest
+	17, // 70: contribution.v1.ContributionService.AcceptCashHandover:input_type -> contribution.v1.AcceptCashHandoverRequest
+	19, // 71: contribution.v1.ContributionService.RecordCashDeposit:input_type -> contribution.v1.RecordCashDepositRequest
+	22, // 72: contribution.v1.ContributionService.VerifyCashDeposit:input_type -> contribution.v1.VerifyCashDepositRequest
+	42, // 73: contribution.v1.ContributionService.ListDarajaPayments:output_type -> contribution.v1.ListDarajaPaymentsResponse
+	45, // 74: contribution.v1.ContributionService.RecoverDarajaPayment:output_type -> contribution.v1.RecoverDarajaPaymentResponse
+	29, // 75: contribution.v1.ContributionService.GetCashContext:output_type -> contribution.v1.GetCashContextResponse
+	6,  // 76: contribution.v1.ContributionService.GetContributionPayment:output_type -> contribution.v1.GetContributionPaymentResponse
+	31, // 77: contribution.v1.ContributionService.GetContributionQuote:output_type -> contribution.v1.GetContributionQuoteResponse
+	39, // 78: contribution.v1.ContributionService.GetCashReceipt:output_type -> contribution.v1.GetCashReceiptResponse
+	35, // 79: contribution.v1.ContributionService.ListCashierSessions:output_type -> contribution.v1.ListCashierSessionsResponse
+	37, // 80: contribution.v1.ContributionService.ListCashDeposits:output_type -> contribution.v1.ListCashDepositsResponse
+	40, // 81: contribution.v1.ContributionService.GetCashDeposit:output_type -> contribution.v1.GetCashDepositResponse
+	26, // 82: contribution.v1.ContributionService.CreateContributionCharge:output_type -> contribution.v1.CreateContributionChargeResponse
+	28, // 83: contribution.v1.ContributionService.ListContributionCharges:output_type -> contribution.v1.ListContributionChargesResponse
+	4,  // 84: contribution.v1.ContributionService.InitiateDarajaSTKContribution:output_type -> contribution.v1.InitiateDarajaSTKContributionResponse
+	10, // 85: contribution.v1.ContributionService.OpenCashierSession:output_type -> contribution.v1.OpenCashierSessionResponse
+	14, // 86: contribution.v1.ContributionService.CreateCashContribution:output_type -> contribution.v1.CreateCashContributionResponse
+	16, // 87: contribution.v1.ContributionService.CloseCashierSession:output_type -> contribution.v1.CloseCashierSessionResponse
+	18, // 88: contribution.v1.ContributionService.AcceptCashHandover:output_type -> contribution.v1.AcceptCashHandoverResponse
+	21, // 89: contribution.v1.ContributionService.RecordCashDeposit:output_type -> contribution.v1.RecordCashDepositResponse
+	23, // 90: contribution.v1.ContributionService.VerifyCashDeposit:output_type -> contribution.v1.VerifyCashDepositResponse
+	73, // [73:91] is the sub-list for method output_type
+	55, // [55:73] is the sub-list for method input_type
+	55, // [55:55] is the sub-list for extension type_name
+	55, // [55:55] is the sub-list for extension extendee
+	0,  // [0:55] is the sub-list for field type_name
 }
 
 func init() { file_contribution_v1_contribution_proto_init() }
@@ -3029,7 +3472,7 @@ func file_contribution_v1_contribution_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_contribution_v1_contribution_proto_rawDesc), len(file_contribution_v1_contribution_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   39,
+			NumMessages:   44,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -102,8 +102,9 @@ func main() {
 	go contributionService.RecoverPendingReceipts(recoveryCtx)
 	darajaClient, err := newDarajaClient(*cfg)
 	exitOnError("failed to configure Daraja STK initiator", err)
+	go contributionService.RecoverDaraja(recoveryCtx, darajaClient)
 	contributionServer := contribution.NewHandlers(contributionService, darajaClient)
-	darajaHandlers := contribution.NewDarajaHandlers(ctx, contributionService)
+	darajaHandlers := contribution.NewDarajaHandlers(contributionService)
 	authStore := auth.NewStore(pool)
 	authServer := auth.NewHandlers(authStore)
 	verifier, err := auth.NewVerifier(

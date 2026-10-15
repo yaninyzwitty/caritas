@@ -334,6 +334,27 @@ type CreditBalance struct {
 	LastActivityAt pgtype.Timestamptz  `json:"lastActivityAt"`
 }
 
+type CreditOperation struct {
+	ID                 pgtype.UUID        `json:"id"`
+	CreditBalanceID    pgtype.UUID        `json:"creditBalanceId"`
+	Amount             pgtype.Numeric     `json:"amount"`
+	Action             string             `json:"action"`
+	TargetID           pgtype.UUID        `json:"targetId"`
+	ContributionPeriod pgtype.Date        `json:"contributionPeriod"`
+	Status             string             `json:"status"`
+	Reason             string             `json:"reason"`
+	ConsentReference   string             `json:"consentReference"`
+	RequestedBy        pgtype.UUID        `json:"requestedBy"`
+	ReviewedBy         pgtype.UUID        `json:"reviewedBy"`
+	ReviewedAt         pgtype.Timestamptz `json:"reviewedAt"`
+	ReviewReason       pgtype.Text        `json:"reviewReason"`
+	CompletedBy        pgtype.UUID        `json:"completedBy"`
+	CompletedAt        pgtype.Timestamptz `json:"completedAt"`
+	PayoutReference    pgtype.Text        `json:"payoutReference"`
+	PayoutEvidence     pgtype.Text        `json:"payoutEvidence"`
+	CreatedAt          pgtype.Timestamptz `json:"createdAt"`
+}
+
 type Loan struct {
 	ID                    pgtype.UUID        `json:"id"`
 	MemberID              pgtype.UUID        `json:"memberId"`

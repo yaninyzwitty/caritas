@@ -24,7 +24,7 @@ func (h *Handlers) GetCashContext(ctx context.Context, _ *contributionv1.GetCash
 		return nil, status.Error(codes.Unauthenticated, "authenticated staff is required")
 	}
 	record, approve := auth.CashPermissions(actor.Role)
-	return &contributionv1.GetCashContextResponse{StaffId: actor.ID.String(), BranchId: actor.BranchID, CanRecord: record, CanApprove: approve}, nil
+	return &contributionv1.GetCashContextResponse{StaffId: actor.ID.String(), BranchId: actor.BranchID, CanRecord: record, CanApprove: approve, CanApproveCredit: auth.CreditApprovalAllowed(actor.Role)}, nil
 }
 
 func (h *Handlers) GetContributionQuote(ctx context.Context, req *contributionv1.GetContributionQuoteRequest) (*contributionv1.GetContributionQuoteResponse, error) {

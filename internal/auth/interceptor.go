@@ -171,8 +171,13 @@ func permissionForMethod(method string) string {
 		return permissionLoanDisburse
 	case "/loan.v1.RepaymentService/RecordRepayment", "/contribution.v1.ContributionService/InitiateDarajaSTKContribution", "/contribution.v1.ContributionService/GetContributionPaymentRequest", "/contribution.v1.ContributionService/GetContributionQuote":
 		return permissionRepaymentRecord
+	case "/contribution.v1.ContributionService/ListDarajaPayments", "/contribution.v1.ContributionService/RecoverDarajaPayment":
+		return permissionRepaymentRecord
 	case "/loan.v1.CreditService/RequestCreditWithdrawal":
-		return permissionCreditWithdraw
+		return permissionRepaymentRecord
+	case "/loan.v1.CreditService/ManageCredit":
+		// The handler distinguishes recording from refund approval permissions.
+		return ""
 	case "/contribution.v1.ContributionService/CreateContributionCharge", "/contribution.v1.ContributionService/OpenCashierSession", "/contribution.v1.ContributionService/CreateCashContribution", "/contribution.v1.ContributionService/CloseCashierSession":
 		return permissionCashRecord
 	case "/contribution.v1.ContributionService/AcceptCashHandover", "/contribution.v1.ContributionService/RecordCashDeposit", "/contribution.v1.ContributionService/VerifyCashDeposit":
@@ -210,4 +215,10 @@ func roleHasPermission(role, permission string) bool {
 // Without it, the UI's advertised actions could drift from RPC authorization.
 func CashPermissions(role string) (record, approve bool) {
 	return roleHasPermission(role, permissionCashRecord), roleHasPermission(role, permissionCashApprove)
+}
+
+// CreditApprovalAllowed keeps refund review on the established credit permission.
+// Without it, the combined credit endpoint would let cashiers approve their own refunds.
+func CreditApprovalAllowed(role string) bool {
+	return roleHasPermission(role, permissionCreditWithdraw)
 }

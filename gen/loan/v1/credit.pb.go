@@ -123,13 +123,15 @@ func (x *GetCreditBalanceResponse) GetCredits() []*CreditBalance {
 
 // RequestCreditWithdrawalRequest submits a credit withdrawal request.
 type RequestCreditWithdrawalRequest struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	CreditBalanceId string                 `protobuf:"bytes,1,opt,name=credit_balance_id,json=creditBalanceId,proto3" json:"credit_balance_id,omitempty"`
-	Amount          string                 `protobuf:"bytes,2,opt,name=amount,proto3" json:"amount,omitempty"` // decimal.Decimal as string to withdraw
-	Reason          string                 `protobuf:"bytes,3,opt,name=reason,proto3" json:"reason,omitempty"`
-	RequestedBy     string                 `protobuf:"bytes,4,opt,name=requested_by,json=requestedBy,proto3" json:"requested_by,omitempty"` // Member ID requesting withdrawal
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	CreditBalanceId  string                 `protobuf:"bytes,1,opt,name=credit_balance_id,json=creditBalanceId,proto3" json:"credit_balance_id,omitempty"`
+	Amount           string                 `protobuf:"bytes,2,opt,name=amount,proto3" json:"amount,omitempty"` // decimal.Decimal as string to withdraw
+	Reason           string                 `protobuf:"bytes,3,opt,name=reason,proto3" json:"reason,omitempty"`
+	RequestedBy      string                 `protobuf:"bytes,4,opt,name=requested_by,json=requestedBy,proto3" json:"requested_by,omitempty"` // Member ID requesting withdrawal
+	IdempotencyKey   string                 `protobuf:"bytes,5,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	ConsentReference string                 `protobuf:"bytes,6,opt,name=consent_reference,json=consentReference,proto3" json:"consent_reference,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *RequestCreditWithdrawalRequest) Reset() {
@@ -186,6 +188,20 @@ func (x *RequestCreditWithdrawalRequest) GetReason() string {
 func (x *RequestCreditWithdrawalRequest) GetRequestedBy() string {
 	if x != nil {
 		return x.RequestedBy
+	}
+	return ""
+}
+
+func (x *RequestCreditWithdrawalRequest) GetIdempotencyKey() string {
+	if x != nil {
+		return x.IdempotencyKey
+	}
+	return ""
+}
+
+func (x *RequestCreditWithdrawalRequest) GetConsentReference() string {
+	if x != nil {
+		return x.ConsentReference
 	}
 	return ""
 }
@@ -251,6 +267,395 @@ func (x *RequestCreditWithdrawalResponse) GetSubmittedAt() *timestamppb.Timestam
 	return nil
 }
 
+// The operation ID is client-generated and reused after uncertain responses.
+type ManageCreditRequest struct {
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	OperationId        string                 `protobuf:"bytes,1,opt,name=operation_id,json=operationId,proto3" json:"operation_id,omitempty"`
+	CreditBalanceId    string                 `protobuf:"bytes,2,opt,name=credit_balance_id,json=creditBalanceId,proto3" json:"credit_balance_id,omitempty"`
+	Action             string                 `protobuf:"bytes,3,opt,name=action,proto3" json:"action,omitempty"` // transfer_shares, apply_loan, request_refund, approve_refund, reject_refund, record_refund
+	Amount             string                 `protobuf:"bytes,4,opt,name=amount,proto3" json:"amount,omitempty"`
+	TargetId           string                 `protobuf:"bytes,5,opt,name=target_id,json=targetId,proto3" json:"target_id,omitempty"`
+	ContributionPeriod string                 `protobuf:"bytes,6,opt,name=contribution_period,json=contributionPeriod,proto3" json:"contribution_period,omitempty"`
+	Reason             string                 `protobuf:"bytes,7,opt,name=reason,proto3" json:"reason,omitempty"`
+	ConsentReference   string                 `protobuf:"bytes,8,opt,name=consent_reference,json=consentReference,proto3" json:"consent_reference,omitempty"`
+	PayoutReference    string                 `protobuf:"bytes,9,opt,name=payout_reference,json=payoutReference,proto3" json:"payout_reference,omitempty"`
+	PayoutEvidence     string                 `protobuf:"bytes,10,opt,name=payout_evidence,json=payoutEvidence,proto3" json:"payout_evidence,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *ManageCreditRequest) Reset() {
+	*x = ManageCreditRequest{}
+	mi := &file_loan_v1_credit_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ManageCreditRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ManageCreditRequest) ProtoMessage() {}
+
+func (x *ManageCreditRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_loan_v1_credit_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ManageCreditRequest.ProtoReflect.Descriptor instead.
+func (*ManageCreditRequest) Descriptor() ([]byte, []int) {
+	return file_loan_v1_credit_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *ManageCreditRequest) GetOperationId() string {
+	if x != nil {
+		return x.OperationId
+	}
+	return ""
+}
+
+func (x *ManageCreditRequest) GetCreditBalanceId() string {
+	if x != nil {
+		return x.CreditBalanceId
+	}
+	return ""
+}
+
+func (x *ManageCreditRequest) GetAction() string {
+	if x != nil {
+		return x.Action
+	}
+	return ""
+}
+
+func (x *ManageCreditRequest) GetAmount() string {
+	if x != nil {
+		return x.Amount
+	}
+	return ""
+}
+
+func (x *ManageCreditRequest) GetTargetId() string {
+	if x != nil {
+		return x.TargetId
+	}
+	return ""
+}
+
+func (x *ManageCreditRequest) GetContributionPeriod() string {
+	if x != nil {
+		return x.ContributionPeriod
+	}
+	return ""
+}
+
+func (x *ManageCreditRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+func (x *ManageCreditRequest) GetConsentReference() string {
+	if x != nil {
+		return x.ConsentReference
+	}
+	return ""
+}
+
+func (x *ManageCreditRequest) GetPayoutReference() string {
+	if x != nil {
+		return x.PayoutReference
+	}
+	return ""
+}
+
+func (x *ManageCreditRequest) GetPayoutEvidence() string {
+	if x != nil {
+		return x.PayoutEvidence
+	}
+	return ""
+}
+
+type ManageCreditResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Operation     *CreditOperation       `protobuf:"bytes,1,opt,name=operation,proto3" json:"operation,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ManageCreditResponse) Reset() {
+	*x = ManageCreditResponse{}
+	mi := &file_loan_v1_credit_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ManageCreditResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ManageCreditResponse) ProtoMessage() {}
+
+func (x *ManageCreditResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_loan_v1_credit_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ManageCreditResponse.ProtoReflect.Descriptor instead.
+func (*ManageCreditResponse) Descriptor() ([]byte, []int) {
+	return file_loan_v1_credit_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *ManageCreditResponse) GetOperation() *CreditOperation {
+	if x != nil {
+		return x.Operation
+	}
+	return nil
+}
+
+type CreditOperation struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	Id               string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	CreditBalanceId  string                 `protobuf:"bytes,2,opt,name=credit_balance_id,json=creditBalanceId,proto3" json:"credit_balance_id,omitempty"`
+	Amount           string                 `protobuf:"bytes,3,opt,name=amount,proto3" json:"amount,omitempty"`
+	Action           string                 `protobuf:"bytes,4,opt,name=action,proto3" json:"action,omitempty"`
+	TargetId         string                 `protobuf:"bytes,5,opt,name=target_id,json=targetId,proto3" json:"target_id,omitempty"`
+	Status           string                 `protobuf:"bytes,6,opt,name=status,proto3" json:"status,omitempty"`
+	Reason           string                 `protobuf:"bytes,7,opt,name=reason,proto3" json:"reason,omitempty"`
+	ConsentReference string                 `protobuf:"bytes,8,opt,name=consent_reference,json=consentReference,proto3" json:"consent_reference,omitempty"`
+	RequestedBy      string                 `protobuf:"bytes,9,opt,name=requested_by,json=requestedBy,proto3" json:"requested_by,omitempty"`
+	PayoutReference  string                 `protobuf:"bytes,10,opt,name=payout_reference,json=payoutReference,proto3" json:"payout_reference,omitempty"`
+	CreatedAt        *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *CreditOperation) Reset() {
+	*x = CreditOperation{}
+	mi := &file_loan_v1_credit_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreditOperation) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreditOperation) ProtoMessage() {}
+
+func (x *CreditOperation) ProtoReflect() protoreflect.Message {
+	mi := &file_loan_v1_credit_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreditOperation.ProtoReflect.Descriptor instead.
+func (*CreditOperation) Descriptor() ([]byte, []int) {
+	return file_loan_v1_credit_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *CreditOperation) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *CreditOperation) GetCreditBalanceId() string {
+	if x != nil {
+		return x.CreditBalanceId
+	}
+	return ""
+}
+
+func (x *CreditOperation) GetAmount() string {
+	if x != nil {
+		return x.Amount
+	}
+	return ""
+}
+
+func (x *CreditOperation) GetAction() string {
+	if x != nil {
+		return x.Action
+	}
+	return ""
+}
+
+func (x *CreditOperation) GetTargetId() string {
+	if x != nil {
+		return x.TargetId
+	}
+	return ""
+}
+
+func (x *CreditOperation) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *CreditOperation) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+func (x *CreditOperation) GetConsentReference() string {
+	if x != nil {
+		return x.ConsentReference
+	}
+	return ""
+}
+
+func (x *CreditOperation) GetRequestedBy() string {
+	if x != nil {
+		return x.RequestedBy
+	}
+	return ""
+}
+
+func (x *CreditOperation) GetPayoutReference() string {
+	if x != nil {
+		return x.PayoutReference
+	}
+	return ""
+}
+
+func (x *CreditOperation) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+type ListCreditOperationsRequest struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	CreditBalanceId string                 `protobuf:"bytes,1,opt,name=credit_balance_id,json=creditBalanceId,proto3" json:"credit_balance_id,omitempty"`
+	PageToken       string                 `protobuf:"bytes,2,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *ListCreditOperationsRequest) Reset() {
+	*x = ListCreditOperationsRequest{}
+	mi := &file_loan_v1_credit_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListCreditOperationsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListCreditOperationsRequest) ProtoMessage() {}
+
+func (x *ListCreditOperationsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_loan_v1_credit_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListCreditOperationsRequest.ProtoReflect.Descriptor instead.
+func (*ListCreditOperationsRequest) Descriptor() ([]byte, []int) {
+	return file_loan_v1_credit_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *ListCreditOperationsRequest) GetCreditBalanceId() string {
+	if x != nil {
+		return x.CreditBalanceId
+	}
+	return ""
+}
+
+func (x *ListCreditOperationsRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
+type ListCreditOperationsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Operations    []*CreditOperation     `protobuf:"bytes,1,rep,name=operations,proto3" json:"operations,omitempty"`
+	NextPageToken string                 `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListCreditOperationsResponse) Reset() {
+	*x = ListCreditOperationsResponse{}
+	mi := &file_loan_v1_credit_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListCreditOperationsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListCreditOperationsResponse) ProtoMessage() {}
+
+func (x *ListCreditOperationsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_loan_v1_credit_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListCreditOperationsResponse.ProtoReflect.Descriptor instead.
+func (*ListCreditOperationsResponse) Descriptor() ([]byte, []int) {
+	return file_loan_v1_credit_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *ListCreditOperationsResponse) GetOperations() []*CreditOperation {
+	if x != nil {
+		return x.Operations
+	}
+	return nil
+}
+
+func (x *ListCreditOperationsResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
+}
+
 var File_loan_v1_credit_proto protoreflect.FileDescriptor
 
 const file_loan_v1_credit_proto_rawDesc = "" +
@@ -260,18 +665,59 @@ const file_loan_v1_credit_proto_rawDesc = "" +
 	"\tmember_id\x18\x01 \x01(\tR\bmemberId\x12\x17\n" +
 	"\aloan_id\x18\x02 \x01(\tR\x06loanId\"L\n" +
 	"\x18GetCreditBalanceResponse\x120\n" +
-	"\acredits\x18\x01 \x03(\v2\x16.loan.v1.CreditBalanceR\acredits\"\x9f\x01\n" +
+	"\acredits\x18\x01 \x03(\v2\x16.loan.v1.CreditBalanceR\acredits\"\xf5\x01\n" +
 	"\x1eRequestCreditWithdrawalRequest\x12*\n" +
 	"\x11credit_balance_id\x18\x01 \x01(\tR\x0fcreditBalanceId\x12\x16\n" +
 	"\x06amount\x18\x02 \x01(\tR\x06amount\x12\x16\n" +
 	"\x06reason\x18\x03 \x01(\tR\x06reason\x12!\n" +
-	"\frequested_by\x18\x04 \x01(\tR\vrequestedBy\"\x99\x01\n" +
+	"\frequested_by\x18\x04 \x01(\tR\vrequestedBy\x12'\n" +
+	"\x0fidempotency_key\x18\x05 \x01(\tR\x0eidempotencyKey\x12+\n" +
+	"\x11consent_reference\x18\x06 \x01(\tR\x10consentReference\"\x99\x01\n" +
 	"\x1fRequestCreditWithdrawalResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x1d\n" +
 	"\n" +
 	"request_id\x18\x02 \x01(\tR\trequestId\x12=\n" +
-	"\fsubmitted_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\vsubmittedAt2\xaa\x02\n" +
-	"\rCreditService\x12{\n" +
+	"\fsubmitted_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\vsubmittedAt\"\xfb\x02\n" +
+	"\x13ManageCreditRequest\x12!\n" +
+	"\foperation_id\x18\x01 \x01(\tR\voperationId\x12*\n" +
+	"\x11credit_balance_id\x18\x02 \x01(\tR\x0fcreditBalanceId\x12\x16\n" +
+	"\x06action\x18\x03 \x01(\tR\x06action\x12\x16\n" +
+	"\x06amount\x18\x04 \x01(\tR\x06amount\x12\x1b\n" +
+	"\ttarget_id\x18\x05 \x01(\tR\btargetId\x12/\n" +
+	"\x13contribution_period\x18\x06 \x01(\tR\x12contributionPeriod\x12\x16\n" +
+	"\x06reason\x18\a \x01(\tR\x06reason\x12+\n" +
+	"\x11consent_reference\x18\b \x01(\tR\x10consentReference\x12)\n" +
+	"\x10payout_reference\x18\t \x01(\tR\x0fpayoutReference\x12'\n" +
+	"\x0fpayout_evidence\x18\n" +
+	" \x01(\tR\x0epayoutEvidence\"N\n" +
+	"\x14ManageCreditResponse\x126\n" +
+	"\toperation\x18\x01 \x01(\v2\x18.loan.v1.CreditOperationR\toperation\"\x80\x03\n" +
+	"\x0fCreditOperation\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12*\n" +
+	"\x11credit_balance_id\x18\x02 \x01(\tR\x0fcreditBalanceId\x12\x16\n" +
+	"\x06amount\x18\x03 \x01(\tR\x06amount\x12\x16\n" +
+	"\x06action\x18\x04 \x01(\tR\x06action\x12\x1b\n" +
+	"\ttarget_id\x18\x05 \x01(\tR\btargetId\x12\x16\n" +
+	"\x06status\x18\x06 \x01(\tR\x06status\x12\x16\n" +
+	"\x06reason\x18\a \x01(\tR\x06reason\x12+\n" +
+	"\x11consent_reference\x18\b \x01(\tR\x10consentReference\x12!\n" +
+	"\frequested_by\x18\t \x01(\tR\vrequestedBy\x12)\n" +
+	"\x10payout_reference\x18\n" +
+	" \x01(\tR\x0fpayoutReference\x129\n" +
+	"\n" +
+	"created_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"h\n" +
+	"\x1bListCreditOperationsRequest\x12*\n" +
+	"\x11credit_balance_id\x18\x01 \x01(\tR\x0fcreditBalanceId\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x02 \x01(\tR\tpageToken\"\x80\x01\n" +
+	"\x1cListCreditOperationsResponse\x128\n" +
+	"\n" +
+	"operations\x18\x01 \x03(\v2\x18.loan.v1.CreditOperationR\n" +
+	"operations\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken2\xa4\x04\n" +
+	"\rCreditService\x12n\n" +
+	"\fManageCredit\x12\x1c.loan.v1.ManageCreditRequest\x1a\x1d.loan.v1.ManageCreditResponse\"!\x82\xd3\xe4\x93\x02\x1b:\x01*\"\x16/api/v1/credits/manage\x12\x87\x01\n" +
+	"\x14ListCreditOperations\x12$.loan.v1.ListCreditOperationsRequest\x1a%.loan.v1.ListCreditOperationsResponse\"\"\x82\xd3\xe4\x93\x02\x1c\x12\x1a/api/v1/credits/operations\x12{\n" +
 	"\x10GetCreditBalance\x12 .loan.v1.GetCreditBalanceRequest\x1a!.loan.v1.GetCreditBalanceResponse\"\"\x82\xd3\xe4\x93\x02\x1c:\x01*\"\x17/api/v1/credits/balance\x12\x9b\x01\n" +
 	"\x17RequestCreditWithdrawal\x12'.loan.v1.RequestCreditWithdrawalRequest\x1a(.loan.v1.RequestCreditWithdrawalResponse\"-\x82\xd3\xe4\x93\x02':\x01*\"\"/api/v1/credits/request-withdrawalB\x93\x01\n" +
 	"\vcom.loan.v1B\vCreditProtoP\x01Z:github.com/yaninyzwitty/caritas-backend/gen/loan/v1;loanv1\xa2\x02\x03LXX\xaa\x02\aLoan.V1\xca\x02\aLoan\\V1\xe2\x02\x13Loan\\V1\\GPBMetadata\xea\x02\bLoan::V1b\x06proto3"
@@ -288,27 +734,39 @@ func file_loan_v1_credit_proto_rawDescGZIP() []byte {
 	return file_loan_v1_credit_proto_rawDescData
 }
 
-var file_loan_v1_credit_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_loan_v1_credit_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_loan_v1_credit_proto_goTypes = []any{
 	(*GetCreditBalanceRequest)(nil),         // 0: loan.v1.GetCreditBalanceRequest
 	(*GetCreditBalanceResponse)(nil),        // 1: loan.v1.GetCreditBalanceResponse
 	(*RequestCreditWithdrawalRequest)(nil),  // 2: loan.v1.RequestCreditWithdrawalRequest
 	(*RequestCreditWithdrawalResponse)(nil), // 3: loan.v1.RequestCreditWithdrawalResponse
-	(*CreditBalance)(nil),                   // 4: loan.v1.CreditBalance
-	(*timestamppb.Timestamp)(nil),           // 5: google.protobuf.Timestamp
+	(*ManageCreditRequest)(nil),             // 4: loan.v1.ManageCreditRequest
+	(*ManageCreditResponse)(nil),            // 5: loan.v1.ManageCreditResponse
+	(*CreditOperation)(nil),                 // 6: loan.v1.CreditOperation
+	(*ListCreditOperationsRequest)(nil),     // 7: loan.v1.ListCreditOperationsRequest
+	(*ListCreditOperationsResponse)(nil),    // 8: loan.v1.ListCreditOperationsResponse
+	(*CreditBalance)(nil),                   // 9: loan.v1.CreditBalance
+	(*timestamppb.Timestamp)(nil),           // 10: google.protobuf.Timestamp
 }
 var file_loan_v1_credit_proto_depIdxs = []int32{
-	4, // 0: loan.v1.GetCreditBalanceResponse.credits:type_name -> loan.v1.CreditBalance
-	5, // 1: loan.v1.RequestCreditWithdrawalResponse.submitted_at:type_name -> google.protobuf.Timestamp
-	0, // 2: loan.v1.CreditService.GetCreditBalance:input_type -> loan.v1.GetCreditBalanceRequest
-	2, // 3: loan.v1.CreditService.RequestCreditWithdrawal:input_type -> loan.v1.RequestCreditWithdrawalRequest
-	1, // 4: loan.v1.CreditService.GetCreditBalance:output_type -> loan.v1.GetCreditBalanceResponse
-	3, // 5: loan.v1.CreditService.RequestCreditWithdrawal:output_type -> loan.v1.RequestCreditWithdrawalResponse
-	4, // [4:6] is the sub-list for method output_type
-	2, // [2:4] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	9,  // 0: loan.v1.GetCreditBalanceResponse.credits:type_name -> loan.v1.CreditBalance
+	10, // 1: loan.v1.RequestCreditWithdrawalResponse.submitted_at:type_name -> google.protobuf.Timestamp
+	6,  // 2: loan.v1.ManageCreditResponse.operation:type_name -> loan.v1.CreditOperation
+	10, // 3: loan.v1.CreditOperation.created_at:type_name -> google.protobuf.Timestamp
+	6,  // 4: loan.v1.ListCreditOperationsResponse.operations:type_name -> loan.v1.CreditOperation
+	4,  // 5: loan.v1.CreditService.ManageCredit:input_type -> loan.v1.ManageCreditRequest
+	7,  // 6: loan.v1.CreditService.ListCreditOperations:input_type -> loan.v1.ListCreditOperationsRequest
+	0,  // 7: loan.v1.CreditService.GetCreditBalance:input_type -> loan.v1.GetCreditBalanceRequest
+	2,  // 8: loan.v1.CreditService.RequestCreditWithdrawal:input_type -> loan.v1.RequestCreditWithdrawalRequest
+	5,  // 9: loan.v1.CreditService.ManageCredit:output_type -> loan.v1.ManageCreditResponse
+	8,  // 10: loan.v1.CreditService.ListCreditOperations:output_type -> loan.v1.ListCreditOperationsResponse
+	1,  // 11: loan.v1.CreditService.GetCreditBalance:output_type -> loan.v1.GetCreditBalanceResponse
+	3,  // 12: loan.v1.CreditService.RequestCreditWithdrawal:output_type -> loan.v1.RequestCreditWithdrawalResponse
+	9,  // [9:13] is the sub-list for method output_type
+	5,  // [5:9] is the sub-list for method input_type
+	5,  // [5:5] is the sub-list for extension type_name
+	5,  // [5:5] is the sub-list for extension extendee
+	0,  // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_loan_v1_credit_proto_init() }
@@ -323,7 +781,7 @@ func file_loan_v1_credit_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_loan_v1_credit_proto_rawDesc), len(file_loan_v1_credit_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

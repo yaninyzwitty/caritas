@@ -460,7 +460,7 @@ func mapContributionError(err error) error {
 		errors.Is(err, ErrReceiptReferenceRequired),
 		errors.Is(err, ErrInconsistentReceipt):
 		return status.Error(codes.InvalidArgument, err.Error())
-	case errors.Is(err, ErrDarajaClientMissing):
+	case errors.Is(err, ErrDarajaClientMissing), errors.Is(err, ErrDarajaRejected):
 		return status.Error(codes.FailedPrecondition, err.Error())
 	case errors.Is(err, context.Canceled):
 		return status.Error(codes.Canceled, err.Error())

@@ -35,6 +35,16 @@ The receipt must contain:
 
 Daraja webhook processing must be idempotent. The gateway transaction ID is the preferred idempotency key. Manual cash entries need a unique internal receipt reference.
 
+Daraja callbacks are persisted before acknowledgement and retried from durable
+records. A transport timeout remains unconfirmed; it must never trigger an
+automatic new prompt. Unresolved checkouts are queried with bounded backoff.
+Provider success without receipt metadata requires reconciliation against
+verified business records, preserving the original request and allocation plan.
+Authorized recovery records the officer, reason, amount, payment time and
+verification evidence. Payment receipt and allocation completion are separate
+outcomes. Business allocation errors remain visible for review rather than
+silently changing the member's instructions.
+
 ### AllocationPlan
 
 The allocation plan states how the received amount is applied to:

@@ -1,30 +1,29 @@
 package contribution
 
 import (
-	"context"
+	"crypto/sha256"
 	"encoding/json"
-	"errors"
-	"log/slog"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
+	contributionsqlc "github.com/yaninyzwitty/caritas-backend/internal/contribution/repository/sqlc"
 )
 
 // DarajaHandlers owns the unauthenticated HTTP callbacks from M-Pesa. Without
 // a separate handler type, Daraja routes would have to be mixed into gRPC
 // services that Safaricom cannot call.
 type DarajaHandlers struct {
-	ctx     context.Context
 	service *Service
 }
 
 // NewDarajaHandlers wires Daraja HTTP callbacks to the contribution service.
 // Removing it would expose the handler struct fields or require construction
 // logic in main.
-func NewDarajaHandlers(ctx context.Context, service *Service) *DarajaHandlers {
-	return &DarajaHandlers{ctx: ctx, service: service}
+func NewDarajaHandlers(service *Service) *DarajaHandlers {
+	return &DarajaHandlers{service: service}
 }
 
 // RegisterDarajaRoutes keeps the public callback paths in one place. Removing
@@ -41,8 +40,24 @@ func (h *DarajaHandlers) HandleSTKCallback(w http.ResponseWriter, r *http.Reques
 	var payload darajaSTKCallbackPayload
 	// i<<20 is Imb
 	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20))
-	if err := decoder.Decode(&payload); err != nil {
+	var body json.RawMessage
+	if err := decoder.Decode(&body); err != nil {
 		http.Error(w, "invalid callback payload", http.StatusBadRequest)
+		return
+	}
+	if err := json.Unmarshal(body, &payload); err != nil {
+		http.Error(w, "invalid callback payload", http.StatusBadRequest)
+		return
+	}
+	var resultCode struct {
+		Body struct {
+			Callback struct {
+				ResultCode *int `json:"ResultCode"`
+			} `json:"stkCallback"`
+		} `json:"Body"`
+	}
+	if err := json.Unmarshal(body, &resultCode); err != nil || resultCode.Body.Callback.ResultCode == nil {
+		http.Error(w, "missing callback result code", http.StatusBadRequest)
 		return
 	}
 
@@ -53,46 +68,28 @@ func (h *DarajaHandlers) HandleSTKCallback(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	if callback.ResultCode != 0 {
-		go h.markSTKPaymentFailed(checkoutID, callback.ResultDesc)
-		writeDarajaAccepted(w)
+	// Canonical JSON makes redelivery idempotent while retaining all provider fields.
+	var canonical any
+	canonicalDecoder := json.NewDecoder(strings.NewReader(string(body)))
+	canonicalDecoder.UseNumber()
+	if err := canonicalDecoder.Decode(&canonical); err != nil {
+		http.Error(w, "invalid callback", http.StatusBadRequest)
 		return
 	}
-
-	payment, err := callback.successPayment()
+	body, err := json.Marshal(canonical)
 	if err != nil {
-		http.Error(w, "invalid successful callback metadata", http.StatusBadRequest)
+		http.Error(w, "invalid callback", http.StatusBadRequest)
 		return
 	}
-
-	go h.processSTKPayment(checkoutID, payment)
+	if err := h.service.store.InsertDarajaCallback(r.Context(), contributionsqlc.InsertDarajaCallbackParams{
+		CheckoutRequestID: checkoutID,
+		Payload:           body,
+		PayloadHash:       fmt.Sprintf("%x", sha256.Sum256(body)),
+	}); err != nil {
+		http.Error(w, "callback could not be saved", http.StatusServiceUnavailable)
+		return
+	}
 	writeDarajaAccepted(w)
-}
-
-func (h *DarajaHandlers) processSTKPayment(checkoutID string, payment DarajaSTKPayment) {
-	// TODO: Move Daraja callback processing to Temporal so accepted callbacks
-	// survive process restarts and retry with workflow history.
-	ctx, cancel := context.WithTimeout(h.ctx, 2*time.Minute)
-	defer cancel()
-
-	if _, err := h.service.ProcessDarajaSTKPayment(ctx, payment); err != nil {
-		if errors.Is(err, ErrPaymentRequestNotFound) {
-			slog.Warn("daraja stk callback without payment request", "checkout_request_id", checkoutID)
-		} else {
-			slog.Error("process daraja stk payment", "checkout_request_id", checkoutID, "error", err)
-		}
-	}
-}
-
-func (h *DarajaHandlers) markSTKPaymentFailed(checkoutID, reason string) {
-	// TODO: Move Daraja callback processing to Temporal so accepted callbacks
-	// survive process restarts and retry with workflow history.
-	ctx, cancel := context.WithTimeout(h.ctx, 2*time.Minute)
-	defer cancel()
-
-	if err := h.service.MarkDarajaSTKPaymentFailed(ctx, checkoutID, reason); err != nil {
-		slog.Warn("record daraja stk failure", "checkout_request_id", checkoutID, "error", err)
-	}
 }
 
 // darajaSTKCallbackPayload mirrors the outer Daraja STK callback envelope.
@@ -150,7 +147,7 @@ func (c darajaSTKCallback) successPayment() (DarajaSTKPayment, error) {
 
 	receivedAt := time.Now().UTC()
 	if value, ok := c.CallbackMetadata.value("TransactionDate"); ok {
-		parsed, err := time.ParseInLocation("20060102150405", value, time.Local)
+		parsed, err := time.ParseInLocation("20060102150405", value, time.FixedZone("Africa/Nairobi", 3*60*60))
 		if err != nil {
 			return DarajaSTKPayment{}, err
 		}

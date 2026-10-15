@@ -409,6 +409,11 @@ type ContributionPaymentRequest struct {
 	CreatedAt          pgtype.Timestamptz               `json:"createdAt"`
 	UpdatedAt          pgtype.Timestamptz               `json:"updatedAt"`
 	IdempotencyKey     string                           `json:"idempotencyKey"`
+	PhoneNumber        string                           `json:"phoneNumber"`
+	RecoveryStatus     string                           `json:"recoveryStatus"`
+	QueryAttempts      int32                            `json:"queryAttempts"`
+	NextQueryAt        pgtype.Timestamptz               `json:"nextQueryAt"`
+	ProviderResult     pgtype.Text                      `json:"providerResult"`
 }
 
 type ContributionReceipt struct {
@@ -434,4 +439,28 @@ type ContributionReceipt struct {
 	InternalReceiptReference pgtype.Text               `json:"internalReceiptReference"`
 	IdempotencyKey           pgtype.Text               `json:"idempotencyKey"`
 	CashierSessionID         pgtype.UUID               `json:"cashierSessionId"`
+}
+
+type DarajaCallback struct {
+	ID                pgtype.UUID        `json:"id"`
+	CheckoutRequestID string             `json:"checkoutRequestId"`
+	Payload           []byte             `json:"payload"`
+	PayloadHash       string             `json:"payloadHash"`
+	Attempts          int32              `json:"attempts"`
+	NextAttemptAt     pgtype.Timestamptz `json:"nextAttemptAt"`
+	ProcessedAt       pgtype.Timestamptz `json:"processedAt"`
+	LastError         pgtype.Text        `json:"lastError"`
+	CreatedAt         pgtype.Timestamptz `json:"createdAt"`
+}
+
+type PaymentReconciliation struct {
+	ID                    pgtype.UUID        `json:"id"`
+	PaymentRequestID      pgtype.UUID        `json:"paymentRequestId"`
+	ExternalTransactionID string             `json:"externalTransactionId"`
+	Amount                pgtype.Numeric     `json:"amount"`
+	ReceivedAt            pgtype.Timestamptz `json:"receivedAt"`
+	Evidence              string             `json:"evidence"`
+	Reason                string             `json:"reason"`
+	ReconciledBy          pgtype.UUID        `json:"reconciledBy"`
+	CreatedAt             pgtype.Timestamptz `json:"createdAt"`
 }
