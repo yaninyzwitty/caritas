@@ -27,15 +27,15 @@ func TestGuarantorSecurityLifecycle(t *testing.T) {
 	params := applyParams(t, applicantID)
 	params.Principal = mustNumeric(t, "200")
 	params.InterestRate = mustNumeric(t, "0")
-	if _, err := service.ApplyForLoan(ctx, params, mustNumeric(t, "100"), []ProposedGuarantor{{GuarantorID: guarantorID, GuaranteedAmount: mustNumeric(t, "151")}}); !errors.Is(err, share.ErrGuaranteeCapacity) {
-		t.Fatalf("application above 30%%: %v", err)
+	if _, err := service.ApplyForLoan(ctx, params, mustNumeric(t, "100"), []ProposedGuarantor{{GuarantorID: guarantorID, GuaranteedAmount: mustNumeric(t, "501")}}); !errors.Is(err, share.ErrGuaranteeCapacity) {
+		t.Fatalf("application above available shares: %v", err)
 	}
 	loan, err := service.ApplyForLoan(ctx, params, mustNumeric(t, "100"), []ProposedGuarantor{{GuarantorID: guarantorID, GuaranteedAmount: mustNumeric(t, "100")}})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := service.AddGuarantor(ctx, loan.ID, extraID, mustNumeric(t, "151")); !errors.Is(err, share.ErrGuaranteeCapacity) {
-		t.Fatalf("addition above 30%%: %v", err)
+	if _, err := service.AddGuarantor(ctx, loan.ID, extraID, mustNumeric(t, "501")); !errors.Is(err, share.ErrGuaranteeCapacity) {
+		t.Fatalf("addition above available shares: %v", err)
 	}
 	if _, err := service.AddGuarantor(ctx, loan.ID, extraID, mustNumeric(t, "50")); err != nil {
 		t.Fatal(err)
@@ -81,8 +81,8 @@ func TestGuarantorSecurityLifecycle(t *testing.T) {
 	if _, err := shareService.WithdrawShares(ctx, account.ID, mustNumeric(t, "200"), testUUID("00000000-0000-0000-0000-000000000305"), actorID, "changed capacity"); err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err := service.DisburseLoan(ctx, loan.ID, actorID, "verify security"); !errors.Is(err, share.ErrGuaranteeCapacity) {
-		t.Fatalf("disbursement ignored changed share capacity: %v", err)
+	if err := share.VerifyGuarantorSecurity(ctx, shares, loan.ID, guarantorID, mustNumeric(t, "100")); err != nil {
+		t.Fatalf("remaining shares still cover the guarantee: %v", err)
 	}
 	if _, err := service.RejectLoan(ctx, loan.ID, actorID, "application withdrawn"); err != nil {
 		t.Fatal(err)
@@ -130,9 +130,9 @@ func TestGuarantorSecurityLifecycle(t *testing.T) {
 	}
 }
 
-// TestLoanApprovalRechecksContributionHistoryAndMembership verifies the gates
-// introduced after application; a successful application must not bypass either.
-func TestLoanApprovalRechecksContributionHistoryAndMembership(t *testing.T) {
+// TestLoanApprovalRechecksMembership verifies that membership still gates approval
+// while contribution history is deferred.
+func TestLoanApprovalRechecksMembership(t *testing.T) {
 	ctx := context.Background()
 	service, pool := applyLoanService(t, ctx)
 	applicantID := createLoanMember(t, ctx, pool, 311, "active")
@@ -149,11 +149,17 @@ func TestLoanApprovalRechecksContributionHistoryAndMembership(t *testing.T) {
 	if _, err := pool.Exec(ctx, `UPDATE members SET status = 'active' WHERE id = $1`, applicantID); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := pool.Exec(ctx, `UPDATE share_transactions SET created_at = NOW()
+	if _, err := pool.Exec(ctx, `UPDATE share_transactions
+		SET created_at = date_trunc('month', NOW()) + balance_after * INTERVAL '1 second'
 		WHERE share_account_id = (SELECT id FROM share_accounts WHERE member_id = $1)`, applicantID); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := service.ApproveLoan(ctx, loan.ID, pgtype.UUID{}, "reviewed"); !errors.Is(err, share.ErrContributionHistory) {
-		t.Fatalf("multiple purchases in one month passed six-month history: %v", err)
+	actorID := testUUID("00000000-0000-0000-0000-000000000312")
+	if _, err := pool.Exec(ctx, `INSERT INTO staff_users (id, branch_id, email, password_hash, role, name)
+		VALUES ($1, 1, 'history-test@example.com', 'test', 'loan_officer', 'Approver')`, actorID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := service.ApproveLoan(ctx, loan.ID, actorID, "reviewed"); err != nil {
+		t.Fatalf("one contribution month blocked approval: %v", err)
 	}
 }

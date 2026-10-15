@@ -56,7 +56,7 @@ func mapServiceError(err error) error {
 		errors.Is(err, ErrInvalidGuaranteedAmount), errors.Is(err, ErrGatewayTransactionID), errors.Is(err, ErrDuplicateGuarantor):
 		return status.Error(codes.InvalidArgument, err.Error())
 	case errors.Is(err, ErrInvalidStatusTransition), errors.Is(err, ErrInvalidGuarantorStatus), errors.Is(err, ErrSelfGuarantee),
-		errors.Is(err, share.ErrGuaranteeCapacity), errors.Is(err, share.ErrContributionHistory), errors.Is(err, share.ErrLoanSecurity),
+		errors.Is(err, share.ErrGuaranteeCapacity), errors.Is(err, share.ErrLoanSecurity),
 		errors.Is(err, share.ErrAccountNotFound), errors.Is(err, share.ErrAccountNotActive),
 		errors.Is(err, ErrTooManyGuarantors), errors.Is(err, ErrInsufficientCollateral),
 		errors.Is(err, ErrPaymentNotAllowed), errors.Is(err, ErrRepaymentScheduleMissing), errors.Is(err, ErrMemberNotActive),

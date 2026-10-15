@@ -35,11 +35,10 @@ func loanSecurityBalances(ctx context.Context, q sharesqlc.Querier, memberID pgt
 	return account, balance, numericToNanos(pledged), err
 }
 
-// guaranteeAvailable applies the same 30% policy to previews and writes, rounded
+// guaranteeAvailable uses unpledged shares for previews and writes, rounded
 // down to ledger precision so the displayed allowance cannot overcommit shares.
 func guaranteeAvailable(balance, pledged *big.Int) *big.Int {
-	limit := new(big.Int).Quo(new(big.Int).Mul(balance, big.NewInt(3)), big.NewInt(10))
-	available := new(big.Int).Sub(limit, pledged)
+	available := new(big.Int).Sub(balance, pledged)
 	if available.Sign() < 0 {
 		available.SetInt64(0)
 	}
@@ -104,23 +103,16 @@ func ApproveGuarantorSecurity(ctx context.Context, q sharesqlc.Querier, loanID, 
 }
 
 // VerifyApplicantSecurity is shared by approval and disbursement. It checks
-// contribution history and backing, and activates a pending pledge only at approval.
+// share backing, and activates a pending pledge only at approval.
 func VerifyApplicantSecurity(ctx context.Context, q sharesqlc.Querier, loanID, memberID, approvedBy pgtype.UUID, principal pgtype.Numeric) (pgtype.Numeric, error) {
 	// A stable account lock order prevents loans sharing guarantors from locking
 	// their existing collateral accounts in opposite orders.
 	if _, err := q.LockLoanShareAccounts(ctx, sharesqlc.LockLoanShareAccountsParams{LoanID: loanID}); err != nil {
 		return pgtype.Numeric{}, err
 	}
-	account, balance, pledged, err := loanSecurityBalances(ctx, q, memberID)
+	_, balance, pledged, err := loanSecurityBalances(ctx, q, memberID)
 	if err != nil {
 		return pgtype.Numeric{}, err
-	}
-	months, err := q.CountQualifyingContributionMonths(ctx, account.ID)
-	if err != nil {
-		return pgtype.Numeric{}, err
-	}
-	if months < 6 {
-		return pgtype.Numeric{}, fmt.Errorf("%w: applicant has %d qualifying months", ErrContributionHistory, months)
 	}
 	if new(big.Int).Mul(new(big.Int).Set(balance), big.NewInt(3)).Cmp(numericToNanos(principal)) < 0 || pledged.Cmp(balance) > 0 {
 		return pgtype.Numeric{}, fmt.Errorf("%w: applicant's current shares no longer cover the loan or existing pledges", ErrLoanSecurity)
@@ -148,7 +140,7 @@ func VerifyApplicantSecurity(ctx context.Context, q sharesqlc.Querier, loanID, m
 }
 
 // VerifyGuarantorSecurity checks the actual active reservation rather than
-// trusting the Loans status, including the 30% limit after balance changes.
+// trusting the Loans status, including share backing after balance changes.
 func VerifyGuarantorSecurity(ctx context.Context, q sharesqlc.Querier, loanID, memberID pgtype.UUID, amount pgtype.Numeric) error {
 	account, balance, pledged, err := loanSecurityBalances(ctx, q, memberID)
 	if err != nil {
@@ -161,8 +153,8 @@ func VerifyGuarantorSecurity(ctx context.Context, q sharesqlc.Querier, loanID, m
 	if err != nil {
 		return err
 	}
-	if new(big.Int).Mul(pledged, big.NewInt(10)).Cmp(new(big.Int).Mul(balance, big.NewInt(3))) > 0 {
-		return fmt.Errorf("%w: approved guarantor's active pledges now exceed 30%% of their current shares", ErrGuaranteeCapacity)
+	if pledged.Cmp(balance) > 0 {
+		return fmt.Errorf("%w: approved guarantor's active pledges exceed their current shares", ErrGuaranteeCapacity)
 	}
 	return nil
 }
