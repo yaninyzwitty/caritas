@@ -69,7 +69,11 @@ func (c *DarajaClient) QuerySTK(ctx context.Context, checkoutID string) (string,
 	if err != nil {
 		return "", "", err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			slog.Error("failed to close response body")
+		}
+	}()
 	var result struct {
 		CheckoutRequestID string          `json:"CheckoutRequestID"`
 		ResultCode        json.RawMessage `json:"ResultCode"`
