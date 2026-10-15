@@ -184,11 +184,15 @@ Loans may request pledge creation, release or availability checks through the Sh
 
 Guarantor approval belongs to the Loans workflow, but share reservation belongs to the Shares domain.
 
-For guarantor security, the additional amount must fit within 30% of the current
+For guarantor security, the additional amount must fit within the current
 share balance minus all active pledges (including applicant security). Round the
 allowance down to the four-decimal ledger precision and clamp it to zero.
 The balance response reports the active pledged total and current guarantor
 allowance so loan forms can explain the same policy before submission.
+
+TODO: Revisit the deferred 30% guarantor cap once the policy defines which
+pledges count and how balance changes affect existing guarantees. Until then,
+guarantors may offer their available unpledged shares.
 
 Loans uses transaction-aware Shares operations to propose, approve, verify and
 release security in the same transaction as the loan decision. Removal releases
@@ -235,7 +239,6 @@ Loans may request:
 - current share balance
 - available shares
 - active pledged amount
-- 6-month contribution history
 - guarantor pledge availability
 
 Decision reads must be strongly consistent and must not come from a stale replica.

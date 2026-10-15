@@ -159,7 +159,6 @@ Only active members may apply for loans.
 Approval requires:
 
 - member is active at approval time
-- member has 6+ months of qualifying share contribution history
 - repayment period is between 1 and 36 months
 - zero to 20 approved guarantors; guarantors are required only when guarantor shares contribute to collateral coverage
 - zero-guarantor loans are allowed when applicant shares and/or deposits provide adequate
@@ -170,14 +169,16 @@ Approval requires:
 
 Eligibility must be checked at approval time and re-checked before disbursement.
 
-Qualifying contribution history means positive, unreversed share purchases in
-at least six distinct calendar months, measured in Africa/Nairobi time. Multiple
-purchases in one month count once; dividends and adjustments do not count.
+TODO: Reinstate the deferred six-month contribution requirement once the policy
+is confirmed. The proposed rule counts positive, unreversed share purchases in
+at least six distinct calendar months in Africa/Nairobi time; multiple purchases
+in one month count once, and dividends and adjustments do not count. Contribution
+history currently does not gate approval or disbursement.
 
 Guarantor capacity is checked at application, addition and approval:
 
 ```text
-new_guarantee <= max(0, 30% * current_guarantor_share_balance - all_active_pledges)
+new_guarantee <= max(0, current_guarantor_share_balance - all_active_pledges)
 ```
 
 The allowance is rounded down to four decimal places. Active pledges include the
@@ -210,7 +211,7 @@ minimum_monthly_principal = approved_principal / 36
 
 Any lower monthly principal requires explicit approval and audit trail.
 
-Share balances, contribution history, guarantor share availability and pledged share checks must come from the Shares domain using strongly consistent reads.
+Share balances, guarantor share availability and pledged share checks must come from the Shares domain using strongly consistent reads.
 
 ## 5. Disbursement
 
@@ -350,7 +351,6 @@ Members:
 Shares:
 
 - read current eligible shares with strong consistency
-- read 6-month contribution history
 - read guarantor available shares
 - read pledged share commitments
 - never write share balances from the Loans domain
