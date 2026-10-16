@@ -104,7 +104,7 @@ func main() {
 	exitOnError("failed to configure Daraja STK initiator", err)
 	go contributionService.RecoverDaraja(recoveryCtx, darajaClient)
 	contributionServer := contribution.NewHandlers(contributionService, darajaClient)
-	darajaHandlers := contribution.NewDarajaHandlers(contributionService)
+	darajaHandlers := contribution.NewDarajaHandlers(contributionService, cfg.Daraja.Passkey)
 	authStore := auth.NewStore(pool)
 	authServer := auth.NewHandlers(authStore)
 	verifier, err := auth.NewVerifier(

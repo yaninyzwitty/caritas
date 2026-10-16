@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"math/big"
 	"strings"
 	"time"
@@ -66,10 +67,12 @@ func (s *Service) InitiateDarajaSTKPayment(ctx context.Context, params InitiateD
 		return contributionsqlc.ContributionPaymentRequest{}, err
 	}
 	checkoutID, err := initiator.InitiateSTK(ctx, DarajaSTKInitiationRequest{
-		PhoneNumber: params.PhoneNumber,
-		Amount:      amount,
+		IdempotencyKey: params.IdempotencyKey,
+		PhoneNumber:    params.PhoneNumber,
+		Amount:         amount,
 	})
 	if err != nil {
+		slog.Warn("initiate daraja checkout", "payment_request_id", request.ID.String(), "error", err)
 		// A network timeout cannot prove that Safaricom rejected the prompt.
 		// Retain the request so retries cannot charge the member again.
 		if errors.Is(err, ErrDarajaRejected) {
@@ -79,10 +82,17 @@ func (s *Service) InitiateDarajaSTKPayment(ctx context.Context, params InitiateD
 		}
 		return contributionsqlc.ContributionPaymentRequest{}, err
 	}
-	return s.store.UpdateContributionPaymentRequestCheckoutID(ctx, contributionsqlc.UpdateContributionPaymentRequestCheckoutIDParams{
+	// Provider latency must not consume the time needed to save an accepted checkout.
+	saveCtx, saveCancel := context.WithTimeout(context.WithoutCancel(ctx), 15*time.Second)
+	defer saveCancel()
+	updated, err := s.store.UpdateContributionPaymentRequestCheckoutID(saveCtx, contributionsqlc.UpdateContributionPaymentRequestCheckoutIDParams{
 		ID:                request.ID,
 		CheckoutRequestID: pgtype.Text{String: checkoutID, Valid: true},
 	})
+	if err != nil {
+		slog.Error("save daraja checkout", "payment_request_id", request.ID.String(), "checkout_request_id", checkoutID, "error", err)
+	}
+	return updated, err
 }
 
 // createContributionPaymentRequest gives STK initiation one sqlc-only

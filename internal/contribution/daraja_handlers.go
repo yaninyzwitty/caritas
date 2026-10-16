@@ -1,9 +1,12 @@
 package contribution
 
 import (
+	"crypto/hmac"
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -16,20 +19,22 @@ import (
 // a separate handler type, Daraja routes would have to be mixed into gRPC
 // services that Safaricom cannot call.
 type DarajaHandlers struct {
-	service *Service
+	service     *Service
+	callbackKey string
 }
 
 // NewDarajaHandlers wires Daraja HTTP callbacks to the contribution service.
 // Removing it would expose the handler struct fields or require construction
 // logic in main.
-func NewDarajaHandlers(service *Service) *DarajaHandlers {
-	return &DarajaHandlers{service: service}
+func NewDarajaHandlers(service *Service, callbackKey string) *DarajaHandlers {
+	return &DarajaHandlers{service: service, callbackKey: callbackKey}
 }
 
 // RegisterDarajaRoutes keeps the public callback paths in one place. Removing
 // it would spread unauthenticated webhook route registration through main.
 func (h *DarajaHandlers) RegisterDarajaRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /webhooks/daraja/stk", h.HandleSTKCallback)
+	mux.HandleFunc("POST /webhooks/daraja/stk/{requestKey}/{signature}", h.HandleSTKCallback)
 }
 
 // HandleSTKCallback accepts Daraja STK result callbacks and delegates all
@@ -81,14 +86,48 @@ func (h *DarajaHandlers) HandleSTKCallback(w http.ResponseWriter, r *http.Reques
 		http.Error(w, "invalid callback", http.StatusBadRequest)
 		return
 	}
-	if err := h.service.store.InsertDarajaCallback(r.Context(), contributionsqlc.InsertDarajaCallbackParams{
+	params := contributionsqlc.InsertDarajaCallbackParams{
 		CheckoutRequestID: checkoutID,
 		Payload:           body,
 		PayloadHash:       fmt.Sprintf("%x", sha256.Sum256(body)),
-	}); err != nil {
+	}
+	if key := r.PathValue("requestKey"); key != "" {
+		mac := hmac.New(sha256.New, []byte(h.callbackKey))
+		_, _ = mac.Write([]byte("daraja-callback:" + key))
+		signature, decodeErr := hex.DecodeString(r.PathValue("signature"))
+		if h.callbackKey == "" || decodeErr != nil || !hmac.Equal(signature, mac.Sum(nil)) {
+			http.Error(w, "invalid callback signature", http.StatusForbidden)
+			return
+		}
+		// Bind only a signed request, atomically with callback persistence, so a lost provider response cannot orphan payment.
+		err = h.service.store.ExecTx(r.Context(), func(q contributionsqlc.Querier) error {
+			request, err := q.GetContributionPaymentRequestByIdempotencyKey(r.Context(), key)
+			if err != nil {
+				return err
+			}
+			request, err = q.LockDarajaRequest(r.Context(), contributionsqlc.LockDarajaRequestParams{ID: request.ID, BranchID: request.BranchID})
+			if err != nil {
+				return err
+			}
+			if request.CheckoutRequestID.Valid && request.CheckoutRequestID.String != checkoutID {
+				return ErrInconsistentReceipt
+			}
+			if !request.CheckoutRequestID.Valid {
+				if _, err := q.UpdateContributionPaymentRequestCheckoutID(r.Context(), contributionsqlc.UpdateContributionPaymentRequestCheckoutIDParams{ID: request.ID, CheckoutRequestID: pgtype.Text{String: checkoutID, Valid: true}}); err != nil {
+					return err
+				}
+			}
+			return q.InsertDarajaCallback(r.Context(), params)
+		})
+	} else {
+		err = h.service.store.InsertDarajaCallback(r.Context(), params)
+	}
+	if err != nil {
+		slog.Error("save daraja callback", "checkout_request_id", checkoutID, "error", err)
 		http.Error(w, "callback could not be saved", http.StatusServiceUnavailable)
 		return
 	}
+	slog.Info("daraja callback saved", "checkout_request_id", checkoutID, "result_code", callback.ResultCode)
 	writeDarajaAccepted(w)
 }
 

@@ -59,7 +59,7 @@ func TestDarajaCallbackAcknowledgementRequiresDurablePersistence(t *testing.T) {
 			if fail {
 				stub.err = errors.New("database unavailable")
 			}
-			h := NewDarajaHandlers(NewService(&Store{Querier: stub}, nil, nil))
+			h := NewDarajaHandlers(NewService(&Store{Querier: stub}, nil, nil), "")
 			body := `{"Body":{"stkCallback":{"CheckoutRequestID":"checkout","MerchantRequestID":"merchant","ResultCode":0,"CallbackMetadata":{"Item":[{"Name":"Amount","Value":1000},{"Name":"MpesaReceiptNumber","Value":"RCP123"}]}}}}`
 			response := httptest.NewRecorder()
 			h.HandleSTKCallback(response, httptest.NewRequest(http.MethodPost, "/webhooks/daraja/stk", strings.NewReader(body)))
@@ -79,11 +79,23 @@ func TestDarajaCallbackAcknowledgementRequiresDurablePersistence(t *testing.T) {
 
 func TestDarajaCallbackMissingResultDoesNotBecomeSuccess(t *testing.T) {
 	stub := &callbackPersistenceStub{}
-	h := NewDarajaHandlers(NewService(&Store{Querier: stub}, nil, nil))
+	h := NewDarajaHandlers(NewService(&Store{Querier: stub}, nil, nil), "")
 	response := httptest.NewRecorder()
 	h.HandleSTKCallback(response, httptest.NewRequest(http.MethodPost, "/webhooks/daraja/stk", strings.NewReader(`{"Body":{"stkCallback":{"CheckoutRequestID":"checkout"}}}`)))
 	if response.Code != http.StatusBadRequest || len(stub.saved) != 0 {
 		t.Fatalf("status %d, saved %d", response.Code, len(stub.saved))
+	}
+}
+
+func TestDarajaCallbackRejectsUnsignedRequestAssociation(t *testing.T) {
+	stub := &callbackPersistenceStub{}
+	h := NewDarajaHandlers(NewService(&Store{Querier: stub}, nil, nil), "test-key")
+	mux := http.NewServeMux()
+	h.RegisterDarajaRoutes(mux)
+	response := httptest.NewRecorder()
+	mux.ServeHTTP(response, httptest.NewRequest(http.MethodPost, "/webhooks/daraja/stk/request/00", strings.NewReader(`{"Body":{"stkCallback":{"CheckoutRequestID":"checkout","ResultCode":0}}}`)))
+	if response.Code != http.StatusForbidden || len(stub.saved) != 0 {
+		t.Fatalf("unverified association: status %d, saved %d", response.Code, len(stub.saved))
 	}
 }
 
