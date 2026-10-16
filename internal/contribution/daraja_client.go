@@ -3,11 +3,14 @@ package contribution
 import (
 	"bytes"
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -20,8 +23,9 @@ type DarajaSTKInitiator interface {
 }
 
 type DarajaSTKInitiationRequest struct {
-	PhoneNumber string
-	Amount      int64
+	IdempotencyKey string
+	PhoneNumber    string
+	Amount         int64
 }
 
 type DarajaClientConfig struct {
@@ -78,12 +82,13 @@ func (c *DarajaClient) QuerySTK(ctx context.Context, checkoutID string) (string,
 		CheckoutRequestID string          `json:"CheckoutRequestID"`
 		ResultCode        json.RawMessage `json:"ResultCode"`
 		ResultDesc        string          `json:"ResultDesc"`
+		ErrorCode         string          `json:"errorCode"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return "", "", err
+		return "", "", fmt.Errorf("daraja query response (HTTP %d, content-type %q): %w", resp.StatusCode, resp.Header.Get("Content-Type"), err)
 	}
 	if resp.StatusCode != http.StatusOK || result.CheckoutRequestID != checkoutID || len(result.ResultCode) == 0 {
-		return "", "", fmt.Errorf("daraja query returned no verified checkout result")
+		return "", "", fmt.Errorf("daraja query returned no verified checkout result (HTTP %d, error_code %q, checkout_matches %t, result_present %t)", resp.StatusCode, result.ErrorCode, result.CheckoutRequestID == checkoutID, len(result.ResultCode) != 0)
 	}
 	return strings.Trim(string(result.ResultCode), "\""), result.ResultDesc, nil
 }
@@ -102,6 +107,16 @@ func NewDarajaClient(httpClient *http.Client, cfg DarajaClientConfig) *DarajaCli
 // method, the contribution service could persist a payment request but never
 // create the M-Pesa prompt that produces the callback it later expects.
 func (c *DarajaClient) InitiateSTK(ctx context.Context, request DarajaSTKInitiationRequest) (string, error) {
+	callbackURL, err := url.Parse(c.config.CallbackURL)
+	if err != nil {
+		return "", fmt.Errorf("invalid daraja callback URL: %w", err)
+	}
+	// A signed request key lets callbacks recover a lost initiation response without guessing a payer.
+	if request.IdempotencyKey != "" {
+		mac := hmac.New(sha256.New, []byte(c.config.Passkey))
+		_, _ = mac.Write([]byte("daraja-callback:" + request.IdempotencyKey))
+		callbackURL.Path = strings.TrimRight(callbackURL.Path, "/") + "/" + request.IdempotencyKey + "/" + fmt.Sprintf("%x", mac.Sum(nil))
+	}
 	token, err := c.accessToken(ctx)
 	if err != nil {
 		return "", err
@@ -118,7 +133,7 @@ func (c *DarajaClient) InitiateSTK(ctx context.Context, request DarajaSTKInitiat
 		"PartyA":            request.PhoneNumber,
 		"PartyB":            c.config.BusinessShortCode,
 		"PhoneNumber":       request.PhoneNumber,
-		"CallBackURL":       c.config.CallbackURL,
+		"CallBackURL":       callbackURL.String(),
 		"AccountReference":  c.config.AccountReference,
 		"TransactionDesc":   c.config.TransactionDesc,
 	})
@@ -149,10 +164,11 @@ func (c *DarajaClient) InitiateSTK(ctx context.Context, request DarajaSTKInitiat
 		ErrorMessage      string `json:"errorMessage"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
-		return "", err
+		return "", fmt.Errorf("daraja initiation response (HTTP %d, content-type %q): %w", resp.StatusCode, resp.Header.Get("Content-Type"), err)
 	}
 	if resp.StatusCode < 200 || resp.StatusCode > 299 || payload.ResponseCode != "0" {
-		if payload.ErrorCode != "" {
+		// A provider outage or rate limit cannot prove that no prompt was sent.
+		if resp.StatusCode == http.StatusBadRequest && payload.ErrorCode != "" {
 			return "", ErrDarajaRejected
 		}
 		return "", fmt.Errorf("daraja stk rejected: %s %s", payload.ErrorCode, payload.ErrorMessage)
@@ -188,7 +204,7 @@ func (c *DarajaClient) accessToken(ctx context.Context) (string, error) {
 		Error       string `json:"error"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
-		return "", err
+		return "", fmt.Errorf("daraja token response (HTTP %d, content-type %q): %w", resp.StatusCode, resp.Header.Get("Content-Type"), err)
 	}
 	if resp.StatusCode < 200 || resp.StatusCode > 299 || strings.TrimSpace(payload.AccessToken) == "" {
 		return "", fmt.Errorf("daraja token rejected: %s %s", payload.ErrorCode, payload.Error)

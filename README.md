@@ -113,6 +113,10 @@ changed by these migrations.
 For local callbacks, tunnel the backend HTTP port and set
 `DARAJA_CALLBACK_URL=https://<your-ngrok-host>/webhooks/daraja/stk`, then restart
 the backend after changing this setting. Keep the tunnel running while testing.
+New prompts append a signed request key to this callback path so callbacks can
+restore the checkout association when the initiation response is lost. Forward
+the entire `/webhooks/daraja/stk/` path through any proxy. Keep the Daraja passkey
+stable while payments are pending; changing it invalidates their callback URLs.
 
 Callbacks are saved before acknowledgement. The server resumes saved callbacks
 and queries unresolved checkouts with bounded backoff after restarts. An
