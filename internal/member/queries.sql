@@ -34,14 +34,14 @@ SELECT m.id, m.branch_id, m.member_number, m.national_id, m.status, m.is_deleted
        p.next_of_kin_name, p.next_of_kin_phone, p.next_of_kin_relationship
 FROM members m
 LEFT JOIN member_profiles p ON p.member_id = m.id
-WHERE m.branch_id = $1
+WHERE m.branch_id = sqlc.arg(branch_id)
   AND NOT m.is_deleted
   AND (sqlc.arg(status_filter)::text = '' OR m.status = sqlc.arg(status_filter))
   AND (sqlc.arg(search)::text = '' OR strpos(lower(COALESCE(p.full_name, '')), lower(sqlc.arg(search))) > 0
        OR m.member_number::text = sqlc.arg(search) OR m.national_id = sqlc.arg(search))
-  AND ($2::uuid IS NULL OR m.id < COALESCE($2::uuid, 'FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF'::uuid))
-ORDER BY m.id DESC
-LIMIT $3;
+  AND (sqlc.narg(before_member_number)::bigint IS NULL OR m.member_number < sqlc.narg(before_member_number)::bigint)
+ORDER BY m.member_number ASC
+LIMIT sqlc.arg(fetch_limit);
 
 -- name: GetNextMemberNumber :one
 SELECT next_member_number

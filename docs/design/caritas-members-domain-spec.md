@@ -182,7 +182,7 @@ When closure succeeds:
 
 - All multi-table member writes use `ExecTx`.
 - Branch member number generation locks `BranchMemberCounter` with `FOR UPDATE`.
-- Use cursor pagination on `(created_at, id)`.
+- List members within a branch by `member_number DESC`, using the last returned member number as the cursor. Fetch one extra row to determine whether another page exists.
 - Do not hard-delete members or profiles.
 - Default member queries exclude `is_deleted`.
 - `member_profiles` is not queried independently. It is joined through `members`.

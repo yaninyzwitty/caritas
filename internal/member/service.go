@@ -118,18 +118,13 @@ func (s *Service) GetMemberByNationalID(ctx context.Context, branchID int64, nat
 	return s.store.GetMemberByID(ctx, existing.ID)
 }
 
-func (s *Service) ListMembers(ctx context.Context, branchID int64, cursor *pgtype.UUID, limit int32, search, statusFilter string) ([]sqlc.ListMembersByBranchCursorRow, error) {
-	var cursorUUID pgtype.UUID
-	if cursor != nil {
-		cursorUUID = *cursor
-	}
-
+func (s *Service) ListMembers(ctx context.Context, branchID int64, cursor pgtype.Int8, limit int32, search, statusFilter string) ([]sqlc.ListMembersByBranchCursorRow, error) {
 	return s.store.ListMembersByBranchCursor(ctx, sqlc.ListMembersByBranchCursorParams{
-		BranchID:     branchID,
-		Column2:      cursorUUID,
-		Limit:        limit,
-		Search:       search,
-		StatusFilter: statusFilter,
+		BranchID:           branchID,
+		BeforeMemberNumber: cursor,
+		FetchLimit:         limit,
+		Search:             search,
+		StatusFilter:       statusFilter,
 	})
 }
 

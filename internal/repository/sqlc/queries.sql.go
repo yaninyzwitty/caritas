@@ -306,20 +306,20 @@ FROM members m
 LEFT JOIN member_profiles p ON p.member_id = m.id
 WHERE m.branch_id = $1
   AND NOT m.is_deleted
-  AND ($4::text = '' OR m.status = $4)
-  AND ($5::text = '' OR strpos(lower(COALESCE(p.full_name, '')), lower($5)) > 0
-       OR m.member_number::text = $5 OR m.national_id = $5)
-  AND ($2::uuid IS NULL OR m.id < COALESCE($2::uuid, 'FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF'::uuid))
-ORDER BY m.id DESC
-LIMIT $3
+  AND ($2::text = '' OR m.status = $2)
+  AND ($3::text = '' OR strpos(lower(COALESCE(p.full_name, '')), lower($3)) > 0
+       OR m.member_number::text = $3 OR m.national_id = $3)
+  AND ($4::bigint IS NULL OR m.member_number < $4::bigint)
+ORDER BY m.member_number ASC
+LIMIT $5
 `
 
 type ListMembersByBranchCursorParams struct {
-	BranchID     int64       `json:"branchId"`
-	Column2      pgtype.UUID `json:"column2"`
-	Limit        int32       `json:"limit"`
-	StatusFilter string      `json:"statusFilter"`
-	Search       string      `json:"search"`
+	BranchID           int64       `json:"branchId"`
+	StatusFilter       string      `json:"statusFilter"`
+	Search             string      `json:"search"`
+	BeforeMemberNumber pgtype.Int8 `json:"beforeMemberNumber"`
+	FetchLimit         int32       `json:"fetchLimit"`
 }
 
 type ListMembersByBranchCursorRow struct {
@@ -349,10 +349,10 @@ type ListMembersByBranchCursorRow struct {
 func (q *Queries) ListMembersByBranchCursor(ctx context.Context, arg ListMembersByBranchCursorParams) ([]ListMembersByBranchCursorRow, error) {
 	rows, err := q.db.Query(ctx, listMembersByBranchCursor,
 		arg.BranchID,
-		arg.Column2,
-		arg.Limit,
 		arg.StatusFilter,
 		arg.Search,
+		arg.BeforeMemberNumber,
+		arg.FetchLimit,
 	)
 	if err != nil {
 		return nil, err
