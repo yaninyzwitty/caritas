@@ -47,7 +47,11 @@ SELECT
         )), 0)
         FROM loan_transactions
         WHERE loan_id = l.id AND type = 'repayment'
-    ))::numeric AS outstanding_principal
+    ))::numeric AS outstanding_principal,
+    COALESCE((SELECT SUM(GREATEST(c.amount - (
+        SELECT COALESCE(SUM(o.amount), 0) FROM credit_operations o
+        WHERE o.credit_balance_id = c.id AND o.status IN ('pending', 'approved', 'completed')
+    ), 0)) FROM credit_balances c WHERE c.loan_id = l.id AND c.status = 'available'), 0)::numeric AS available_credit
 FROM loans l
 JOIN members m ON m.id = l.member_id
 LEFT JOIN member_profiles mp ON mp.member_id = m.id

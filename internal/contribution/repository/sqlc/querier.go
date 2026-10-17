@@ -65,6 +65,7 @@ type Querier interface {
 	QuoteMonthlyFees(ctx context.Context, arg QuoteMonthlyFeesParams) ([]QuoteMonthlyFeesRow, error)
 	RecordDarajaQueryResult(ctx context.Context, arg RecordDarajaQueryResultParams) error
 	RequeueDarajaCallbacks(ctx context.Context, checkoutRequestID string) error
+	RestoreDarajaCheckout(ctx context.Context, arg RestoreDarajaCheckoutParams) error
 	RetryDarajaReceipt(ctx context.Context, arg RetryDarajaReceiptParams) error
 	ScheduleDarajaQuery(ctx context.Context, arg ScheduleDarajaQueryParams) error
 	SumCashReceiptsBySession(ctx context.Context, cashierSessionID pgtype.UUID) (pgtype.Numeric, error)

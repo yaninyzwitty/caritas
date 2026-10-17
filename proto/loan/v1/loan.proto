@@ -101,7 +101,7 @@ message Loan {
   string                    member_id               = 2;
   string                    branch_id               = 3;
   string                    principal               = 4;  // decimal.Decimal as string
-  string                    interest_rate           = 5;  // decimal.Decimal as string (percentage rate)
+  string                    interest_rate           = 5;  // Monthly fraction: 0.01 means 1%.
   int32                     repayment_period_months = 6;
   LoanStatus                status                  = 7;
   google.protobuf.Timestamp disbursed_at            = 8;
@@ -117,6 +117,26 @@ message Loan {
   string applicant_share_pledge = 17;
   string approved_guarantor_coverage = 18;
   string collateral_shortfall = 19;
+  LoanFinancialSummary financial_summary = 20;
+  optional string available_credit = 21;
+}
+
+// LoanFinancialSummary reconciles the full ledger, independent of history pagination.
+message LoanFinancialSummary {
+  string principal_outstanding = 1;
+  string assessed_interest_outstanding = 2;
+  string unposted_interest = 3;
+  string interest_outstanding = 4;
+  string penalty_outstanding = 5;
+  string total_outstanding = 6;
+  string received = 7;
+  string principal_paid = 8;
+  string interest_paid = 9;
+  string penalty_paid = 10;
+  string overpayment = 11;
+  string available_credit = 12;
+  string next_month_interest = 13;
+  string as_of_period = 14;
 }
 
 // LoanGuarantor represents a member who guarantees a loan.
@@ -158,7 +178,7 @@ message ApplyForLoanRequest {
   string                     member_id                     = 1;
   int32                      branch_id                     = 2;
   string                     principal                     = 3;  // decimal.Decimal as string
-  string                     interest_rate                 = 4;  // decimal.Decimal as string (percentage rate)
+  string                     interest_rate                 = 4;  // Monthly fraction: 0.01 means 1%.
   int32                      repayment_period_months       = 5;
   string                     officer_id                    = 6;
   repeated ProposedGuarantor guarantors                    = 7;

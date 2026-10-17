@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	contributionv1 "github.com/yaninyzwitty/caritas-backend/gen/contribution/v1"
 	"github.com/yaninyzwitty/caritas-backend/internal/auth"
@@ -149,14 +150,37 @@ func (h *Handlers) RecoverDarajaPayment(ctx context.Context, req *contributionv1
 			return err
 		}
 		if req.GetAction() != "query" {
-			if strings.TrimSpace(req.GetReason()) == "" {
+			reason := strings.TrimSpace(req.GetReason())
+			if reason == "" {
 				return ErrInvalidPayment
 			}
-			if err := q.InsertPaymentRecoveryAction(ctx, contributionsqlc.InsertPaymentRecoveryActionParams{PaymentRequestID: id, Action: req.GetAction(), Reason: req.GetReason(), PerformedBy: actor.ID}); err != nil {
+			if req.GetAction() == "restore_checkout" {
+				reason += " (checkout: " + strings.TrimSpace(req.GetCheckoutRequestId()) + ")"
+			}
+			if err := q.InsertPaymentRecoveryAction(ctx, contributionsqlc.InsertPaymentRecoveryActionParams{PaymentRequestID: id, Action: req.GetAction(), Reason: reason, PerformedBy: actor.ID}); err != nil {
 				return err
 			}
 		}
 		switch req.GetAction() {
+		case "restore_checkout":
+			checkout := strings.TrimSpace(req.GetCheckoutRequestId())
+			if checkout == "" {
+				return ErrInvalidPayment
+			}
+			if request.CheckoutRequestID.Valid && request.CheckoutRequestID.String != checkout {
+				return ErrInconsistentReceipt
+			}
+			if request.Status != contributionsqlc.ContributionPaymentRequestStatusPending || request.ReceiptID.Valid {
+				return status.Error(codes.FailedPrecondition, "only pending requests without a receipt can have their checkout restored")
+			}
+			// Repeating a successful restoration must not reset the provider retry budget.
+			if request.CheckoutRequestID.Valid {
+				return nil
+			}
+			if err := q.RestoreDarajaCheckout(ctx, contributionsqlc.RestoreDarajaCheckoutParams{ID: id, CheckoutRequestID: text(checkout)}); err != nil {
+				return err
+			}
+			return q.RequeueDarajaCallbacks(ctx, checkout)
 		case "query":
 			if err := q.RequeueDarajaCallbacks(ctx, request.CheckoutRequestID.String); err != nil {
 				return err
@@ -237,6 +261,13 @@ func (h *Handlers) RecoverDarajaPayment(ctx context.Context, req *contributionv1
 		return nil, status.Error(codes.NotFound, "payment request not found")
 	}
 	if err != nil {
+		if _, ok := status.FromError(err); ok {
+			return nil, err
+		}
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" && pgErr.ConstraintName == "contribution_payment_requests_checkout_request_id_key" {
+			return nil, status.Error(codes.AlreadyExists, "checkout ID belongs to another payment request")
+		}
 		return nil, mapContributionError(err)
 	}
 	payment, err := h.GetContributionPayment(ctx, &contributionv1.GetContributionPaymentRequest{Lookup: &contributionv1.GetContributionPaymentRequest_PaymentRequestId{PaymentRequestId: id.String()}})

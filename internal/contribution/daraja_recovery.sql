@@ -34,6 +34,12 @@ WHERE id = $1 AND branch_id = $2 AND status = 'pending'
     AND (query_attempts >= 8 OR next_query_at > NOW() + INTERVAL '30 seconds')
     AND updated_at < NOW() - INTERVAL '30 seconds';
 
+-- name: RestoreDarajaCheckout :exec
+UPDATE contribution_payment_requests
+SET checkout_request_id = $2, next_query_at = NOW(), query_attempts = 0,
+    recovery_status = 'awaiting_confirmation', updated_at = NOW()
+WHERE id = $1 AND status = 'pending' AND checkout_request_id IS NULL AND receipt_id IS NULL;
+
 -- name: ListUnresolvedDarajaPayments :many
 SELECT p.*, COALESCE(r.status::text, '')::text AS receipt_status,
     COALESCE(r.external_transaction_id, '')::text AS mpesa_reference,

@@ -68,6 +68,7 @@ message LoanTransaction {
   string                           created_by                     = 6;
   string                           loan_id                        = 7;
   string                           transaction_id                 = 8;
+  AllocationBreakdown allocation = 9;
 }
 
 // AllocationBreakdown details how a payment was allocated.

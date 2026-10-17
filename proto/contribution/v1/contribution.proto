@@ -397,7 +397,7 @@ message DarajaPayment {
 // Reconciliation requires verified business records; query and retry never initiate STK.
 message RecoverDarajaPaymentRequest {
   string payment_request_id = 1;
-  string action = 2; // query, reconcile, retry_posting
+  string action = 2; // query, restore_checkout, reconcile, retry_posting
   string checkout_request_id = 3;
   string mpesa_reference = 4;
   member.v1.Money amount = 5;

@@ -749,7 +749,16 @@ func (s *Service) RecordRepaymentForPeriodInTx(
 		interestDue.SetInt64(0)
 	}
 	priorApplied := totals.Principal
-	allocation := allocateRepayment(amount, priorApplied, current.Principal, numericFromScale(interestDue))
+	penaltyDue, err := q.GetLoanPenaltyDue(ctx, loanID)
+	if err != nil {
+		return tx, fmt.Errorf("sum penalties: %w", err)
+	}
+	payment := numericToScale(amount, -4)
+	penalty := minBigInt(payment, numericToScale(penaltyDue, -4))
+	payment.Sub(payment, penalty)
+	allocation := allocateRepayment(numericFromScale(payment), priorApplied, current.Principal, numericFromScale(interestDue))
+	allocation.Penalty = decimalStringFromScale(penalty, -4)
+	allocation.loanClosed = allocation.loanClosed && penalty.Cmp(numericToScale(penaltyDue, -4)) >= 0
 	allocation.Period = period.Time.Format("2006-01-02")
 	allocationJSON, err := json.Marshal(allocation)
 	if err != nil {
@@ -773,7 +782,7 @@ func (s *Service) RecordRepaymentForPeriodInTx(
 		return tx, fmt.Errorf("insert repayment transaction: %w", err)
 	}
 
-	if allocation.Credit != "0" {
+	if allocation.creditAmount.Sign() > 0 {
 		if _, err := q.CreateCreditBalance(ctx, loansqlc.CreateCreditBalanceParams{
 			MemberID: current.MemberID,
 			LoanID:   loanID,
