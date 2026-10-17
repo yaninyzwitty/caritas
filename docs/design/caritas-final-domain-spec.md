@@ -40,6 +40,10 @@ records. A transport timeout remains unconfirmed; it must never trigger an
 automatic new prompt. Unresolved checkouts are queried with bounded backoff.
 Provider success without receipt metadata requires reconciliation against
 verified business records, preserving the original request and allocation plan.
+Staff with cash approval permission may restore a missing checkout ID from an
+exact provider response or backend log match. Restoration is branch-scoped,
+audited, and limited to pending requests without a receipt. It cannot replace a
+different checkout ID or send another prompt; it schedules status recovery only.
 Authorized recovery records the officer, reason, amount, payment time and
 verification evidence. Payment receipt and allocation completion are separate
 outcomes. Business allocation errors remain visible for review rather than

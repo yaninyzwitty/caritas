@@ -25,8 +25,11 @@ type Querier interface {
 	GetLoanByID(ctx context.Context, id pgtype.UUID) (GetLoanByIDRow, error)
 	GetLoanByMemberID(ctx context.Context, memberID pgtype.UUID) (GetLoanByMemberIDRow, error)
 	GetLoanDisbursement(ctx context.Context, loanID pgtype.UUID) (LoanTransaction, error)
+	// One statement keeps balances and status on the same database snapshot.
+	GetLoanFinancialSummary(ctx context.Context, loanID pgtype.UUID) (GetLoanFinancialSummaryRow, error)
 	GetLoanGuarantor(ctx context.Context, arg GetLoanGuarantorParams) (LoanGuarantor, error)
 	GetLoanInterestPeriod(ctx context.Context, loanID pgtype.UUID) (pgtype.Date, error)
+	GetLoanPenaltyDue(ctx context.Context, loanID pgtype.UUID) (pgtype.Numeric, error)
 	GetLoanRepaymentTotals(ctx context.Context, loanID pgtype.UUID) (GetLoanRepaymentTotalsRow, error)
 	GetLoanSecuritySummary(ctx context.Context, loanID pgtype.UUID) (GetLoanSecuritySummaryRow, error)
 	GetLoanTransactionByGatewayID(ctx context.Context, arg GetLoanTransactionByGatewayIDParams) (LoanTransaction, error)

@@ -341,6 +341,23 @@ func (q *Queries) RequeueDarajaCallbacks(ctx context.Context, checkoutRequestID 
 	return err
 }
 
+const restoreDarajaCheckout = `-- name: RestoreDarajaCheckout :exec
+UPDATE contribution_payment_requests
+SET checkout_request_id = $2, next_query_at = NOW(), query_attempts = 0,
+    recovery_status = 'awaiting_confirmation', updated_at = NOW()
+WHERE id = $1 AND status = 'pending' AND checkout_request_id IS NULL AND receipt_id IS NULL
+`
+
+type RestoreDarajaCheckoutParams struct {
+	ID                pgtype.UUID `json:"id"`
+	CheckoutRequestID pgtype.Text `json:"checkoutRequestId"`
+}
+
+func (q *Queries) RestoreDarajaCheckout(ctx context.Context, arg RestoreDarajaCheckoutParams) error {
+	_, err := q.db.Exec(ctx, restoreDarajaCheckout, arg.ID, arg.CheckoutRequestID)
+	return err
+}
+
 const retryDarajaReceipt = `-- name: RetryDarajaReceipt :exec
 UPDATE contribution_receipts SET status = 'pending', failure_reason = NULL, updated_at = NOW()
 WHERE id = $1 AND branch_id = $2 AND source_channel = 'daraja_stk'

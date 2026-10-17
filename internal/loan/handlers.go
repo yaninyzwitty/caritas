@@ -301,6 +301,17 @@ func (h *Handlers) GetLoan(ctx context.Context, req *loanv1.GetLoanRequest) (*lo
 	if err != nil {
 		return nil, status.Error(codes.Internal, "could not read loan security")
 	}
+	financial, err := h.store.GetLoanFinancialSummary(ctx, loan.ID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "could not read loan balances")
+	}
+	// Read status alongside its balances so a concurrent repayment cannot show stale Active with settled debt.
+	loan.Status, loan.PreviousStatus, loan.UpdatedAt = financial.Status, financial.PreviousStatus, financial.UpdatedAt
+	outstandingPrincipal := numericToString(financial.PrincipalOutstanding)
+	var disbursedAt *timestamppb.Timestamp
+	if loan.DisbursedAt.Valid {
+		disbursedAt = timestamppb.New(loan.DisbursedAt.Time)
+	}
 	shortfall := numericToScale(loan.Principal, -4)
 	shortfall.Sub(shortfall, numericToScale(security.ApplicantPledge, -4))
 	shortfall.Sub(shortfall, numericToScale(security.ApprovedGuarantees, -4))
@@ -316,7 +327,7 @@ func (h *Handlers) GetLoan(ctx context.Context, req *loanv1.GetLoanRequest) (*lo
 			InterestRate:              numericToString(loan.InterestRate),
 			RepaymentPeriodMonths:     loan.RepaymentPeriodMonths,
 			Status:                    loanStatusToProto(loan.Status),
-			DisbursedAt:               timestamppb.New(loan.DisbursedAt.Time),
+			DisbursedAt:               disbursedAt,
 			CreatedAt:                 timestamppb.New(loan.CreatedAt.Time),
 			UpdatedAt:                 timestamppb.New(loan.UpdatedAt.Time),
 			UpdatedBy:                 loan.UpdatedBy.String(),
@@ -324,6 +335,23 @@ func (h *Handlers) GetLoan(ctx context.Context, req *loanv1.GetLoanRequest) (*lo
 			ApplicantSharePledge:      numericToString(security.ApplicantPledge),
 			ApprovedGuarantorCoverage: numericToString(security.ApprovedGuarantees),
 			CollateralShortfall:       numericToString(pgtype.Numeric{Int: shortfall, Exp: -4, Valid: true}),
+			OutstandingPrincipal:      &outstandingPrincipal,
+			FinancialSummary: &loanv1.LoanFinancialSummary{
+				PrincipalOutstanding:        numericToString(financial.PrincipalOutstanding),
+				AssessedInterestOutstanding: numericToString(financial.AssessedInterestOutstanding),
+				UnpostedInterest:            numericToString(financial.UnpostedInterest),
+				InterestOutstanding:         numericToString(financial.InterestOutstanding),
+				PenaltyOutstanding:          numericToString(financial.PenaltyOutstanding),
+				TotalOutstanding:            numericToString(financial.TotalOutstanding),
+				Received:                    numericToString(financial.Received),
+				PrincipalPaid:               numericToString(financial.PrincipalPaid),
+				InterestPaid:                numericToString(financial.InterestPaid),
+				PenaltyPaid:                 numericToString(financial.PenaltyPaid),
+				Overpayment:                 numericToString(financial.Overpayment),
+				AvailableCredit:             numericToString(financial.AvailableCredit),
+				NextMonthInterest:           numericToString(financial.NextMonthInterest),
+				AsOfPeriod:                  financial.AsOfPeriod.Time.Format("2006-01-02"),
+			},
 		},
 	}, nil
 
@@ -398,12 +426,14 @@ func (h *Handlers) ListLoans(ctx context.Context, req *loanv1.ListLoansRequest) 
 		slog.Info("outstanding principal", "principal", outstandingPrincipal)
 
 		interestRate := numericToString(loan.Loan.InterestRate)
+		availableCredit := numericToString(loan.AvailableCredit)
 
 		resp.Loans = append(resp.Loans, &loanv1.Loan{
 			MemberId:              loan.Loan.MemberID.String(),
 			BranchId:              branchID,
 			Principal:             loanPrincipal,
 			OutstandingPrincipal:  &outstandingPrincipal,
+			AvailableCredit:       &availableCredit,
 			Id:                    loan.Loan.ID.String(),
 			InterestRate:          interestRate,
 			RepaymentPeriodMonths: loan.Loan.RepaymentPeriodMonths,
@@ -791,7 +821,12 @@ func (h *Handlers) GetCreditBalance(ctx context.Context, req *loanv1.GetCreditBa
 		}
 	}
 
-	credits, err := h.service.ListCreditBalances(ctx, memberID, 100)
+	var credits []loansqlc.CreditBalance
+	if loanID.Valid {
+		credits, err = h.store.ListCreditBalancesByLoan(ctx, loanID)
+	} else {
+		credits, err = h.service.ListCreditBalances(ctx, memberID, 100)
+	}
 	if err != nil {
 		return nil, mapServiceError(err)
 	}
@@ -800,6 +835,9 @@ func (h *Handlers) GetCreditBalance(ctx context.Context, req *loanv1.GetCreditBa
 		Credits: make([]*loanv1.CreditBalance, 0, len(credits)),
 	}
 	for _, credit := range credits {
+		if !sameUUID(credit.MemberID, memberID) {
+			continue
+		}
 		if loanID.Valid && !sameUUID(credit.LoanID, loanID) {
 			continue
 		}
@@ -811,7 +849,7 @@ func (h *Handlers) GetCreditBalance(ctx context.Context, req *loanv1.GetCreditBa
 		available := numericToScale(funds.Amount, -4)
 		available.Sub(available, numericToScale(funds.Reserved, -4))
 		available.Sub(available, numericToScale(funds.Used, -4))
-		if credit.Status != loansqlc.CreditBalanceStatusAvailable {
+		if credit.Status != loansqlc.CreditBalanceStatusAvailable || available.Sign() < 0 {
 			available.SetInt64(0)
 		}
 		row.AvailableAmount = decimalStringFromScale(available, -4)
@@ -1016,6 +1054,7 @@ func loanTransactionToProto(tx loansqlc.LoanTransaction) *loanv1.LoanTransaction
 		CreatedBy:                   tx.CreatedBy.String(),
 		LoanId:                      tx.LoanID.String(),
 		TransactionId:               tx.ID.String(),
+		Allocation:                  allocationBreakdownToProto(tx.AllocationBreakdown),
 	}
 }
 

@@ -237,6 +237,7 @@ type LoanTransaction struct {
 	CreatedBy                   string                 `protobuf:"bytes,6,opt,name=created_by,json=createdBy,proto3" json:"created_by,omitempty"`
 	LoanId                      string                 `protobuf:"bytes,7,opt,name=loan_id,json=loanId,proto3" json:"loan_id,omitempty"`
 	TransactionId               string                 `protobuf:"bytes,8,opt,name=transaction_id,json=transactionId,proto3" json:"transaction_id,omitempty"`
+	Allocation                  *AllocationBreakdown   `protobuf:"bytes,9,opt,name=allocation,proto3" json:"allocation,omitempty"`
 	unknownFields               protoimpl.UnknownFields
 	sizeCache                   protoimpl.SizeCache
 }
@@ -325,6 +326,13 @@ func (x *LoanTransaction) GetTransactionId() string {
 		return x.TransactionId
 	}
 	return ""
+}
+
+func (x *LoanTransaction) GetAllocation() *AllocationBreakdown {
+	if x != nil {
+		return x.Allocation
+	}
+	return nil
 }
 
 // AllocationBreakdown details how a payment was allocated.
@@ -848,7 +856,7 @@ const file_loan_v1_repayment_proto_rawDesc = "" +
 	"\bdue_date\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\adueDate\x12\x1d\n" +
 	"\n" +
 	"amount_due\x18\x05 \x01(\tR\tamountDue\x120\n" +
-	"\x06status\x18\x06 \x01(\x0e2\x18.loan.v1.RepaymentStatusR\x06status\"\xbf\x02\n" +
+	"\x06status\x18\x06 \x01(\x0e2\x18.loan.v1.RepaymentStatusR\x06status\"\xfd\x02\n" +
 	"\x0fLoanTransaction\x12\x12\n" +
 	"\x04type\x18\x01 \x01(\tR\x04type\x12\x16\n" +
 	"\x06amount\x18\x02 \x01(\tR\x06amount\x12!\n" +
@@ -859,7 +867,10 @@ const file_loan_v1_repayment_proto_rawDesc = "" +
 	"\n" +
 	"created_by\x18\x06 \x01(\tR\tcreatedBy\x12\x17\n" +
 	"\aloan_id\x18\a \x01(\tR\x06loanId\x12%\n" +
-	"\x0etransaction_id\x18\b \x01(\tR\rtransactionId\"\x81\x01\n" +
+	"\x0etransaction_id\x18\b \x01(\tR\rtransactionId\x12<\n" +
+	"\n" +
+	"allocation\x18\t \x01(\v2\x1c.loan.v1.AllocationBreakdownR\n" +
+	"allocation\"\x81\x01\n" +
 	"\x13AllocationBreakdown\x12\x1c\n" +
 	"\tprincipal\x18\x01 \x01(\tR\tprincipal\x12\x1a\n" +
 	"\binterest\x18\x02 \x01(\tR\binterest\x12\x18\n" +
@@ -952,25 +963,26 @@ var file_loan_v1_repayment_proto_depIdxs = []int32{
 	13, // 0: loan.v1.RepaymentSchedule.due_date:type_name -> google.protobuf.Timestamp
 	0,  // 1: loan.v1.RepaymentSchedule.status:type_name -> loan.v1.RepaymentStatus
 	13, // 2: loan.v1.LoanTransaction.created_at:type_name -> google.protobuf.Timestamp
-	13, // 3: loan.v1.RecordRepaymentResponse.recorded_at:type_name -> google.protobuf.Timestamp
-	4,  // 4: loan.v1.RecordRepaymentResponse.allocation:type_name -> loan.v1.AllocationBreakdown
-	2,  // 5: loan.v1.GetRepaymentScheduleResponse.schedule:type_name -> loan.v1.RepaymentSchedule
-	2,  // 6: loan.v1.GetInstallmentDetailsResponse.installment:type_name -> loan.v1.RepaymentSchedule
-	1,  // 7: loan.v1.GetPaymentHistoryRequest.type_filter:type_name -> loan.v1.TransactionType
-	3,  // 8: loan.v1.GetPaymentHistoryResponse.transactions:type_name -> loan.v1.LoanTransaction
-	5,  // 9: loan.v1.RepaymentService.RecordRepayment:input_type -> loan.v1.RecordRepaymentRequest
-	7,  // 10: loan.v1.RepaymentService.GetRepaymentSchedule:input_type -> loan.v1.GetRepaymentScheduleRequest
-	9,  // 11: loan.v1.RepaymentService.GetInstallmentDetails:input_type -> loan.v1.GetInstallmentDetailsRequest
-	11, // 12: loan.v1.RepaymentService.GetPaymentHistory:input_type -> loan.v1.GetPaymentHistoryRequest
-	6,  // 13: loan.v1.RepaymentService.RecordRepayment:output_type -> loan.v1.RecordRepaymentResponse
-	8,  // 14: loan.v1.RepaymentService.GetRepaymentSchedule:output_type -> loan.v1.GetRepaymentScheduleResponse
-	10, // 15: loan.v1.RepaymentService.GetInstallmentDetails:output_type -> loan.v1.GetInstallmentDetailsResponse
-	12, // 16: loan.v1.RepaymentService.GetPaymentHistory:output_type -> loan.v1.GetPaymentHistoryResponse
-	13, // [13:17] is the sub-list for method output_type
-	9,  // [9:13] is the sub-list for method input_type
-	9,  // [9:9] is the sub-list for extension type_name
-	9,  // [9:9] is the sub-list for extension extendee
-	0,  // [0:9] is the sub-list for field type_name
+	4,  // 3: loan.v1.LoanTransaction.allocation:type_name -> loan.v1.AllocationBreakdown
+	13, // 4: loan.v1.RecordRepaymentResponse.recorded_at:type_name -> google.protobuf.Timestamp
+	4,  // 5: loan.v1.RecordRepaymentResponse.allocation:type_name -> loan.v1.AllocationBreakdown
+	2,  // 6: loan.v1.GetRepaymentScheduleResponse.schedule:type_name -> loan.v1.RepaymentSchedule
+	2,  // 7: loan.v1.GetInstallmentDetailsResponse.installment:type_name -> loan.v1.RepaymentSchedule
+	1,  // 8: loan.v1.GetPaymentHistoryRequest.type_filter:type_name -> loan.v1.TransactionType
+	3,  // 9: loan.v1.GetPaymentHistoryResponse.transactions:type_name -> loan.v1.LoanTransaction
+	5,  // 10: loan.v1.RepaymentService.RecordRepayment:input_type -> loan.v1.RecordRepaymentRequest
+	7,  // 11: loan.v1.RepaymentService.GetRepaymentSchedule:input_type -> loan.v1.GetRepaymentScheduleRequest
+	9,  // 12: loan.v1.RepaymentService.GetInstallmentDetails:input_type -> loan.v1.GetInstallmentDetailsRequest
+	11, // 13: loan.v1.RepaymentService.GetPaymentHistory:input_type -> loan.v1.GetPaymentHistoryRequest
+	6,  // 14: loan.v1.RepaymentService.RecordRepayment:output_type -> loan.v1.RecordRepaymentResponse
+	8,  // 15: loan.v1.RepaymentService.GetRepaymentSchedule:output_type -> loan.v1.GetRepaymentScheduleResponse
+	10, // 16: loan.v1.RepaymentService.GetInstallmentDetails:output_type -> loan.v1.GetInstallmentDetailsResponse
+	12, // 17: loan.v1.RepaymentService.GetPaymentHistory:output_type -> loan.v1.GetPaymentHistoryResponse
+	14, // [14:18] is the sub-list for method output_type
+	10, // [10:14] is the sub-list for method input_type
+	10, // [10:10] is the sub-list for extension type_name
+	10, // [10:10] is the sub-list for extension extendee
+	0,  // [0:10] is the sub-list for field type_name
 }
 
 func init() { file_loan_v1_repayment_proto_init() }

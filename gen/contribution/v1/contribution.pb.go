@@ -2879,7 +2879,7 @@ func (x *DarajaPayment) GetProviderResult() string {
 type RecoverDarajaPaymentRequest struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
 	PaymentRequestId  string                 `protobuf:"bytes,1,opt,name=payment_request_id,json=paymentRequestId,proto3" json:"payment_request_id,omitempty"`
-	Action            string                 `protobuf:"bytes,2,opt,name=action,proto3" json:"action,omitempty"` // query, reconcile, retry_posting
+	Action            string                 `protobuf:"bytes,2,opt,name=action,proto3" json:"action,omitempty"` // query, restore_checkout, reconcile, retry_posting
 	CheckoutRequestId string                 `protobuf:"bytes,3,opt,name=checkout_request_id,json=checkoutRequestId,proto3" json:"checkout_request_id,omitempty"`
 	MpesaReference    string                 `protobuf:"bytes,4,opt,name=mpesa_reference,json=mpesaReference,proto3" json:"mpesa_reference,omitempty"`
 	Amount            *v1.Money              `protobuf:"bytes,5,opt,name=amount,proto3" json:"amount,omitempty"`

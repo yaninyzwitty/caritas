@@ -248,6 +248,21 @@ The disbursed amount must equal the approved principal unless a formally approve
 
 ## 6. Repayment and Interest
 
+The API and database store the monthly interest rate as a decimal fraction:
+`0.01` means `1%`. Percentage inputs must divide by 100 before submission;
+displays multiply by 100. Do not reinterpret existing stored rates or rewrite
+historical allocations when correcting input or display units. Existing rate
+corrections require the approved, audited process described under Restructuring.
+
+Loan details expose a full-ledger financial summary, independent of transaction
+pagination: unpaid principal, unpaid assessed interest, catch-up interest payable
+on a current-month repayment, unpaid penalties, total settlement and available
+loan-specific credit. Status and these balances use the same database snapshot.
+Next month's interest is a separately labelled estimate based on remaining
+principal, assuming no further principal payments. Posted repayments expose their
+principal, interest, penalty and credit allocation. Unavailable figures must not
+be displayed as zero.
+
 Repayments may be accepted only for `Active`, `Disbursed` where repayment is allowed, or `Delinquent` loans. Repayments must be rejected for `Closed`, `WrittenOff`, `Restructuring` and terminal application states.
 
 Loan interest for monthly contribution reporting is:
