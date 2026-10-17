@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"math/big"
+	"strconv"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -143,13 +144,13 @@ func (h *Handlers) ListMembers(
 
 	branchID := resolveBranchID(req.BranchId)
 
-	var cursor *pgtype.UUID
+	var cursor pgtype.Int8
 	if req.PageToken != "" {
-		cursorUUID, err := stringToUUID(req.PageToken)
-		if err != nil {
+		memberNumber, err := strconv.ParseInt(req.PageToken, 10, 64)
+		if err != nil || memberNumber <= 0 {
 			return nil, status.Error(codes.InvalidArgument, "invalid page_token")
 		}
-		cursor = &cursorUUID
+		cursor = pgtype.Int8{Int64: memberNumber, Valid: true}
 	}
 
 	statusFilter := ""
@@ -159,11 +160,15 @@ func (h *Handlers) ListMembers(
 	if len(req.GetSearch()) > 100 {
 		return nil, status.Error(codes.InvalidArgument, "search must be at most 100 characters")
 	}
-	members, err := h.memberService.ListMembers(ctx, branchID, cursor, limit, strings.TrimSpace(req.GetSearch()), statusFilter)
+	members, err := h.memberService.ListMembers(ctx, branchID, cursor, limit+1, strings.TrimSpace(req.GetSearch()), statusFilter)
 	if err != nil {
 		return nil, mapServiceError(err)
 	}
 
+	hasMore := len(members) > int(limit)
+	if hasMore {
+		members = members[:limit]
+	}
 	resp := &memberv1.ListMembersResponse{
 		Members: make([]*memberv1.Member, 0, len(members)),
 	}
@@ -172,13 +177,9 @@ func (h *Handlers) ListMembers(
 		resp.Members = append(resp.Members, convertListMemberFromRow(m))
 	}
 
-	if len(members) == int(limit) {
+	if hasMore {
 		last := members[len(members)-1]
-		lastIDStr, err := uuidToString(last.ID)
-		if err != nil {
-			return nil, status.Error(codes.Internal, "failed to encode next page token")
-		}
-		resp.NextPageToken = lastIDStr
+		resp.NextPageToken = strconv.FormatInt(last.MemberNumber, 10)
 	}
 
 	return resp, nil
