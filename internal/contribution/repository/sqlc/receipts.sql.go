@@ -12,7 +12,7 @@ import (
 )
 
 const getContributionReceiptByCheckoutRequestID = `-- name: GetContributionReceiptByCheckoutRequestID :one
-SELECT id, source_channel, external_transaction_id, checkout_request_id, member_id, branch_id, contribution_period, received_amount, allocation_plan, status, failure_reason, received_by, received_at, is_deleted, created_at, updated_at, deleted_at, deleted_by, deletion_reason, internal_receipt_reference, idempotency_key, cashier_session_id
+SELECT id, source_channel, external_transaction_id, checkout_request_id, member_id, branch_id, contribution_period, received_amount, allocation_plan, status, failure_reason, received_by, received_at, is_deleted, created_at, updated_at, deleted_at, deleted_by, deletion_reason, internal_receipt_reference, idempotency_key, cashier_session_id, loan_snapshot
 FROM contribution_receipts
 WHERE checkout_request_id = $1 AND is_deleted = FALSE
 `
@@ -43,12 +43,13 @@ func (q *Queries) GetContributionReceiptByCheckoutRequestID(ctx context.Context,
 		&i.InternalReceiptReference,
 		&i.IdempotencyKey,
 		&i.CashierSessionID,
+		&i.LoanSnapshot,
 	)
 	return i, err
 }
 
 const getContributionReceiptByExternalTransactionID = `-- name: GetContributionReceiptByExternalTransactionID :one
-SELECT id, source_channel, external_transaction_id, checkout_request_id, member_id, branch_id, contribution_period, received_amount, allocation_plan, status, failure_reason, received_by, received_at, is_deleted, created_at, updated_at, deleted_at, deleted_by, deletion_reason, internal_receipt_reference, idempotency_key, cashier_session_id
+SELECT id, source_channel, external_transaction_id, checkout_request_id, member_id, branch_id, contribution_period, received_amount, allocation_plan, status, failure_reason, received_by, received_at, is_deleted, created_at, updated_at, deleted_at, deleted_by, deletion_reason, internal_receipt_reference, idempotency_key, cashier_session_id, loan_snapshot
 FROM contribution_receipts
 WHERE external_transaction_id = $1 AND is_deleted = FALSE
 `
@@ -79,12 +80,13 @@ func (q *Queries) GetContributionReceiptByExternalTransactionID(ctx context.Cont
 		&i.InternalReceiptReference,
 		&i.IdempotencyKey,
 		&i.CashierSessionID,
+		&i.LoanSnapshot,
 	)
 	return i, err
 }
 
 const getContributionReceiptByID = `-- name: GetContributionReceiptByID :one
-SELECT id, source_channel, external_transaction_id, checkout_request_id, member_id, branch_id, contribution_period, received_amount, allocation_plan, status, failure_reason, received_by, received_at, is_deleted, created_at, updated_at, deleted_at, deleted_by, deletion_reason, internal_receipt_reference, idempotency_key, cashier_session_id
+SELECT id, source_channel, external_transaction_id, checkout_request_id, member_id, branch_id, contribution_period, received_amount, allocation_plan, status, failure_reason, received_by, received_at, is_deleted, created_at, updated_at, deleted_at, deleted_by, deletion_reason, internal_receipt_reference, idempotency_key, cashier_session_id, loan_snapshot
 FROM contribution_receipts
 WHERE id = $1 AND is_deleted = FALSE
 `
@@ -115,12 +117,13 @@ func (q *Queries) GetContributionReceiptByID(ctx context.Context, id pgtype.UUID
 		&i.InternalReceiptReference,
 		&i.IdempotencyKey,
 		&i.CashierSessionID,
+		&i.LoanSnapshot,
 	)
 	return i, err
 }
 
 const getContributionReceiptByIdempotencyKey = `-- name: GetContributionReceiptByIdempotencyKey :one
-SELECT id, source_channel, external_transaction_id, checkout_request_id, member_id, branch_id, contribution_period, received_amount, allocation_plan, status, failure_reason, received_by, received_at, is_deleted, created_at, updated_at, deleted_at, deleted_by, deletion_reason, internal_receipt_reference, idempotency_key, cashier_session_id
+SELECT id, source_channel, external_transaction_id, checkout_request_id, member_id, branch_id, contribution_period, received_amount, allocation_plan, status, failure_reason, received_by, received_at, is_deleted, created_at, updated_at, deleted_at, deleted_by, deletion_reason, internal_receipt_reference, idempotency_key, cashier_session_id, loan_snapshot
 FROM contribution_receipts
 WHERE idempotency_key = $1 AND is_deleted = FALSE
 `
@@ -151,6 +154,7 @@ func (q *Queries) GetContributionReceiptByIdempotencyKey(ctx context.Context, id
 		&i.InternalReceiptReference,
 		&i.IdempotencyKey,
 		&i.CashierSessionID,
+		&i.LoanSnapshot,
 	)
 	return i, err
 }
@@ -175,7 +179,7 @@ INSERT INTO contribution_receipts (
     $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'pending', $12, $13
 )
 ON CONFLICT DO NOTHING
-RETURNING id, source_channel, external_transaction_id, checkout_request_id, member_id, branch_id, contribution_period, received_amount, allocation_plan, status, failure_reason, received_by, received_at, is_deleted, created_at, updated_at, deleted_at, deleted_by, deletion_reason, internal_receipt_reference, idempotency_key, cashier_session_id
+RETURNING id, source_channel, external_transaction_id, checkout_request_id, member_id, branch_id, contribution_period, received_amount, allocation_plan, status, failure_reason, received_by, received_at, is_deleted, created_at, updated_at, deleted_at, deleted_by, deletion_reason, internal_receipt_reference, idempotency_key, cashier_session_id, loan_snapshot
 `
 
 type InsertContributionReceiptParams struct {
@@ -234,12 +238,13 @@ func (q *Queries) InsertContributionReceipt(ctx context.Context, arg InsertContr
 		&i.InternalReceiptReference,
 		&i.IdempotencyKey,
 		&i.CashierSessionID,
+		&i.LoanSnapshot,
 	)
 	return i, err
 }
 
 const listContributionReceiptsByMember = `-- name: ListContributionReceiptsByMember :many
-SELECT id, source_channel, external_transaction_id, checkout_request_id, member_id, branch_id, contribution_period, received_amount, allocation_plan, status, failure_reason, received_by, received_at, is_deleted, created_at, updated_at, deleted_at, deleted_by, deletion_reason, internal_receipt_reference, idempotency_key, cashier_session_id
+SELECT id, source_channel, external_transaction_id, checkout_request_id, member_id, branch_id, contribution_period, received_amount, allocation_plan, status, failure_reason, received_by, received_at, is_deleted, created_at, updated_at, deleted_at, deleted_by, deletion_reason, internal_receipt_reference, idempotency_key, cashier_session_id, loan_snapshot
 FROM contribution_receipts
 WHERE member_id = $1
   AND is_deleted = FALSE
@@ -296,6 +301,7 @@ func (q *Queries) ListContributionReceiptsByMember(ctx context.Context, arg List
 			&i.InternalReceiptReference,
 			&i.IdempotencyKey,
 			&i.CashierSessionID,
+			&i.LoanSnapshot,
 		); err != nil {
 			return nil, err
 		}
@@ -308,7 +314,7 @@ func (q *Queries) ListContributionReceiptsByMember(ctx context.Context, arg List
 }
 
 const listPendingContributionReceipts = `-- name: ListPendingContributionReceipts :many
-SELECT id, source_channel, external_transaction_id, checkout_request_id, member_id, branch_id, contribution_period, received_amount, allocation_plan, status, failure_reason, received_by, received_at, is_deleted, created_at, updated_at, deleted_at, deleted_by, deletion_reason, internal_receipt_reference, idempotency_key, cashier_session_id FROM contribution_receipts
+SELECT id, source_channel, external_transaction_id, checkout_request_id, member_id, branch_id, contribution_period, received_amount, allocation_plan, status, failure_reason, received_by, received_at, is_deleted, created_at, updated_at, deleted_at, deleted_by, deletion_reason, internal_receipt_reference, idempotency_key, cashier_session_id, loan_snapshot FROM contribution_receipts
 WHERE status IN ('pending', 'processing') AND NOT is_deleted
   AND updated_at < $1::timestamptz
   AND ($2::timestamptz IS NULL
@@ -355,6 +361,7 @@ func (q *Queries) ListPendingContributionReceipts(ctx context.Context, arg ListP
 			&i.InternalReceiptReference,
 			&i.IdempotencyKey,
 			&i.CashierSessionID,
+			&i.LoanSnapshot,
 		); err != nil {
 			return nil, err
 		}
@@ -367,7 +374,7 @@ func (q *Queries) ListPendingContributionReceipts(ctx context.Context, arg ListP
 }
 
 const lockContributionReceiptByID = `-- name: LockContributionReceiptByID :one
-SELECT id, source_channel, external_transaction_id, checkout_request_id, member_id, branch_id, contribution_period, received_amount, allocation_plan, status, failure_reason, received_by, received_at, is_deleted, created_at, updated_at, deleted_at, deleted_by, deletion_reason, internal_receipt_reference, idempotency_key, cashier_session_id
+SELECT id, source_channel, external_transaction_id, checkout_request_id, member_id, branch_id, contribution_period, received_amount, allocation_plan, status, failure_reason, received_by, received_at, is_deleted, created_at, updated_at, deleted_at, deleted_by, deletion_reason, internal_receipt_reference, idempotency_key, cashier_session_id, loan_snapshot
 FROM contribution_receipts
 WHERE id = $1 AND is_deleted = FALSE
 FOR UPDATE
@@ -399,6 +406,49 @@ func (q *Queries) LockContributionReceiptByID(ctx context.Context, id pgtype.UUI
 		&i.InternalReceiptReference,
 		&i.IdempotencyKey,
 		&i.CashierSessionID,
+		&i.LoanSnapshot,
+	)
+	return i, err
+}
+
+const saveContributionLoanSnapshot = `-- name: SaveContributionLoanSnapshot :one
+UPDATE contribution_receipts SET loan_snapshot = $2
+WHERE id = $1 AND loan_snapshot IS NULL AND status = 'processing'
+RETURNING id, source_channel, external_transaction_id, checkout_request_id, member_id, branch_id, contribution_period, received_amount, allocation_plan, status, failure_reason, received_by, received_at, is_deleted, created_at, updated_at, deleted_at, deleted_by, deletion_reason, internal_receipt_reference, idempotency_key, cashier_session_id, loan_snapshot
+`
+
+type SaveContributionLoanSnapshotParams struct {
+	ID           pgtype.UUID `json:"id"`
+	LoanSnapshot []byte      `json:"loanSnapshot"`
+}
+
+func (q *Queries) SaveContributionLoanSnapshot(ctx context.Context, arg SaveContributionLoanSnapshotParams) (ContributionReceipt, error) {
+	row := q.db.QueryRow(ctx, saveContributionLoanSnapshot, arg.ID, arg.LoanSnapshot)
+	var i ContributionReceipt
+	err := row.Scan(
+		&i.ID,
+		&i.SourceChannel,
+		&i.ExternalTransactionID,
+		&i.CheckoutRequestID,
+		&i.MemberID,
+		&i.BranchID,
+		&i.ContributionPeriod,
+		&i.ReceivedAmount,
+		&i.AllocationPlan,
+		&i.Status,
+		&i.FailureReason,
+		&i.ReceivedBy,
+		&i.ReceivedAt,
+		&i.IsDeleted,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.DeletedBy,
+		&i.DeletionReason,
+		&i.InternalReceiptReference,
+		&i.IdempotencyKey,
+		&i.CashierSessionID,
+		&i.LoanSnapshot,
 	)
 	return i, err
 }
@@ -409,7 +459,7 @@ SET status = $2,
     failure_reason = $3,
     updated_at = NOW()
 WHERE id = $1 AND is_deleted = FALSE
-RETURNING id, source_channel, external_transaction_id, checkout_request_id, member_id, branch_id, contribution_period, received_amount, allocation_plan, status, failure_reason, received_by, received_at, is_deleted, created_at, updated_at, deleted_at, deleted_by, deletion_reason, internal_receipt_reference, idempotency_key, cashier_session_id
+RETURNING id, source_channel, external_transaction_id, checkout_request_id, member_id, branch_id, contribution_period, received_amount, allocation_plan, status, failure_reason, received_by, received_at, is_deleted, created_at, updated_at, deleted_at, deleted_by, deletion_reason, internal_receipt_reference, idempotency_key, cashier_session_id, loan_snapshot
 `
 
 type UpdateContributionReceiptStatusParams struct {
@@ -444,6 +494,7 @@ func (q *Queries) UpdateContributionReceiptStatus(ctx context.Context, arg Updat
 		&i.InternalReceiptReference,
 		&i.IdempotencyKey,
 		&i.CashierSessionID,
+		&i.LoanSnapshot,
 	)
 	return i, err
 }

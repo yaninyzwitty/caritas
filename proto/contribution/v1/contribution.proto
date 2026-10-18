@@ -163,6 +163,8 @@ message ContributionPaymentReceipt {
   member.v1.Money           amount          = 3;
   string                    mpesa_reference = 4;
   google.protobuf.Timestamp received_at     = 5;
+  repeated ContributionLoanSummary loans = 6;
+  bool loan_snapshot_available = 7;
 }
 
 message OpenCashierSessionRequest {}
@@ -214,6 +216,8 @@ message CashContributionReceipt {
   string                         member_id                  = 7;
   string                         contribution_period        = 8;
   repeated CashReceiptAllocation allocations                = 9;
+  repeated ContributionLoanSummary loans = 10;
+  bool loan_snapshot_available = 11;
 }
 
 message CreateCashContributionResponse {
@@ -326,6 +330,30 @@ message GetContributionQuoteRequest {
 
 message GetContributionQuoteResponse {
   repeated ContributionAllocationInput fees = 1;
+  repeated ContributionLoanSummary loans = 2;
+  bool loan_snapshot_available = 3;
+}
+
+// Review uses live Loans figures; completed receipts retain the same fields at posting.
+// Decimal strings preserve the loan ledger's four decimal places.
+message ContributionLoanSummary {
+  string loan_id = 1;
+  string period = 2;
+  string opening_principal = 3;
+  string interest_rate = 4;
+  string period_interest = 5;
+  string earlier_interest_due = 6;
+  string interest_due = 7;
+  string penalty_due = 8;
+  string principal_due = 9;
+  string payment = 10;
+  string penalty_paid = 11;
+  string interest_paid = 12;
+  string principal_paid = 13;
+  string credit = 14;
+  string interest_remaining = 15;
+  string principal_remaining = 16;
+  bool payable = 17;
 }
 
 message GetCashReceiptRequest {

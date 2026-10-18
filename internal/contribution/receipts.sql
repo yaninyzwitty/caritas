@@ -67,6 +67,11 @@ WHERE member_id = $1
 ORDER BY created_at DESC, id DESC
 LIMIT sqlc.arg('limit');
 
+-- name: SaveContributionLoanSnapshot :one
+UPDATE contribution_receipts SET loan_snapshot = $2
+WHERE id = $1 AND loan_snapshot IS NULL AND status = 'processing'
+RETURNING *;
+
 -- name: ListPendingContributionReceipts :many
 SELECT * FROM contribution_receipts
 WHERE status IN ('pending', 'processing') AND NOT is_deleted

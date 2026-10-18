@@ -64,6 +64,16 @@ The allocation plan states how the received amount is applied to:
 
 A receipt is completed only after every required authoritative allocation has succeeded in its owning domain. Failed or partial receipts must not appear as completed in CEEP.
 
+Contribution review must show Loans' period-specific interest obligations even
+when no loan payment is selected. Show the opening principal, monthly rate,
+month's interest, unpaid earlier interest, proposed penalty/interest/principal
+split and remaining unpaid interest. These are estimates until posting.
+Completion snapshots the actual Loans split and remaining interest/principal
+in the receipt transaction, including eligible loans with no payment. Reprints
+use this saved snapshot. Pending receipts must not claim posted loan payments;
+older receipts without a snapshot explicitly report its absence. Interest is
+not silently funded by reducing the member's chosen share allocation.
+
 ### CEEP Snapshot
 
 One CEEP snapshot must exist per active member per contribution period.

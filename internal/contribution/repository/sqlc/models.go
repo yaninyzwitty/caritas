@@ -439,6 +439,7 @@ type ContributionReceipt struct {
 	InternalReceiptReference pgtype.Text               `json:"internalReceiptReference"`
 	IdempotencyKey           pgtype.Text               `json:"idempotencyKey"`
 	CashierSessionID         pgtype.UUID               `json:"cashierSessionId"`
+	LoanSnapshot             []byte                    `json:"loanSnapshot"`
 }
 
 type DarajaCallback struct {

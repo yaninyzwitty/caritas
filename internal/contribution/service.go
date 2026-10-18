@@ -264,6 +264,26 @@ func (s *Service) ProcessReceipt(ctx context.Context, receiptID, processedBy pgt
 			return failReceipt(ctx, tx, q, receipt.ID, receiptFailureStatus(receipt), processErr, &result)
 		}
 		// Keep target lock order consistent across receipts.
+		loanQueries := loansqlc.New(tx)
+		if _, err := loanQueries.LockMemberContributionLoans(ctx, loansqlc.LockMemberContributionLoansParams{MemberID: receipt.MemberID, BranchID: receipt.BranchID}); err != nil {
+			return fmt.Errorf("lock receipt loan positions: %w", err)
+		}
+		loanPositions, err := loan.QuoteContributionLoans(ctx, loanQueries, receipt.MemberID, receipt.BranchID, receipt.ContributionPeriod)
+		if err != nil {
+			return err
+		}
+		var loanAllocationIDs []string
+		canSnapshot := len(receipt.LoanSnapshot) == 0
+		for _, allocation := range allocations {
+			if allocation.Type == contributionsqlc.ContributionAllocationTypeLoanPrincipal {
+				loanAllocationIDs = append(loanAllocationIDs, allocation.ID.String())
+				// Older partial receipts have already reduced debt. Recovery must not
+				// subtract that payment twice or invent a before-payment snapshot.
+				if allocation.Status == contributionsqlc.ContributionAllocationStatusCompleted {
+					canSnapshot = false
+				}
+			}
+		}
 		sort.Slice(allocations, func(i, j int) bool {
 			if allocations[i].Type != allocations[j].Type {
 				return allocations[i].Type < allocations[j].Type
@@ -304,6 +324,16 @@ func (s *Service) ProcessReceipt(ctx context.Context, receiptID, processedBy pgt
 			result.Allocations = append(result.Allocations, allocation)
 		}
 
+		if canSnapshot {
+			snapshot, err := loan.CompleteContributionLoanSnapshot(ctx, loanQueries, loanPositions, loanAllocationIDs)
+			if err != nil {
+				return err
+			}
+			receipt, err = q.SaveContributionLoanSnapshot(ctx, contributionsqlc.SaveContributionLoanSnapshotParams{ID: receipt.ID, LoanSnapshot: snapshot})
+			if err != nil {
+				return fmt.Errorf("save receipt loan snapshot: %w", err)
+			}
+		}
 		receipt, err = q.UpdateContributionReceiptStatus(ctx, contributionsqlc.UpdateContributionReceiptStatusParams{
 			ID:            receipt.ID,
 			Status:        contributionsqlc.ContributionReceiptStatusCompleted,

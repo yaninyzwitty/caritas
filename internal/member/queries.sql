@@ -14,7 +14,7 @@ SELECT m.id, m.branch_id, m.member_number, m.national_id, m.status, m.is_deleted
        p.full_name, p.phone, p.email, p.address, p.date_of_birth, p.occupation, p.employer,
        p.monthly_income, p.id_document_type, p.id_document_number,
        p.next_of_kin_name, p.next_of_kin_phone, p.next_of_kin_relationship
-FROM members m
+FROM members m  
 LEFT JOIN member_profiles p ON p.member_id = m.id
 WHERE m.id = $1 AND m.is_deleted = FALSE;
 
