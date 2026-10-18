@@ -73,6 +73,9 @@ func (h *Handlers) GetContributionPayment(ctx context.Context, req *contribution
 			MpesaReference: row.ExternalTransactionID.String,
 			ReceivedAt:     timestamppb.New(row.ReceivedAt.Time),
 		}
+		if len(row.LoanSnapshot) > 0 && json.Unmarshal(row.LoanSnapshot, &response.Receipt.Loans) == nil {
+			response.Receipt.LoanSnapshotAvailable = true
+		}
 	}
 	return response, nil
 }

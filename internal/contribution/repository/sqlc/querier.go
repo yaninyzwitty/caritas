@@ -67,6 +67,7 @@ type Querier interface {
 	RequeueDarajaCallbacks(ctx context.Context, checkoutRequestID string) error
 	RestoreDarajaCheckout(ctx context.Context, arg RestoreDarajaCheckoutParams) error
 	RetryDarajaReceipt(ctx context.Context, arg RetryDarajaReceiptParams) error
+	SaveContributionLoanSnapshot(ctx context.Context, arg SaveContributionLoanSnapshotParams) (ContributionReceipt, error)
 	ScheduleDarajaQuery(ctx context.Context, arg ScheduleDarajaQueryParams) error
 	SumCashReceiptsBySession(ctx context.Context, cashierSessionID pgtype.UUID) (pgtype.Numeric, error)
 	SumContributionChargePayments(ctx context.Context, arg SumContributionChargePaymentsParams) (pgtype.Numeric, error)

@@ -37,7 +37,7 @@ WHERE checkout_request_id = $1;
 SELECT p.id, p.status, p.expected_amount, p.contribution_period,
        p.created_at, p.failure_reason, p.checkout_request_id, p.recovery_status, p.query_attempts,
        r.id AS receipt_id, COALESCE(r.status::text, '')::text AS receipt_status,
-       r.received_amount, r.external_transaction_id, r.received_at
+       r.received_amount, r.external_transaction_id, r.received_at, r.loan_snapshot
 FROM contribution_payment_requests p
 LEFT JOIN contribution_receipts r
   ON r.id = p.receipt_id AND r.branch_id = p.branch_id AND r.is_deleted = FALSE

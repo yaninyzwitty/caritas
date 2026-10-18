@@ -13,6 +13,8 @@ import (
 	contributionv1 "github.com/yaninyzwitty/caritas-backend/gen/contribution/v1"
 	"github.com/yaninyzwitty/caritas-backend/internal/auth"
 	contributionsqlc "github.com/yaninyzwitty/caritas-backend/internal/contribution/repository/sqlc"
+	"github.com/yaninyzwitty/caritas-backend/internal/loan"
+	loansqlc "github.com/yaninyzwitty/caritas-backend/internal/loan/repository/sqlc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -58,6 +60,18 @@ func (h *Handlers) GetContributionQuote(ctx context.Context, req *contributionv1
 			response.Fees = append(response.Fees, &contributionv1.ContributionAllocationInput{Type: allocationTypeToProto(row.Type), Amount: numericToMoney(row.Outstanding)})
 		}
 	}
+	loans, err := loan.QuoteContributionLoans(ctx, loansqlc.New(h.service.store.pool), id, actor.BranchID, pgtype.Date{Time: period, Valid: true})
+	if err != nil {
+		return nil, mapContributionError(err)
+	}
+	snapshot, err := json.Marshal(loans)
+	if err != nil {
+		return nil, mapContributionError(err)
+	}
+	if err := json.Unmarshal(snapshot, &response.Loans); err != nil {
+		return nil, mapContributionError(err)
+	}
+	response.LoanSnapshotAvailable = true
 	return response, nil
 }
 
@@ -103,6 +117,9 @@ func cashReceiptToProto(row contributionsqlc.ContributionReceipt, allocations []
 	}
 	if row.ReceivedAt.Valid {
 		receipt.ReceivedAt = timestamppb.New(row.ReceivedAt.Time)
+	}
+	if len(row.LoanSnapshot) > 0 && json.Unmarshal(row.LoanSnapshot, &receipt.Loans) == nil {
+		receipt.LoanSnapshotAvailable = true
 	}
 	var plan allocationPlan
 	// Older receipts have no labels and retain their type/reference fallback.
