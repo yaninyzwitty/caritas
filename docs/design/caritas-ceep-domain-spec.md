@@ -1,5 +1,26 @@
 # CEEP Domain Specification
 
+Confirmed update, 22 October 2026 (supersedes conflicting presentation rules below):
+Recno is a report row reference, BO8001, BO8002, and so on, restarting for each
+monthly report in member-number order. M.NO displays the actual member number
+padded to at least three digits (001, 002; longer numbers are preserved).
+Monthly loanPaid means principal paid only. The Interest 1% column is opening
+principal plus principal disbursed during the reporting month, multiplied by
+0.01, regardless of posted assessments or stored loan rates. New loans incur
+the full 1% in their disbursement month even if repaid that month. Closing
+principal still comes from the loan ledger. This reporting rule
+does not change loan assessments or payment allocation. Unhandled columns display
+0. The page, printout and CSV contain the CEEP table without reconciliation,
+member-detail or source-reference sections. Existing finalized snapshots remain
+immutable.
+
+The Loan balance column shows principal before the reporting month's repayments:
+opening principal plus principal disbursed during that month. Interest is 1% of
+this balance. Keep the true opening principal separately in the report source
+data. Loan balance after pay remains the closing principal from the ledger;
+Total Amt remains actual completed receipts. Display CEEP amounts with at most
+two decimal places without changing stored precision.
+
 Status: requirements baseline, recorded 8 October 2026. This document preserves the user's CEEP requirements and April 2026 monitoring report for Our Lady of Consolata Sagana, Kabiruini Parish. Payment date: 27 April 2026; printed: 22 May 2026. Report month, payment date and generation date are distinct.
 
 Read this before implementing CEEP or charge extensions. It supplements [the cross-domain spec](caritas-final-domain-spec.md), [Shares](caritas-shares-domain-spec.md) and [Loans](caritas-loans-domain-spec.md). Confirmed requirements, proposed interpretations and implementation gaps are distinguished below.
@@ -221,3 +242,58 @@ The entry form records physical cash independently, adds quoted fees, and requir
 Before posting cash, the browser saves the exact request and idempotency key in session storage scoped to the authenticated staff UUID. An uncertain result blocks another payment until the cashier retrieves the receipt or retries the same request. Reloading the same tab retains the pending request; clearing browser storage or closing the tab is not a durable recovery mechanism. Receipt IDs can also be reopened explicitly. Deposits and charge assessments preserve their own exact retry details. No member profile is saved in the cash submission snapshot.
 
 Collection, till closure, handover acceptance, deposit recording and independent bank verification are distinct operations. The frontend displays existing permissions and prevents self-handover/self-verification choices; backend authorization and separation-of-duties checks remain the security boundary. No automatic fee-rate policy, loan penalty policy, waivers, reversals, or CEEP generation is introduced here.
+
+## 13. Monthly CEEP reports
+
+GET /api/v1/contributions/ceep accepts period (YYYY-MM-01), optional RFC3339 cutoff,
+title, parish and optional paymentDate. The authenticated staff branch is always
+authoritative. Future months/cutoffs are rejected. A missing cutoff means now.
+Once the branch month is finalized, reads return its saved report regardless of
+new source activity or requested headings.
+
+POST /api/v1/contributions/ceep/finalize accepts the same fields plus previewHash
+from the reviewed preview. It requires the existing cash approval permission,
+an ended reporting month, a cutoff at or after month end, unchanged preview facts
+and no reconciliation errors. Concurrent identical finalizations return the
+stored report. Report metadata and one snapshot per member/month are saved in
+one transaction. Database triggers reject changes to finalized records.
+
+The report includes members active at month start or activated during the month,
+plus members with receipts in that month. Members closed later remain visible.
+The current schema does not provide branch-transfer history; existing member
+branch assignments are used. Member names are captured at report generation.
+Member numbers are exported as text, but leading zeros already lost to the
+Members BIGINT column cannot be reconstructed.
+
+Only receipts whose status and all allocations are completed by the cutoff enter
+paid totals. Completion uses the stored status-update timestamps. All sources
+are read in one database statement; in-flight, uncommitted records are excluded.
+Pending, failed and later-completed receipts remain visible with references and
+amounts. Their completed ledger effects and charge settlements remain separate
+from completed CEEP cash totals.
+
+Historical share movements use their contribution period where linked to a
+receipt; other movements use their Nairobi calendar month. Historical principal
+uses Loans' repayment periods and actual disbursement records. Closing balances
+include all authoritative movements through the reporting period visible by the
+cutoff. Additional share movements, disbursements and repayments outside completed
+contributions are shown explicitly. Unsupported loan reversals, missing
+disbursement history, missing payment sources and unreconciled cash block
+finalization. Missing posted interest/fee assessments are marked unavailable or
+listed as warnings; generating a report never creates assessments. Interest
+uses Loans' posted assessments and stored rates, with a warning for rates other
+than 1%. The report never changes ledger state.
+
+The dashboard follows the sample column order, shows principal paid separately
+from assessed interest, and retains per-loan and receipt details. Registration
+payments remain unsplit; the unresolved group-registration column is unavailable.
+RecNo lists all included receipt references. CSV exports the loaded dataset with
+additional reconciliation/source columns. Print / Save PDF uses the existing
+cash-receipt browser print approach, with landscape pages, repeated column
+headings, page numbers and supporting details. Draft exports are marked DRAFT.
+Finalized reports are never regenerated or amended through these endpoints.
+
+CI-only check (not run locally): TestCEEPReportIntegration covers multiple
+receipts/loans, payments below interest, members without payments, lifecycle and
+branch isolation, cutoff exclusions, other share movements, partial receipt
+charge settlement, concurrent idempotent saves and immutable historical reads.

@@ -19,6 +19,8 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
+	ContributionService_GetCEEPReport_FullMethodName                 = "/contribution.v1.ContributionService/GetCEEPReport"
+	ContributionService_FinalizeCEEPReport_FullMethodName            = "/contribution.v1.ContributionService/FinalizeCEEPReport"
 	ContributionService_ListDarajaPayments_FullMethodName            = "/contribution.v1.ContributionService/ListDarajaPayments"
 	ContributionService_RecoverDarajaPayment_FullMethodName          = "/contribution.v1.ContributionService/RecoverDarajaPayment"
 	ContributionService_GetCashContext_FullMethodName                = "/contribution.v1.ContributionService/GetCashContext"
@@ -43,6 +45,8 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ContributionServiceClient interface {
+	GetCEEPReport(ctx context.Context, in *GetCEEPReportRequest, opts ...grpc.CallOption) (*GetCEEPReportResponse, error)
+	FinalizeCEEPReport(ctx context.Context, in *FinalizeCEEPReportRequest, opts ...grpc.CallOption) (*FinalizeCEEPReportResponse, error)
 	ListDarajaPayments(ctx context.Context, in *ListDarajaPaymentsRequest, opts ...grpc.CallOption) (*ListDarajaPaymentsResponse, error)
 	RecoverDarajaPayment(ctx context.Context, in *RecoverDarajaPaymentRequest, opts ...grpc.CallOption) (*RecoverDarajaPaymentResponse, error)
 	GetCashContext(ctx context.Context, in *GetCashContextRequest, opts ...grpc.CallOption) (*GetCashContextResponse, error)
@@ -69,6 +73,26 @@ type contributionServiceClient struct {
 
 func NewContributionServiceClient(cc grpc.ClientConnInterface) ContributionServiceClient {
 	return &contributionServiceClient{cc}
+}
+
+func (c *contributionServiceClient) GetCEEPReport(ctx context.Context, in *GetCEEPReportRequest, opts ...grpc.CallOption) (*GetCEEPReportResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetCEEPReportResponse)
+	err := c.cc.Invoke(ctx, ContributionService_GetCEEPReport_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *contributionServiceClient) FinalizeCEEPReport(ctx context.Context, in *FinalizeCEEPReportRequest, opts ...grpc.CallOption) (*FinalizeCEEPReportResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(FinalizeCEEPReportResponse)
+	err := c.cc.Invoke(ctx, ContributionService_FinalizeCEEPReport_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *contributionServiceClient) ListDarajaPayments(ctx context.Context, in *ListDarajaPaymentsRequest, opts ...grpc.CallOption) (*ListDarajaPaymentsResponse, error) {
@@ -255,6 +279,8 @@ func (c *contributionServiceClient) VerifyCashDeposit(ctx context.Context, in *V
 // All implementations must embed UnimplementedContributionServiceServer
 // for forward compatibility.
 type ContributionServiceServer interface {
+	GetCEEPReport(context.Context, *GetCEEPReportRequest) (*GetCEEPReportResponse, error)
+	FinalizeCEEPReport(context.Context, *FinalizeCEEPReportRequest) (*FinalizeCEEPReportResponse, error)
 	ListDarajaPayments(context.Context, *ListDarajaPaymentsRequest) (*ListDarajaPaymentsResponse, error)
 	RecoverDarajaPayment(context.Context, *RecoverDarajaPaymentRequest) (*RecoverDarajaPaymentResponse, error)
 	GetCashContext(context.Context, *GetCashContextRequest) (*GetCashContextResponse, error)
@@ -283,6 +309,12 @@ type ContributionServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedContributionServiceServer struct{}
 
+func (UnimplementedContributionServiceServer) GetCEEPReport(context.Context, *GetCEEPReportRequest) (*GetCEEPReportResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetCEEPReport not implemented")
+}
+func (UnimplementedContributionServiceServer) FinalizeCEEPReport(context.Context, *FinalizeCEEPReportRequest) (*FinalizeCEEPReportResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method FinalizeCEEPReport not implemented")
+}
 func (UnimplementedContributionServiceServer) ListDarajaPayments(context.Context, *ListDarajaPaymentsRequest) (*ListDarajaPaymentsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListDarajaPayments not implemented")
 }
@@ -356,6 +388,42 @@ func RegisterContributionServiceServer(s grpc.ServiceRegistrar, srv Contribution
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&ContributionService_ServiceDesc, srv)
+}
+
+func _ContributionService_GetCEEPReport_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetCEEPReportRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ContributionServiceServer).GetCEEPReport(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ContributionService_GetCEEPReport_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ContributionServiceServer).GetCEEPReport(ctx, req.(*GetCEEPReportRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ContributionService_FinalizeCEEPReport_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(FinalizeCEEPReportRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ContributionServiceServer).FinalizeCEEPReport(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ContributionService_FinalizeCEEPReport_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ContributionServiceServer).FinalizeCEEPReport(ctx, req.(*FinalizeCEEPReportRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _ContributionService_ListDarajaPayments_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -689,6 +757,14 @@ var ContributionService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "contribution.v1.ContributionService",
 	HandlerType: (*ContributionServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetCEEPReport",
+			Handler:    _ContributionService_GetCEEPReport_Handler,
+		},
+		{
+			MethodName: "FinalizeCEEPReport",
+			Handler:    _ContributionService_FinalizeCEEPReport_Handler,
+		},
 		{
 			MethodName: "ListDarajaPayments",
 			Handler:    _ContributionService_ListDarajaPayments_Handler,

@@ -17,11 +17,13 @@ type Querier interface {
 	CreateCreditBalance(ctx context.Context, arg CreateCreditBalanceParams) (CreditBalance, error)
 	CreateLoan(ctx context.Context, arg CreateLoanParams) (CreateLoanRow, error)
 	CreateLoanGuarantor(ctx context.Context, arg CreateLoanGuarantorParams) (LoanGuarantor, error)
+	CreateProposedLoanGuarantors(ctx context.Context, arg CreateProposedLoanGuarantorsParams) error
 	CreateRepaymentSchedule(ctx context.Context, arg CreateRepaymentScheduleParams) (RepaymentSchedule, error)
 	GetCreditBalanceByID(ctx context.Context, id pgtype.UUID) (CreditBalance, error)
 	GetCreditFunds(ctx context.Context, id pgtype.UUID) (GetCreditFundsRow, error)
 	GetCreditMemberBranch(ctx context.Context, id pgtype.UUID) (int64, error)
 	GetCreditOperation(ctx context.Context, id pgtype.UUID) (CreditOperation, error)
+	GetLoanApplicationByKey(ctx context.Context, applicationKey pgtype.UUID) (GetLoanApplicationByKeyRow, error)
 	GetLoanByID(ctx context.Context, id pgtype.UUID) (GetLoanByIDRow, error)
 	GetLoanByMemberID(ctx context.Context, memberID pgtype.UUID) (GetLoanByMemberIDRow, error)
 	GetLoanDisbursement(ctx context.Context, loanID pgtype.UUID) (LoanTransaction, error)
@@ -55,6 +57,7 @@ type Querier interface {
 	LockActiveRepaymentSchedulesByLoan(ctx context.Context, loanID pgtype.UUID) ([]RepaymentSchedule, error)
 	LockCreditBalanceByID(ctx context.Context, id pgtype.UUID) (CreditBalance, error)
 	LockGuarantor(ctx context.Context, arg LockGuarantorParams) (LoanGuarantor, error)
+	LockLoanApplicationKey(ctx context.Context, applicationKey string) error
 	LockLoanByID(ctx context.Context, id pgtype.UUID) (LockLoanByIDRow, error)
 	LockMemberContributionLoans(ctx context.Context, arg LockMemberContributionLoansParams) ([]pgtype.UUID, error)
 	LockRepaymentSchedulesByLoan(ctx context.Context, loanID pgtype.UUID) ([]RepaymentSchedule, error)

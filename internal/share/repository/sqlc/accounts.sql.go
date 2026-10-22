@@ -134,6 +134,51 @@ func (q *Queries) GetAccountByMemberIdentifier(ctx context.Context, arg GetAccou
 	return i, err
 }
 
+const getSecurityBalances = `-- name: GetSecurityBalances :many
+SELECT sa.id, sa.member_id, sa.status,
+       COALESCE((SELECT st.balance_after FROM share_transactions st
+                 WHERE st.share_account_id = sa.id
+                 ORDER BY st.created_at DESC, st.id DESC LIMIT 1), 0)::numeric AS balance,
+       COALESCE((SELECT SUM(sp.pledged_amount) FROM share_pledges sp
+                 WHERE sp.share_account_id = sa.id AND sp.status = 'active'), 0)::numeric AS pledged
+FROM share_accounts sa
+WHERE sa.member_id = ANY($1::uuid[]) AND sa.is_deleted = FALSE
+`
+
+type GetSecurityBalancesRow struct {
+	ID       pgtype.UUID        `json:"id"`
+	MemberID pgtype.UUID        `json:"memberId"`
+	Status   ShareAccountStatus `json:"status"`
+	Balance  pgtype.Numeric     `json:"balance"`
+	Pledged  pgtype.Numeric     `json:"pledged"`
+}
+
+func (q *Queries) GetSecurityBalances(ctx context.Context, memberIds []pgtype.UUID) ([]GetSecurityBalancesRow, error) {
+	rows, err := q.db.Query(ctx, getSecurityBalances, memberIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetSecurityBalancesRow
+	for rows.Next() {
+		var i GetSecurityBalancesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.MemberID,
+			&i.Status,
+			&i.Balance,
+			&i.Pledged,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listShareAccounts = `-- name: ListShareAccounts :many
 SELECT
     sa.id,
@@ -261,6 +306,39 @@ func (q *Queries) LockAndReadAccount(ctx context.Context, id pgtype.UUID) (Share
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const lockSecurityAccounts = `-- name: LockSecurityAccounts :many
+SELECT id, member_id, status FROM share_accounts
+WHERE member_id = ANY($1::uuid[]) AND is_deleted = FALSE
+ORDER BY id
+FOR UPDATE
+`
+
+type LockSecurityAccountsRow struct {
+	ID       pgtype.UUID        `json:"id"`
+	MemberID pgtype.UUID        `json:"memberId"`
+	Status   ShareAccountStatus `json:"status"`
+}
+
+func (q *Queries) LockSecurityAccounts(ctx context.Context, memberIds []pgtype.UUID) ([]LockSecurityAccountsRow, error) {
+	rows, err := q.db.Query(ctx, lockSecurityAccounts, memberIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []LockSecurityAccountsRow
+	for rows.Next() {
+		var i LockSecurityAccountsRow
+		if err := rows.Scan(&i.ID, &i.MemberID, &i.Status); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const updateAccountStatus = `-- name: UpdateAccountStatus :one

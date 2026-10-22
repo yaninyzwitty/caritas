@@ -11,6 +11,7 @@ import (
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	structpb "google.golang.org/protobuf/types/known/structpb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
@@ -143,6 +144,261 @@ func (ContributionAllocationType) EnumDescriptor() ([]byte, []int) {
 	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{1}
 }
 
+// GetCEEPReportRequest identifies a branch month; branch and officer come from authentication.
+type GetCEEPReportRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Period        string                 `protobuf:"bytes,1,opt,name=period,proto3" json:"period,omitempty"`
+	Cutoff        string                 `protobuf:"bytes,2,opt,name=cutoff,proto3" json:"cutoff,omitempty"`
+	Title         string                 `protobuf:"bytes,3,opt,name=title,proto3" json:"title,omitempty"`
+	Parish        string                 `protobuf:"bytes,4,opt,name=parish,proto3" json:"parish,omitempty"`
+	PaymentDate   string                 `protobuf:"bytes,5,opt,name=payment_date,json=paymentDate,proto3" json:"payment_date,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetCEEPReportRequest) Reset() {
+	*x = GetCEEPReportRequest{}
+	mi := &file_contribution_v1_contribution_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetCEEPReportRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetCEEPReportRequest) ProtoMessage() {}
+
+func (x *GetCEEPReportRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_contribution_v1_contribution_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetCEEPReportRequest.ProtoReflect.Descriptor instead.
+func (*GetCEEPReportRequest) Descriptor() ([]byte, []int) {
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *GetCEEPReportRequest) GetPeriod() string {
+	if x != nil {
+		return x.Period
+	}
+	return ""
+}
+
+func (x *GetCEEPReportRequest) GetCutoff() string {
+	if x != nil {
+		return x.Cutoff
+	}
+	return ""
+}
+
+func (x *GetCEEPReportRequest) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *GetCEEPReportRequest) GetParish() string {
+	if x != nil {
+		return x.Parish
+	}
+	return ""
+}
+
+func (x *GetCEEPReportRequest) GetPaymentDate() string {
+	if x != nil {
+		return x.PaymentDate
+	}
+	return ""
+}
+
+// GetCEEPReportResponse carries the saved report's decimal-text fields without
+// converting money into protobuf Struct numbers, which use binary floating point.
+type GetCEEPReportResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Report        *structpb.Struct       `protobuf:"bytes,1,opt,name=report,proto3" json:"report,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetCEEPReportResponse) Reset() {
+	*x = GetCEEPReportResponse{}
+	mi := &file_contribution_v1_contribution_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetCEEPReportResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetCEEPReportResponse) ProtoMessage() {}
+
+func (x *GetCEEPReportResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_contribution_v1_contribution_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetCEEPReportResponse.ProtoReflect.Descriptor instead.
+func (*GetCEEPReportResponse) Descriptor() ([]byte, []int) {
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *GetCEEPReportResponse) GetReport() *structpb.Struct {
+	if x != nil {
+		return x.Report
+	}
+	return nil
+}
+
+// FinalizeCEEPReportRequest is a separate mutation contract required by the RPC
+// conventions; its hash binds approval to the exact reviewed read response.
+type FinalizeCEEPReportRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Period        string                 `protobuf:"bytes,1,opt,name=period,proto3" json:"period,omitempty"`
+	Cutoff        string                 `protobuf:"bytes,2,opt,name=cutoff,proto3" json:"cutoff,omitempty"`
+	PreviewHash   string                 `protobuf:"bytes,3,opt,name=preview_hash,json=previewHash,proto3" json:"preview_hash,omitempty"`
+	Title         string                 `protobuf:"bytes,4,opt,name=title,proto3" json:"title,omitempty"`
+	Parish        string                 `protobuf:"bytes,5,opt,name=parish,proto3" json:"parish,omitempty"`
+	PaymentDate   string                 `protobuf:"bytes,6,opt,name=payment_date,json=paymentDate,proto3" json:"payment_date,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FinalizeCEEPReportRequest) Reset() {
+	*x = FinalizeCEEPReportRequest{}
+	mi := &file_contribution_v1_contribution_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FinalizeCEEPReportRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FinalizeCEEPReportRequest) ProtoMessage() {}
+
+func (x *FinalizeCEEPReportRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_contribution_v1_contribution_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FinalizeCEEPReportRequest.ProtoReflect.Descriptor instead.
+func (*FinalizeCEEPReportRequest) Descriptor() ([]byte, []int) {
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *FinalizeCEEPReportRequest) GetPeriod() string {
+	if x != nil {
+		return x.Period
+	}
+	return ""
+}
+
+func (x *FinalizeCEEPReportRequest) GetCutoff() string {
+	if x != nil {
+		return x.Cutoff
+	}
+	return ""
+}
+
+func (x *FinalizeCEEPReportRequest) GetPreviewHash() string {
+	if x != nil {
+		return x.PreviewHash
+	}
+	return ""
+}
+
+func (x *FinalizeCEEPReportRequest) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *FinalizeCEEPReportRequest) GetParish() string {
+	if x != nil {
+		return x.Parish
+	}
+	return ""
+}
+
+func (x *FinalizeCEEPReportRequest) GetPaymentDate() string {
+	if x != nil {
+		return x.PaymentDate
+	}
+	return ""
+}
+
+// FinalizeCEEPReportResponse returns the stored winner on concurrent retries;
+// without it callers could mistake their own proposed figures for saved facts.
+type FinalizeCEEPReportResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Report        *structpb.Struct       `protobuf:"bytes,1,opt,name=report,proto3" json:"report,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FinalizeCEEPReportResponse) Reset() {
+	*x = FinalizeCEEPReportResponse{}
+	mi := &file_contribution_v1_contribution_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FinalizeCEEPReportResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FinalizeCEEPReportResponse) ProtoMessage() {}
+
+func (x *FinalizeCEEPReportResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_contribution_v1_contribution_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FinalizeCEEPReportResponse.ProtoReflect.Descriptor instead.
+func (*FinalizeCEEPReportResponse) Descriptor() ([]byte, []int) {
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *FinalizeCEEPReportResponse) GetReport() *structpb.Struct {
+	if x != nil {
+		return x.Report
+	}
+	return nil
+}
+
 // COM/LGOM may be omitted: the server supplies unpaid monthly fees. Supplied
 // fee amounts must match. The receipt total includes these fees in addition to
 // the requested share/loan amounts. Loan principal and interest inputs for the
@@ -159,7 +415,7 @@ type ContributionAllocationInput struct {
 
 func (x *ContributionAllocationInput) Reset() {
 	*x = ContributionAllocationInput{}
-	mi := &file_contribution_v1_contribution_proto_msgTypes[0]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -171,7 +427,7 @@ func (x *ContributionAllocationInput) String() string {
 func (*ContributionAllocationInput) ProtoMessage() {}
 
 func (x *ContributionAllocationInput) ProtoReflect() protoreflect.Message {
-	mi := &file_contribution_v1_contribution_proto_msgTypes[0]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -184,7 +440,7 @@ func (x *ContributionAllocationInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ContributionAllocationInput.ProtoReflect.Descriptor instead.
 func (*ContributionAllocationInput) Descriptor() ([]byte, []int) {
-	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{0}
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *ContributionAllocationInput) GetType() ContributionAllocationType {
@@ -223,7 +479,7 @@ type InitiateDarajaSTKContributionRequest struct {
 
 func (x *InitiateDarajaSTKContributionRequest) Reset() {
 	*x = InitiateDarajaSTKContributionRequest{}
-	mi := &file_contribution_v1_contribution_proto_msgTypes[1]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -235,7 +491,7 @@ func (x *InitiateDarajaSTKContributionRequest) String() string {
 func (*InitiateDarajaSTKContributionRequest) ProtoMessage() {}
 
 func (x *InitiateDarajaSTKContributionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_contribution_v1_contribution_proto_msgTypes[1]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -248,7 +504,7 @@ func (x *InitiateDarajaSTKContributionRequest) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use InitiateDarajaSTKContributionRequest.ProtoReflect.Descriptor instead.
 func (*InitiateDarajaSTKContributionRequest) Descriptor() ([]byte, []int) {
-	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{1}
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *InitiateDarajaSTKContributionRequest) GetIdempotencyKey() string {
@@ -312,7 +568,7 @@ type InitiateDarajaSTKContributionResponse struct {
 
 func (x *InitiateDarajaSTKContributionResponse) Reset() {
 	*x = InitiateDarajaSTKContributionResponse{}
-	mi := &file_contribution_v1_contribution_proto_msgTypes[2]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -324,7 +580,7 @@ func (x *InitiateDarajaSTKContributionResponse) String() string {
 func (*InitiateDarajaSTKContributionResponse) ProtoMessage() {}
 
 func (x *InitiateDarajaSTKContributionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_contribution_v1_contribution_proto_msgTypes[2]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -337,7 +593,7 @@ func (x *InitiateDarajaSTKContributionResponse) ProtoReflect() protoreflect.Mess
 
 // Deprecated: Use InitiateDarajaSTKContributionResponse.ProtoReflect.Descriptor instead.
 func (*InitiateDarajaSTKContributionResponse) Descriptor() ([]byte, []int) {
-	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{2}
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *InitiateDarajaSTKContributionResponse) GetPaymentRequestId() string {
@@ -382,7 +638,7 @@ type GetContributionPaymentRequest struct {
 
 func (x *GetContributionPaymentRequest) Reset() {
 	*x = GetContributionPaymentRequest{}
-	mi := &file_contribution_v1_contribution_proto_msgTypes[3]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -394,7 +650,7 @@ func (x *GetContributionPaymentRequest) String() string {
 func (*GetContributionPaymentRequest) ProtoMessage() {}
 
 func (x *GetContributionPaymentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_contribution_v1_contribution_proto_msgTypes[3]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -407,7 +663,7 @@ func (x *GetContributionPaymentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetContributionPaymentRequest.ProtoReflect.Descriptor instead.
 func (*GetContributionPaymentRequest) Descriptor() ([]byte, []int) {
-	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{3}
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *GetContributionPaymentRequest) GetLookup() isGetContributionPaymentRequest_Lookup {
@@ -469,7 +725,7 @@ type GetContributionPaymentResponse struct {
 
 func (x *GetContributionPaymentResponse) Reset() {
 	*x = GetContributionPaymentResponse{}
-	mi := &file_contribution_v1_contribution_proto_msgTypes[4]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -481,7 +737,7 @@ func (x *GetContributionPaymentResponse) String() string {
 func (*GetContributionPaymentResponse) ProtoMessage() {}
 
 func (x *GetContributionPaymentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_contribution_v1_contribution_proto_msgTypes[4]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -494,7 +750,7 @@ func (x *GetContributionPaymentResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetContributionPaymentResponse.ProtoReflect.Descriptor instead.
 func (*GetContributionPaymentResponse) Descriptor() ([]byte, []int) {
-	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{4}
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *GetContributionPaymentResponse) GetPaymentRequestId() string {
@@ -577,7 +833,7 @@ type ContributionPaymentReceipt struct {
 
 func (x *ContributionPaymentReceipt) Reset() {
 	*x = ContributionPaymentReceipt{}
-	mi := &file_contribution_v1_contribution_proto_msgTypes[5]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -589,7 +845,7 @@ func (x *ContributionPaymentReceipt) String() string {
 func (*ContributionPaymentReceipt) ProtoMessage() {}
 
 func (x *ContributionPaymentReceipt) ProtoReflect() protoreflect.Message {
-	mi := &file_contribution_v1_contribution_proto_msgTypes[5]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -602,7 +858,7 @@ func (x *ContributionPaymentReceipt) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ContributionPaymentReceipt.ProtoReflect.Descriptor instead.
 func (*ContributionPaymentReceipt) Descriptor() ([]byte, []int) {
-	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{5}
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *ContributionPaymentReceipt) GetId() string {
@@ -662,7 +918,7 @@ type OpenCashierSessionRequest struct {
 
 func (x *OpenCashierSessionRequest) Reset() {
 	*x = OpenCashierSessionRequest{}
-	mi := &file_contribution_v1_contribution_proto_msgTypes[6]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -674,7 +930,7 @@ func (x *OpenCashierSessionRequest) String() string {
 func (*OpenCashierSessionRequest) ProtoMessage() {}
 
 func (x *OpenCashierSessionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_contribution_v1_contribution_proto_msgTypes[6]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -687,7 +943,7 @@ func (x *OpenCashierSessionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OpenCashierSessionRequest.ProtoReflect.Descriptor instead.
 func (*OpenCashierSessionRequest) Descriptor() ([]byte, []int) {
-	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{6}
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{10}
 }
 
 type GetCashContextRequest struct {
@@ -698,7 +954,7 @@ type GetCashContextRequest struct {
 
 func (x *GetCashContextRequest) Reset() {
 	*x = GetCashContextRequest{}
-	mi := &file_contribution_v1_contribution_proto_msgTypes[7]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -710,7 +966,7 @@ func (x *GetCashContextRequest) String() string {
 func (*GetCashContextRequest) ProtoMessage() {}
 
 func (x *GetCashContextRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_contribution_v1_contribution_proto_msgTypes[7]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -723,7 +979,7 @@ func (x *GetCashContextRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCashContextRequest.ProtoReflect.Descriptor instead.
 func (*GetCashContextRequest) Descriptor() ([]byte, []int) {
-	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{7}
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{11}
 }
 
 type OpenCashierSessionResponse struct {
@@ -735,7 +991,7 @@ type OpenCashierSessionResponse struct {
 
 func (x *OpenCashierSessionResponse) Reset() {
 	*x = OpenCashierSessionResponse{}
-	mi := &file_contribution_v1_contribution_proto_msgTypes[8]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -747,7 +1003,7 @@ func (x *OpenCashierSessionResponse) String() string {
 func (*OpenCashierSessionResponse) ProtoMessage() {}
 
 func (x *OpenCashierSessionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_contribution_v1_contribution_proto_msgTypes[8]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -760,7 +1016,7 @@ func (x *OpenCashierSessionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OpenCashierSessionResponse.ProtoReflect.Descriptor instead.
 func (*OpenCashierSessionResponse) Descriptor() ([]byte, []int) {
-	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{8}
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *OpenCashierSessionResponse) GetSession() *CashierSession {
@@ -793,7 +1049,7 @@ type CashierSession struct {
 
 func (x *CashierSession) Reset() {
 	*x = CashierSession{}
-	mi := &file_contribution_v1_contribution_proto_msgTypes[9]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -805,7 +1061,7 @@ func (x *CashierSession) String() string {
 func (*CashierSession) ProtoMessage() {}
 
 func (x *CashierSession) ProtoReflect() protoreflect.Message {
-	mi := &file_contribution_v1_contribution_proto_msgTypes[9]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -818,7 +1074,7 @@ func (x *CashierSession) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CashierSession.ProtoReflect.Descriptor instead.
 func (*CashierSession) Descriptor() ([]byte, []int) {
-	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{9}
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *CashierSession) GetId() string {
@@ -940,7 +1196,7 @@ type CreateCashContributionRequest struct {
 
 func (x *CreateCashContributionRequest) Reset() {
 	*x = CreateCashContributionRequest{}
-	mi := &file_contribution_v1_contribution_proto_msgTypes[10]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -952,7 +1208,7 @@ func (x *CreateCashContributionRequest) String() string {
 func (*CreateCashContributionRequest) ProtoMessage() {}
 
 func (x *CreateCashContributionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_contribution_v1_contribution_proto_msgTypes[10]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -965,7 +1221,7 @@ func (x *CreateCashContributionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateCashContributionRequest.ProtoReflect.Descriptor instead.
 func (*CreateCashContributionRequest) Descriptor() ([]byte, []int) {
-	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{10}
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *CreateCashContributionRequest) GetIdempotencyKey() string {
@@ -1029,7 +1285,7 @@ type CashContributionReceipt struct {
 
 func (x *CashContributionReceipt) Reset() {
 	*x = CashContributionReceipt{}
-	mi := &file_contribution_v1_contribution_proto_msgTypes[11]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1041,7 +1297,7 @@ func (x *CashContributionReceipt) String() string {
 func (*CashContributionReceipt) ProtoMessage() {}
 
 func (x *CashContributionReceipt) ProtoReflect() protoreflect.Message {
-	mi := &file_contribution_v1_contribution_proto_msgTypes[11]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1054,7 +1310,7 @@ func (x *CashContributionReceipt) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CashContributionReceipt.ProtoReflect.Descriptor instead.
 func (*CashContributionReceipt) Descriptor() ([]byte, []int) {
-	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{11}
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *CashContributionReceipt) GetId() string {
@@ -1143,7 +1399,7 @@ type CreateCashContributionResponse struct {
 
 func (x *CreateCashContributionResponse) Reset() {
 	*x = CreateCashContributionResponse{}
-	mi := &file_contribution_v1_contribution_proto_msgTypes[12]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1155,7 +1411,7 @@ func (x *CreateCashContributionResponse) String() string {
 func (*CreateCashContributionResponse) ProtoMessage() {}
 
 func (x *CreateCashContributionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_contribution_v1_contribution_proto_msgTypes[12]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1168,7 +1424,7 @@ func (x *CreateCashContributionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateCashContributionResponse.ProtoReflect.Descriptor instead.
 func (*CreateCashContributionResponse) Descriptor() ([]byte, []int) {
-	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{12}
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *CreateCashContributionResponse) GetReceipt() *CashContributionReceipt {
@@ -1189,7 +1445,7 @@ type CloseCashierSessionRequest struct {
 
 func (x *CloseCashierSessionRequest) Reset() {
 	*x = CloseCashierSessionRequest{}
-	mi := &file_contribution_v1_contribution_proto_msgTypes[13]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1201,7 +1457,7 @@ func (x *CloseCashierSessionRequest) String() string {
 func (*CloseCashierSessionRequest) ProtoMessage() {}
 
 func (x *CloseCashierSessionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_contribution_v1_contribution_proto_msgTypes[13]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1214,7 +1470,7 @@ func (x *CloseCashierSessionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CloseCashierSessionRequest.ProtoReflect.Descriptor instead.
 func (*CloseCashierSessionRequest) Descriptor() ([]byte, []int) {
-	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{13}
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *CloseCashierSessionRequest) GetSessionId() string {
@@ -1247,7 +1503,7 @@ type CloseCashierSessionResponse struct {
 
 func (x *CloseCashierSessionResponse) Reset() {
 	*x = CloseCashierSessionResponse{}
-	mi := &file_contribution_v1_contribution_proto_msgTypes[14]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1259,7 +1515,7 @@ func (x *CloseCashierSessionResponse) String() string {
 func (*CloseCashierSessionResponse) ProtoMessage() {}
 
 func (x *CloseCashierSessionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_contribution_v1_contribution_proto_msgTypes[14]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1272,7 +1528,7 @@ func (x *CloseCashierSessionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CloseCashierSessionResponse.ProtoReflect.Descriptor instead.
 func (*CloseCashierSessionResponse) Descriptor() ([]byte, []int) {
-	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{14}
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *CloseCashierSessionResponse) GetSession() *CashierSession {
@@ -1291,7 +1547,7 @@ type AcceptCashHandoverRequest struct {
 
 func (x *AcceptCashHandoverRequest) Reset() {
 	*x = AcceptCashHandoverRequest{}
-	mi := &file_contribution_v1_contribution_proto_msgTypes[15]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1303,7 +1559,7 @@ func (x *AcceptCashHandoverRequest) String() string {
 func (*AcceptCashHandoverRequest) ProtoMessage() {}
 
 func (x *AcceptCashHandoverRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_contribution_v1_contribution_proto_msgTypes[15]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1316,7 +1572,7 @@ func (x *AcceptCashHandoverRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AcceptCashHandoverRequest.ProtoReflect.Descriptor instead.
 func (*AcceptCashHandoverRequest) Descriptor() ([]byte, []int) {
-	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{15}
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *AcceptCashHandoverRequest) GetSessionId() string {
@@ -1335,7 +1591,7 @@ type AcceptCashHandoverResponse struct {
 
 func (x *AcceptCashHandoverResponse) Reset() {
 	*x = AcceptCashHandoverResponse{}
-	mi := &file_contribution_v1_contribution_proto_msgTypes[16]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1347,7 +1603,7 @@ func (x *AcceptCashHandoverResponse) String() string {
 func (*AcceptCashHandoverResponse) ProtoMessage() {}
 
 func (x *AcceptCashHandoverResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_contribution_v1_contribution_proto_msgTypes[16]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1360,7 +1616,7 @@ func (x *AcceptCashHandoverResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AcceptCashHandoverResponse.ProtoReflect.Descriptor instead.
 func (*AcceptCashHandoverResponse) Descriptor() ([]byte, []int) {
-	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{16}
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *AcceptCashHandoverResponse) GetSession() *CashierSession {
@@ -1381,7 +1637,7 @@ type RecordCashDepositRequest struct {
 
 func (x *RecordCashDepositRequest) Reset() {
 	*x = RecordCashDepositRequest{}
-	mi := &file_contribution_v1_contribution_proto_msgTypes[17]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1393,7 +1649,7 @@ func (x *RecordCashDepositRequest) String() string {
 func (*RecordCashDepositRequest) ProtoMessage() {}
 
 func (x *RecordCashDepositRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_contribution_v1_contribution_proto_msgTypes[17]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1406,7 +1662,7 @@ func (x *RecordCashDepositRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RecordCashDepositRequest.ProtoReflect.Descriptor instead.
 func (*RecordCashDepositRequest) Descriptor() ([]byte, []int) {
-	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{17}
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *RecordCashDepositRequest) GetSessionIds() []string {
@@ -1450,7 +1706,7 @@ type CashDeposit struct {
 
 func (x *CashDeposit) Reset() {
 	*x = CashDeposit{}
-	mi := &file_contribution_v1_contribution_proto_msgTypes[18]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1462,7 +1718,7 @@ func (x *CashDeposit) String() string {
 func (*CashDeposit) ProtoMessage() {}
 
 func (x *CashDeposit) ProtoReflect() protoreflect.Message {
-	mi := &file_contribution_v1_contribution_proto_msgTypes[18]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1475,7 +1731,7 @@ func (x *CashDeposit) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CashDeposit.ProtoReflect.Descriptor instead.
 func (*CashDeposit) Descriptor() ([]byte, []int) {
-	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{18}
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *CashDeposit) GetId() string {
@@ -1571,7 +1827,7 @@ type RecordCashDepositResponse struct {
 
 func (x *RecordCashDepositResponse) Reset() {
 	*x = RecordCashDepositResponse{}
-	mi := &file_contribution_v1_contribution_proto_msgTypes[19]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1583,7 +1839,7 @@ func (x *RecordCashDepositResponse) String() string {
 func (*RecordCashDepositResponse) ProtoMessage() {}
 
 func (x *RecordCashDepositResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_contribution_v1_contribution_proto_msgTypes[19]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1596,7 +1852,7 @@ func (x *RecordCashDepositResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RecordCashDepositResponse.ProtoReflect.Descriptor instead.
 func (*RecordCashDepositResponse) Descriptor() ([]byte, []int) {
-	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{19}
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *RecordCashDepositResponse) GetDeposit() *CashDeposit {
@@ -1615,7 +1871,7 @@ type VerifyCashDepositRequest struct {
 
 func (x *VerifyCashDepositRequest) Reset() {
 	*x = VerifyCashDepositRequest{}
-	mi := &file_contribution_v1_contribution_proto_msgTypes[20]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1627,7 +1883,7 @@ func (x *VerifyCashDepositRequest) String() string {
 func (*VerifyCashDepositRequest) ProtoMessage() {}
 
 func (x *VerifyCashDepositRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_contribution_v1_contribution_proto_msgTypes[20]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1640,7 +1896,7 @@ func (x *VerifyCashDepositRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VerifyCashDepositRequest.ProtoReflect.Descriptor instead.
 func (*VerifyCashDepositRequest) Descriptor() ([]byte, []int) {
-	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{20}
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *VerifyCashDepositRequest) GetDepositId() string {
@@ -1659,7 +1915,7 @@ type VerifyCashDepositResponse struct {
 
 func (x *VerifyCashDepositResponse) Reset() {
 	*x = VerifyCashDepositResponse{}
-	mi := &file_contribution_v1_contribution_proto_msgTypes[21]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1671,7 +1927,7 @@ func (x *VerifyCashDepositResponse) String() string {
 func (*VerifyCashDepositResponse) ProtoMessage() {}
 
 func (x *VerifyCashDepositResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_contribution_v1_contribution_proto_msgTypes[21]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1684,7 +1940,7 @@ func (x *VerifyCashDepositResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VerifyCashDepositResponse.ProtoReflect.Descriptor instead.
 func (*VerifyCashDepositResponse) Descriptor() ([]byte, []int) {
-	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{21}
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *VerifyCashDepositResponse) GetDeposit() *CashDeposit {
@@ -1713,7 +1969,7 @@ type ContributionCharge struct {
 
 func (x *ContributionCharge) Reset() {
 	*x = ContributionCharge{}
-	mi := &file_contribution_v1_contribution_proto_msgTypes[22]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1725,7 +1981,7 @@ func (x *ContributionCharge) String() string {
 func (*ContributionCharge) ProtoMessage() {}
 
 func (x *ContributionCharge) ProtoReflect() protoreflect.Message {
-	mi := &file_contribution_v1_contribution_proto_msgTypes[22]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1738,7 +1994,7 @@ func (x *ContributionCharge) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ContributionCharge.ProtoReflect.Descriptor instead.
 func (*ContributionCharge) Descriptor() ([]byte, []int) {
-	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{22}
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *ContributionCharge) GetId() string {
@@ -1818,7 +2074,7 @@ type CreateContributionChargeRequest struct {
 
 func (x *CreateContributionChargeRequest) Reset() {
 	*x = CreateContributionChargeRequest{}
-	mi := &file_contribution_v1_contribution_proto_msgTypes[23]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1830,7 +2086,7 @@ func (x *CreateContributionChargeRequest) String() string {
 func (*CreateContributionChargeRequest) ProtoMessage() {}
 
 func (x *CreateContributionChargeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_contribution_v1_contribution_proto_msgTypes[23]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1843,7 +2099,7 @@ func (x *CreateContributionChargeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateContributionChargeRequest.ProtoReflect.Descriptor instead.
 func (*CreateContributionChargeRequest) Descriptor() ([]byte, []int) {
-	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{23}
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *CreateContributionChargeRequest) GetIdempotencyKey() string {
@@ -1890,7 +2146,7 @@ type CreateContributionChargeResponse struct {
 
 func (x *CreateContributionChargeResponse) Reset() {
 	*x = CreateContributionChargeResponse{}
-	mi := &file_contribution_v1_contribution_proto_msgTypes[24]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1902,7 +2158,7 @@ func (x *CreateContributionChargeResponse) String() string {
 func (*CreateContributionChargeResponse) ProtoMessage() {}
 
 func (x *CreateContributionChargeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_contribution_v1_contribution_proto_msgTypes[24]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1915,7 +2171,7 @@ func (x *CreateContributionChargeResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateContributionChargeResponse.ProtoReflect.Descriptor instead.
 func (*CreateContributionChargeResponse) Descriptor() ([]byte, []int) {
-	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{24}
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *CreateContributionChargeResponse) GetCharge() *ContributionCharge {
@@ -1936,7 +2192,7 @@ type ListContributionChargesRequest struct {
 
 func (x *ListContributionChargesRequest) Reset() {
 	*x = ListContributionChargesRequest{}
-	mi := &file_contribution_v1_contribution_proto_msgTypes[25]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1948,7 +2204,7 @@ func (x *ListContributionChargesRequest) String() string {
 func (*ListContributionChargesRequest) ProtoMessage() {}
 
 func (x *ListContributionChargesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_contribution_v1_contribution_proto_msgTypes[25]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1961,7 +2217,7 @@ func (x *ListContributionChargesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListContributionChargesRequest.ProtoReflect.Descriptor instead.
 func (*ListContributionChargesRequest) Descriptor() ([]byte, []int) {
-	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{25}
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *ListContributionChargesRequest) GetMemberId() string {
@@ -1995,7 +2251,7 @@ type ListContributionChargesResponse struct {
 
 func (x *ListContributionChargesResponse) Reset() {
 	*x = ListContributionChargesResponse{}
-	mi := &file_contribution_v1_contribution_proto_msgTypes[26]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2007,7 +2263,7 @@ func (x *ListContributionChargesResponse) String() string {
 func (*ListContributionChargesResponse) ProtoMessage() {}
 
 func (x *ListContributionChargesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_contribution_v1_contribution_proto_msgTypes[26]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2020,7 +2276,7 @@ func (x *ListContributionChargesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListContributionChargesResponse.ProtoReflect.Descriptor instead.
 func (*ListContributionChargesResponse) Descriptor() ([]byte, []int) {
-	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{26}
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *ListContributionChargesResponse) GetCharges() []*ContributionCharge {
@@ -2050,7 +2306,7 @@ type GetCashContextResponse struct {
 
 func (x *GetCashContextResponse) Reset() {
 	*x = GetCashContextResponse{}
-	mi := &file_contribution_v1_contribution_proto_msgTypes[27]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2062,7 +2318,7 @@ func (x *GetCashContextResponse) String() string {
 func (*GetCashContextResponse) ProtoMessage() {}
 
 func (x *GetCashContextResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_contribution_v1_contribution_proto_msgTypes[27]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2075,7 +2331,7 @@ func (x *GetCashContextResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCashContextResponse.ProtoReflect.Descriptor instead.
 func (*GetCashContextResponse) Descriptor() ([]byte, []int) {
-	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{27}
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *GetCashContextResponse) GetStaffId() string {
@@ -2123,7 +2379,7 @@ type GetContributionQuoteRequest struct {
 
 func (x *GetContributionQuoteRequest) Reset() {
 	*x = GetContributionQuoteRequest{}
-	mi := &file_contribution_v1_contribution_proto_msgTypes[28]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2135,7 +2391,7 @@ func (x *GetContributionQuoteRequest) String() string {
 func (*GetContributionQuoteRequest) ProtoMessage() {}
 
 func (x *GetContributionQuoteRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_contribution_v1_contribution_proto_msgTypes[28]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2148,7 +2404,7 @@ func (x *GetContributionQuoteRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetContributionQuoteRequest.ProtoReflect.Descriptor instead.
 func (*GetContributionQuoteRequest) Descriptor() ([]byte, []int) {
-	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{28}
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *GetContributionQuoteRequest) GetMemberId() string {
@@ -2176,7 +2432,7 @@ type GetContributionQuoteResponse struct {
 
 func (x *GetContributionQuoteResponse) Reset() {
 	*x = GetContributionQuoteResponse{}
-	mi := &file_contribution_v1_contribution_proto_msgTypes[29]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2188,7 +2444,7 @@ func (x *GetContributionQuoteResponse) String() string {
 func (*GetContributionQuoteResponse) ProtoMessage() {}
 
 func (x *GetContributionQuoteResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_contribution_v1_contribution_proto_msgTypes[29]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2201,7 +2457,7 @@ func (x *GetContributionQuoteResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetContributionQuoteResponse.ProtoReflect.Descriptor instead.
 func (*GetContributionQuoteResponse) Descriptor() ([]byte, []int) {
-	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{29}
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *GetContributionQuoteResponse) GetFees() []*ContributionAllocationInput {
@@ -2252,7 +2508,7 @@ type ContributionLoanSummary struct {
 
 func (x *ContributionLoanSummary) Reset() {
 	*x = ContributionLoanSummary{}
-	mi := &file_contribution_v1_contribution_proto_msgTypes[30]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2264,7 +2520,7 @@ func (x *ContributionLoanSummary) String() string {
 func (*ContributionLoanSummary) ProtoMessage() {}
 
 func (x *ContributionLoanSummary) ProtoReflect() protoreflect.Message {
-	mi := &file_contribution_v1_contribution_proto_msgTypes[30]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2277,7 +2533,7 @@ func (x *ContributionLoanSummary) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ContributionLoanSummary.ProtoReflect.Descriptor instead.
 func (*ContributionLoanSummary) Descriptor() ([]byte, []int) {
-	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{30}
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *ContributionLoanSummary) GetLoanId() string {
@@ -2409,7 +2665,7 @@ type GetCashReceiptRequest struct {
 
 func (x *GetCashReceiptRequest) Reset() {
 	*x = GetCashReceiptRequest{}
-	mi := &file_contribution_v1_contribution_proto_msgTypes[31]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2421,7 +2677,7 @@ func (x *GetCashReceiptRequest) String() string {
 func (*GetCashReceiptRequest) ProtoMessage() {}
 
 func (x *GetCashReceiptRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_contribution_v1_contribution_proto_msgTypes[31]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2434,7 +2690,7 @@ func (x *GetCashReceiptRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCashReceiptRequest.ProtoReflect.Descriptor instead.
 func (*GetCashReceiptRequest) Descriptor() ([]byte, []int) {
-	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{31}
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *GetCashReceiptRequest) GetReceiptId() string {
@@ -2466,7 +2722,7 @@ type CashReceiptAllocation struct {
 
 func (x *CashReceiptAllocation) Reset() {
 	*x = CashReceiptAllocation{}
-	mi := &file_contribution_v1_contribution_proto_msgTypes[32]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2478,7 +2734,7 @@ func (x *CashReceiptAllocation) String() string {
 func (*CashReceiptAllocation) ProtoMessage() {}
 
 func (x *CashReceiptAllocation) ProtoReflect() protoreflect.Message {
-	mi := &file_contribution_v1_contribution_proto_msgTypes[32]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2491,7 +2747,7 @@ func (x *CashReceiptAllocation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CashReceiptAllocation.ProtoReflect.Descriptor instead.
 func (*CashReceiptAllocation) Descriptor() ([]byte, []int) {
-	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{32}
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *CashReceiptAllocation) GetType() ContributionAllocationType {
@@ -2546,7 +2802,7 @@ type ListCashierSessionsRequest struct {
 
 func (x *ListCashierSessionsRequest) Reset() {
 	*x = ListCashierSessionsRequest{}
-	mi := &file_contribution_v1_contribution_proto_msgTypes[33]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2558,7 +2814,7 @@ func (x *ListCashierSessionsRequest) String() string {
 func (*ListCashierSessionsRequest) ProtoMessage() {}
 
 func (x *ListCashierSessionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_contribution_v1_contribution_proto_msgTypes[33]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2571,7 +2827,7 @@ func (x *ListCashierSessionsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCashierSessionsRequest.ProtoReflect.Descriptor instead.
 func (*ListCashierSessionsRequest) Descriptor() ([]byte, []int) {
-	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{33}
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *ListCashierSessionsRequest) GetPageSize() int32 {
@@ -2598,7 +2854,7 @@ type ListCashierSessionsResponse struct {
 
 func (x *ListCashierSessionsResponse) Reset() {
 	*x = ListCashierSessionsResponse{}
-	mi := &file_contribution_v1_contribution_proto_msgTypes[34]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2610,7 +2866,7 @@ func (x *ListCashierSessionsResponse) String() string {
 func (*ListCashierSessionsResponse) ProtoMessage() {}
 
 func (x *ListCashierSessionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_contribution_v1_contribution_proto_msgTypes[34]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2623,7 +2879,7 @@ func (x *ListCashierSessionsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCashierSessionsResponse.ProtoReflect.Descriptor instead.
 func (*ListCashierSessionsResponse) Descriptor() ([]byte, []int) {
-	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{34}
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *ListCashierSessionsResponse) GetSessions() []*CashierSession {
@@ -2650,7 +2906,7 @@ type ListCashDepositsRequest struct {
 
 func (x *ListCashDepositsRequest) Reset() {
 	*x = ListCashDepositsRequest{}
-	mi := &file_contribution_v1_contribution_proto_msgTypes[35]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2662,7 +2918,7 @@ func (x *ListCashDepositsRequest) String() string {
 func (*ListCashDepositsRequest) ProtoMessage() {}
 
 func (x *ListCashDepositsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_contribution_v1_contribution_proto_msgTypes[35]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2675,7 +2931,7 @@ func (x *ListCashDepositsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCashDepositsRequest.ProtoReflect.Descriptor instead.
 func (*ListCashDepositsRequest) Descriptor() ([]byte, []int) {
-	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{35}
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *ListCashDepositsRequest) GetPageSize() int32 {
@@ -2702,7 +2958,7 @@ type ListCashDepositsResponse struct {
 
 func (x *ListCashDepositsResponse) Reset() {
 	*x = ListCashDepositsResponse{}
-	mi := &file_contribution_v1_contribution_proto_msgTypes[36]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2714,7 +2970,7 @@ func (x *ListCashDepositsResponse) String() string {
 func (*ListCashDepositsResponse) ProtoMessage() {}
 
 func (x *ListCashDepositsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_contribution_v1_contribution_proto_msgTypes[36]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2727,7 +2983,7 @@ func (x *ListCashDepositsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCashDepositsResponse.ProtoReflect.Descriptor instead.
 func (*ListCashDepositsResponse) Descriptor() ([]byte, []int) {
-	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{36}
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *ListCashDepositsResponse) GetDeposits() []*CashDeposit {
@@ -2753,7 +3009,7 @@ type GetCashDepositRequest struct {
 
 func (x *GetCashDepositRequest) Reset() {
 	*x = GetCashDepositRequest{}
-	mi := &file_contribution_v1_contribution_proto_msgTypes[37]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2765,7 +3021,7 @@ func (x *GetCashDepositRequest) String() string {
 func (*GetCashDepositRequest) ProtoMessage() {}
 
 func (x *GetCashDepositRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_contribution_v1_contribution_proto_msgTypes[37]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2778,7 +3034,7 @@ func (x *GetCashDepositRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCashDepositRequest.ProtoReflect.Descriptor instead.
 func (*GetCashDepositRequest) Descriptor() ([]byte, []int) {
-	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{37}
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *GetCashDepositRequest) GetDepositId() string {
@@ -2797,7 +3053,7 @@ type GetCashReceiptResponse struct {
 
 func (x *GetCashReceiptResponse) Reset() {
 	*x = GetCashReceiptResponse{}
-	mi := &file_contribution_v1_contribution_proto_msgTypes[38]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[42]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2809,7 +3065,7 @@ func (x *GetCashReceiptResponse) String() string {
 func (*GetCashReceiptResponse) ProtoMessage() {}
 
 func (x *GetCashReceiptResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_contribution_v1_contribution_proto_msgTypes[38]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[42]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2822,7 +3078,7 @@ func (x *GetCashReceiptResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCashReceiptResponse.ProtoReflect.Descriptor instead.
 func (*GetCashReceiptResponse) Descriptor() ([]byte, []int) {
-	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{38}
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{42}
 }
 
 func (x *GetCashReceiptResponse) GetReceipt() *CashContributionReceipt {
@@ -2841,7 +3097,7 @@ type GetCashDepositResponse struct {
 
 func (x *GetCashDepositResponse) Reset() {
 	*x = GetCashDepositResponse{}
-	mi := &file_contribution_v1_contribution_proto_msgTypes[39]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[43]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2853,7 +3109,7 @@ func (x *GetCashDepositResponse) String() string {
 func (*GetCashDepositResponse) ProtoMessage() {}
 
 func (x *GetCashDepositResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_contribution_v1_contribution_proto_msgTypes[39]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[43]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2866,7 +3122,7 @@ func (x *GetCashDepositResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCashDepositResponse.ProtoReflect.Descriptor instead.
 func (*GetCashDepositResponse) Descriptor() ([]byte, []int) {
-	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{39}
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{43}
 }
 
 func (x *GetCashDepositResponse) GetDeposit() *CashDeposit {
@@ -2886,7 +3142,7 @@ type ListDarajaPaymentsRequest struct {
 
 func (x *ListDarajaPaymentsRequest) Reset() {
 	*x = ListDarajaPaymentsRequest{}
-	mi := &file_contribution_v1_contribution_proto_msgTypes[40]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[44]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2898,7 +3154,7 @@ func (x *ListDarajaPaymentsRequest) String() string {
 func (*ListDarajaPaymentsRequest) ProtoMessage() {}
 
 func (x *ListDarajaPaymentsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_contribution_v1_contribution_proto_msgTypes[40]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[44]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2911,7 +3167,7 @@ func (x *ListDarajaPaymentsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListDarajaPaymentsRequest.ProtoReflect.Descriptor instead.
 func (*ListDarajaPaymentsRequest) Descriptor() ([]byte, []int) {
-	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{40}
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *ListDarajaPaymentsRequest) GetPageToken() string {
@@ -2931,7 +3187,7 @@ type ListDarajaPaymentsResponse struct {
 
 func (x *ListDarajaPaymentsResponse) Reset() {
 	*x = ListDarajaPaymentsResponse{}
-	mi := &file_contribution_v1_contribution_proto_msgTypes[41]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[45]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2943,7 +3199,7 @@ func (x *ListDarajaPaymentsResponse) String() string {
 func (*ListDarajaPaymentsResponse) ProtoMessage() {}
 
 func (x *ListDarajaPaymentsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_contribution_v1_contribution_proto_msgTypes[41]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[45]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2956,7 +3212,7 @@ func (x *ListDarajaPaymentsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListDarajaPaymentsResponse.ProtoReflect.Descriptor instead.
 func (*ListDarajaPaymentsResponse) Descriptor() ([]byte, []int) {
-	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{41}
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{45}
 }
 
 func (x *ListDarajaPaymentsResponse) GetPayments() []*DarajaPayment {
@@ -2992,7 +3248,7 @@ type DarajaPayment struct {
 
 func (x *DarajaPayment) Reset() {
 	*x = DarajaPayment{}
-	mi := &file_contribution_v1_contribution_proto_msgTypes[42]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[46]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3004,7 +3260,7 @@ func (x *DarajaPayment) String() string {
 func (*DarajaPayment) ProtoMessage() {}
 
 func (x *DarajaPayment) ProtoReflect() protoreflect.Message {
-	mi := &file_contribution_v1_contribution_proto_msgTypes[42]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[46]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3017,7 +3273,7 @@ func (x *DarajaPayment) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DarajaPayment.ProtoReflect.Descriptor instead.
 func (*DarajaPayment) Descriptor() ([]byte, []int) {
-	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{42}
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{46}
 }
 
 func (x *DarajaPayment) GetPaymentRequestId() string {
@@ -3114,7 +3370,7 @@ type RecoverDarajaPaymentRequest struct {
 
 func (x *RecoverDarajaPaymentRequest) Reset() {
 	*x = RecoverDarajaPaymentRequest{}
-	mi := &file_contribution_v1_contribution_proto_msgTypes[43]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[47]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3126,7 +3382,7 @@ func (x *RecoverDarajaPaymentRequest) String() string {
 func (*RecoverDarajaPaymentRequest) ProtoMessage() {}
 
 func (x *RecoverDarajaPaymentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_contribution_v1_contribution_proto_msgTypes[43]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[47]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3139,7 +3395,7 @@ func (x *RecoverDarajaPaymentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RecoverDarajaPaymentRequest.ProtoReflect.Descriptor instead.
 func (*RecoverDarajaPaymentRequest) Descriptor() ([]byte, []int) {
-	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{43}
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{47}
 }
 
 func (x *RecoverDarajaPaymentRequest) GetPaymentRequestId() string {
@@ -3207,7 +3463,7 @@ type RecoverDarajaPaymentResponse struct {
 
 func (x *RecoverDarajaPaymentResponse) Reset() {
 	*x = RecoverDarajaPaymentResponse{}
-	mi := &file_contribution_v1_contribution_proto_msgTypes[44]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[48]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3219,7 +3475,7 @@ func (x *RecoverDarajaPaymentResponse) String() string {
 func (*RecoverDarajaPaymentResponse) ProtoMessage() {}
 
 func (x *RecoverDarajaPaymentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_contribution_v1_contribution_proto_msgTypes[44]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[48]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3232,7 +3488,7 @@ func (x *RecoverDarajaPaymentResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RecoverDarajaPaymentResponse.ProtoReflect.Descriptor instead.
 func (*RecoverDarajaPaymentResponse) Descriptor() ([]byte, []int) {
-	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{44}
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{48}
 }
 
 func (x *RecoverDarajaPaymentResponse) GetPayment() *GetContributionPaymentResponse {
@@ -3246,7 +3502,24 @@ var File_contribution_v1_contribution_proto protoreflect.FileDescriptor
 
 const file_contribution_v1_contribution_proto_rawDesc = "" +
 	"\n" +
-	"\"contribution/v1/contribution.proto\x12\x0fcontribution.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x16member/v1/member.proto\"\xa5\x01\n" +
+	"\"contribution/v1/contribution.proto\x12\x0fcontribution.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x16member/v1/member.proto\"\x97\x01\n" +
+	"\x14GetCEEPReportRequest\x12\x16\n" +
+	"\x06period\x18\x01 \x01(\tR\x06period\x12\x16\n" +
+	"\x06cutoff\x18\x02 \x01(\tR\x06cutoff\x12\x14\n" +
+	"\x05title\x18\x03 \x01(\tR\x05title\x12\x16\n" +
+	"\x06parish\x18\x04 \x01(\tR\x06parish\x12!\n" +
+	"\fpayment_date\x18\x05 \x01(\tR\vpaymentDate\"H\n" +
+	"\x15GetCEEPReportResponse\x12/\n" +
+	"\x06report\x18\x01 \x01(\v2\x17.google.protobuf.StructR\x06report\"\xbf\x01\n" +
+	"\x19FinalizeCEEPReportRequest\x12\x16\n" +
+	"\x06period\x18\x01 \x01(\tR\x06period\x12\x16\n" +
+	"\x06cutoff\x18\x02 \x01(\tR\x06cutoff\x12!\n" +
+	"\fpreview_hash\x18\x03 \x01(\tR\vpreviewHash\x12\x14\n" +
+	"\x05title\x18\x04 \x01(\tR\x05title\x12\x16\n" +
+	"\x06parish\x18\x05 \x01(\tR\x06parish\x12!\n" +
+	"\fpayment_date\x18\x06 \x01(\tR\vpaymentDate\"M\n" +
+	"\x1aFinalizeCEEPReportResponse\x12/\n" +
+	"\x06report\x18\x01 \x01(\v2\x17.google.protobuf.StructR\x06report\"\xa5\x01\n" +
 	"\x1bContributionAllocationInput\x12?\n" +
 	"\x04type\x18\x01 \x01(\x0e2+.contribution.v1.ContributionAllocationTypeR\x04type\x12\x1b\n" +
 	"\ttarget_id\x18\x02 \x01(\tR\btargetId\x12(\n" +
@@ -3521,8 +3794,10 @@ const file_contribution_v1_contribution_proto_rawDesc = "" +
 	"*CONTRIBUTION_ALLOCATION_TYPE_LOAN_INTEREST\x10\x05\x12(\n" +
 	"$CONTRIBUTION_ALLOCATION_TYPE_PENALTY\x10\x06\x12-\n" +
 	")CONTRIBUTION_ALLOCATION_TYPE_OTHER_CHARGE\x10\a\x123\n" +
-	"/CONTRIBUTION_ALLOCATION_TYPE_OVERPAYMENT_CREDIT\x10\b2\x8d\x17\n" +
-	"\x13ContributionService\x12\x9c\x01\n" +
+	"/CONTRIBUTION_ALLOCATION_TYPE_OVERPAYMENT_CREDIT\x10\b2\xc2\x19\n" +
+	"\x13ContributionService\x12\x8a\x01\n" +
+	"\rGetCEEPReport\x12%.contribution.v1.GetCEEPReportRequest\x1a&.contribution.v1.GetCEEPReportResponse\"*\x82\xd3\xe4\x93\x02$b\x06report\x12\x1a/api/v1/contributions/ceep\x12\xa5\x01\n" +
+	"\x12FinalizeCEEPReport\x12*.contribution.v1.FinalizeCEEPReportRequest\x1a+.contribution.v1.FinalizeCEEPReportResponse\"6\x82\xd3\xe4\x93\x020:\x01*b\x06report\"#/api/v1/contributions/ceep/finalize\x12\x9c\x01\n" +
 	"\x12ListDarajaPayments\x12*.contribution.v1.ListDarajaPaymentsRequest\x1a+.contribution.v1.ListDarajaPaymentsResponse\"-\x82\xd3\xe4\x93\x02'\x12%/api/v1/contributions/daraja-payments\x12\xa4\x01\n" +
 	"\x14RecoverDarajaPayment\x12,.contribution.v1.RecoverDarajaPaymentRequest\x1a-.contribution.v1.RecoverDarajaPaymentResponse\"/\x82\xd3\xe4\x93\x02):\x01*\"$/api/v1/contributions/recover-daraja\x12\x8d\x01\n" +
 	"\x0eGetCashContext\x12&.contribution.v1.GetCashContextRequest\x1a'.contribution.v1.GetCashContextResponse\"*\x82\xd3\xe4\x93\x02$\x12\"/api/v1/contributions/cash-context\x12\xa8\x01\n" +
@@ -3556,158 +3831,169 @@ func file_contribution_v1_contribution_proto_rawDescGZIP() []byte {
 }
 
 var file_contribution_v1_contribution_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_contribution_v1_contribution_proto_msgTypes = make([]protoimpl.MessageInfo, 45)
+var file_contribution_v1_contribution_proto_msgTypes = make([]protoimpl.MessageInfo, 49)
 var file_contribution_v1_contribution_proto_goTypes = []any{
 	(ContributionPaymentRequestStatus)(0),         // 0: contribution.v1.ContributionPaymentRequestStatus
 	(ContributionAllocationType)(0),               // 1: contribution.v1.ContributionAllocationType
-	(*ContributionAllocationInput)(nil),           // 2: contribution.v1.ContributionAllocationInput
-	(*InitiateDarajaSTKContributionRequest)(nil),  // 3: contribution.v1.InitiateDarajaSTKContributionRequest
-	(*InitiateDarajaSTKContributionResponse)(nil), // 4: contribution.v1.InitiateDarajaSTKContributionResponse
-	(*GetContributionPaymentRequest)(nil),         // 5: contribution.v1.GetContributionPaymentRequest
-	(*GetContributionPaymentResponse)(nil),        // 6: contribution.v1.GetContributionPaymentResponse
-	(*ContributionPaymentReceipt)(nil),            // 7: contribution.v1.ContributionPaymentReceipt
-	(*OpenCashierSessionRequest)(nil),             // 8: contribution.v1.OpenCashierSessionRequest
-	(*GetCashContextRequest)(nil),                 // 9: contribution.v1.GetCashContextRequest
-	(*OpenCashierSessionResponse)(nil),            // 10: contribution.v1.OpenCashierSessionResponse
-	(*CashierSession)(nil),                        // 11: contribution.v1.CashierSession
-	(*CreateCashContributionRequest)(nil),         // 12: contribution.v1.CreateCashContributionRequest
-	(*CashContributionReceipt)(nil),               // 13: contribution.v1.CashContributionReceipt
-	(*CreateCashContributionResponse)(nil),        // 14: contribution.v1.CreateCashContributionResponse
-	(*CloseCashierSessionRequest)(nil),            // 15: contribution.v1.CloseCashierSessionRequest
-	(*CloseCashierSessionResponse)(nil),           // 16: contribution.v1.CloseCashierSessionResponse
-	(*AcceptCashHandoverRequest)(nil),             // 17: contribution.v1.AcceptCashHandoverRequest
-	(*AcceptCashHandoverResponse)(nil),            // 18: contribution.v1.AcceptCashHandoverResponse
-	(*RecordCashDepositRequest)(nil),              // 19: contribution.v1.RecordCashDepositRequest
-	(*CashDeposit)(nil),                           // 20: contribution.v1.CashDeposit
-	(*RecordCashDepositResponse)(nil),             // 21: contribution.v1.RecordCashDepositResponse
-	(*VerifyCashDepositRequest)(nil),              // 22: contribution.v1.VerifyCashDepositRequest
-	(*VerifyCashDepositResponse)(nil),             // 23: contribution.v1.VerifyCashDepositResponse
-	(*ContributionCharge)(nil),                    // 24: contribution.v1.ContributionCharge
-	(*CreateContributionChargeRequest)(nil),       // 25: contribution.v1.CreateContributionChargeRequest
-	(*CreateContributionChargeResponse)(nil),      // 26: contribution.v1.CreateContributionChargeResponse
-	(*ListContributionChargesRequest)(nil),        // 27: contribution.v1.ListContributionChargesRequest
-	(*ListContributionChargesResponse)(nil),       // 28: contribution.v1.ListContributionChargesResponse
-	(*GetCashContextResponse)(nil),                // 29: contribution.v1.GetCashContextResponse
-	(*GetContributionQuoteRequest)(nil),           // 30: contribution.v1.GetContributionQuoteRequest
-	(*GetContributionQuoteResponse)(nil),          // 31: contribution.v1.GetContributionQuoteResponse
-	(*ContributionLoanSummary)(nil),               // 32: contribution.v1.ContributionLoanSummary
-	(*GetCashReceiptRequest)(nil),                 // 33: contribution.v1.GetCashReceiptRequest
-	(*CashReceiptAllocation)(nil),                 // 34: contribution.v1.CashReceiptAllocation
-	(*ListCashierSessionsRequest)(nil),            // 35: contribution.v1.ListCashierSessionsRequest
-	(*ListCashierSessionsResponse)(nil),           // 36: contribution.v1.ListCashierSessionsResponse
-	(*ListCashDepositsRequest)(nil),               // 37: contribution.v1.ListCashDepositsRequest
-	(*ListCashDepositsResponse)(nil),              // 38: contribution.v1.ListCashDepositsResponse
-	(*GetCashDepositRequest)(nil),                 // 39: contribution.v1.GetCashDepositRequest
-	(*GetCashReceiptResponse)(nil),                // 40: contribution.v1.GetCashReceiptResponse
-	(*GetCashDepositResponse)(nil),                // 41: contribution.v1.GetCashDepositResponse
-	(*ListDarajaPaymentsRequest)(nil),             // 42: contribution.v1.ListDarajaPaymentsRequest
-	(*ListDarajaPaymentsResponse)(nil),            // 43: contribution.v1.ListDarajaPaymentsResponse
-	(*DarajaPayment)(nil),                         // 44: contribution.v1.DarajaPayment
-	(*RecoverDarajaPaymentRequest)(nil),           // 45: contribution.v1.RecoverDarajaPaymentRequest
-	(*RecoverDarajaPaymentResponse)(nil),          // 46: contribution.v1.RecoverDarajaPaymentResponse
-	(*v1.Money)(nil),                              // 47: member.v1.Money
-	(*timestamppb.Timestamp)(nil),                 // 48: google.protobuf.Timestamp
+	(*GetCEEPReportRequest)(nil),                  // 2: contribution.v1.GetCEEPReportRequest
+	(*GetCEEPReportResponse)(nil),                 // 3: contribution.v1.GetCEEPReportResponse
+	(*FinalizeCEEPReportRequest)(nil),             // 4: contribution.v1.FinalizeCEEPReportRequest
+	(*FinalizeCEEPReportResponse)(nil),            // 5: contribution.v1.FinalizeCEEPReportResponse
+	(*ContributionAllocationInput)(nil),           // 6: contribution.v1.ContributionAllocationInput
+	(*InitiateDarajaSTKContributionRequest)(nil),  // 7: contribution.v1.InitiateDarajaSTKContributionRequest
+	(*InitiateDarajaSTKContributionResponse)(nil), // 8: contribution.v1.InitiateDarajaSTKContributionResponse
+	(*GetContributionPaymentRequest)(nil),         // 9: contribution.v1.GetContributionPaymentRequest
+	(*GetContributionPaymentResponse)(nil),        // 10: contribution.v1.GetContributionPaymentResponse
+	(*ContributionPaymentReceipt)(nil),            // 11: contribution.v1.ContributionPaymentReceipt
+	(*OpenCashierSessionRequest)(nil),             // 12: contribution.v1.OpenCashierSessionRequest
+	(*GetCashContextRequest)(nil),                 // 13: contribution.v1.GetCashContextRequest
+	(*OpenCashierSessionResponse)(nil),            // 14: contribution.v1.OpenCashierSessionResponse
+	(*CashierSession)(nil),                        // 15: contribution.v1.CashierSession
+	(*CreateCashContributionRequest)(nil),         // 16: contribution.v1.CreateCashContributionRequest
+	(*CashContributionReceipt)(nil),               // 17: contribution.v1.CashContributionReceipt
+	(*CreateCashContributionResponse)(nil),        // 18: contribution.v1.CreateCashContributionResponse
+	(*CloseCashierSessionRequest)(nil),            // 19: contribution.v1.CloseCashierSessionRequest
+	(*CloseCashierSessionResponse)(nil),           // 20: contribution.v1.CloseCashierSessionResponse
+	(*AcceptCashHandoverRequest)(nil),             // 21: contribution.v1.AcceptCashHandoverRequest
+	(*AcceptCashHandoverResponse)(nil),            // 22: contribution.v1.AcceptCashHandoverResponse
+	(*RecordCashDepositRequest)(nil),              // 23: contribution.v1.RecordCashDepositRequest
+	(*CashDeposit)(nil),                           // 24: contribution.v1.CashDeposit
+	(*RecordCashDepositResponse)(nil),             // 25: contribution.v1.RecordCashDepositResponse
+	(*VerifyCashDepositRequest)(nil),              // 26: contribution.v1.VerifyCashDepositRequest
+	(*VerifyCashDepositResponse)(nil),             // 27: contribution.v1.VerifyCashDepositResponse
+	(*ContributionCharge)(nil),                    // 28: contribution.v1.ContributionCharge
+	(*CreateContributionChargeRequest)(nil),       // 29: contribution.v1.CreateContributionChargeRequest
+	(*CreateContributionChargeResponse)(nil),      // 30: contribution.v1.CreateContributionChargeResponse
+	(*ListContributionChargesRequest)(nil),        // 31: contribution.v1.ListContributionChargesRequest
+	(*ListContributionChargesResponse)(nil),       // 32: contribution.v1.ListContributionChargesResponse
+	(*GetCashContextResponse)(nil),                // 33: contribution.v1.GetCashContextResponse
+	(*GetContributionQuoteRequest)(nil),           // 34: contribution.v1.GetContributionQuoteRequest
+	(*GetContributionQuoteResponse)(nil),          // 35: contribution.v1.GetContributionQuoteResponse
+	(*ContributionLoanSummary)(nil),               // 36: contribution.v1.ContributionLoanSummary
+	(*GetCashReceiptRequest)(nil),                 // 37: contribution.v1.GetCashReceiptRequest
+	(*CashReceiptAllocation)(nil),                 // 38: contribution.v1.CashReceiptAllocation
+	(*ListCashierSessionsRequest)(nil),            // 39: contribution.v1.ListCashierSessionsRequest
+	(*ListCashierSessionsResponse)(nil),           // 40: contribution.v1.ListCashierSessionsResponse
+	(*ListCashDepositsRequest)(nil),               // 41: contribution.v1.ListCashDepositsRequest
+	(*ListCashDepositsResponse)(nil),              // 42: contribution.v1.ListCashDepositsResponse
+	(*GetCashDepositRequest)(nil),                 // 43: contribution.v1.GetCashDepositRequest
+	(*GetCashReceiptResponse)(nil),                // 44: contribution.v1.GetCashReceiptResponse
+	(*GetCashDepositResponse)(nil),                // 45: contribution.v1.GetCashDepositResponse
+	(*ListDarajaPaymentsRequest)(nil),             // 46: contribution.v1.ListDarajaPaymentsRequest
+	(*ListDarajaPaymentsResponse)(nil),            // 47: contribution.v1.ListDarajaPaymentsResponse
+	(*DarajaPayment)(nil),                         // 48: contribution.v1.DarajaPayment
+	(*RecoverDarajaPaymentRequest)(nil),           // 49: contribution.v1.RecoverDarajaPaymentRequest
+	(*RecoverDarajaPaymentResponse)(nil),          // 50: contribution.v1.RecoverDarajaPaymentResponse
+	(*structpb.Struct)(nil),                       // 51: google.protobuf.Struct
+	(*v1.Money)(nil),                              // 52: member.v1.Money
+	(*timestamppb.Timestamp)(nil),                 // 53: google.protobuf.Timestamp
 }
 var file_contribution_v1_contribution_proto_depIdxs = []int32{
-	1,  // 0: contribution.v1.ContributionAllocationInput.type:type_name -> contribution.v1.ContributionAllocationType
-	47, // 1: contribution.v1.ContributionAllocationInput.amount:type_name -> member.v1.Money
-	47, // 2: contribution.v1.InitiateDarajaSTKContributionRequest.amount:type_name -> member.v1.Money
-	2,  // 3: contribution.v1.InitiateDarajaSTKContributionRequest.allocations:type_name -> contribution.v1.ContributionAllocationInput
-	0,  // 4: contribution.v1.InitiateDarajaSTKContributionResponse.status:type_name -> contribution.v1.ContributionPaymentRequestStatus
-	48, // 5: contribution.v1.InitiateDarajaSTKContributionResponse.created_at:type_name -> google.protobuf.Timestamp
-	0,  // 6: contribution.v1.GetContributionPaymentResponse.status:type_name -> contribution.v1.ContributionPaymentRequestStatus
-	47, // 7: contribution.v1.GetContributionPaymentResponse.amount:type_name -> member.v1.Money
-	48, // 8: contribution.v1.GetContributionPaymentResponse.created_at:type_name -> google.protobuf.Timestamp
-	7,  // 9: contribution.v1.GetContributionPaymentResponse.receipt:type_name -> contribution.v1.ContributionPaymentReceipt
-	47, // 10: contribution.v1.ContributionPaymentReceipt.amount:type_name -> member.v1.Money
-	48, // 11: contribution.v1.ContributionPaymentReceipt.received_at:type_name -> google.protobuf.Timestamp
-	32, // 12: contribution.v1.ContributionPaymentReceipt.loans:type_name -> contribution.v1.ContributionLoanSummary
-	11, // 13: contribution.v1.OpenCashierSessionResponse.session:type_name -> contribution.v1.CashierSession
-	47, // 14: contribution.v1.CashierSession.expected_amount:type_name -> member.v1.Money
-	47, // 15: contribution.v1.CashierSession.counted_amount:type_name -> member.v1.Money
-	47, // 16: contribution.v1.CashierSession.variance:type_name -> member.v1.Money
-	48, // 17: contribution.v1.CashierSession.opened_at:type_name -> google.protobuf.Timestamp
-	48, // 18: contribution.v1.CashierSession.closed_at:type_name -> google.protobuf.Timestamp
-	48, // 19: contribution.v1.CashierSession.handed_over_at:type_name -> google.protobuf.Timestamp
-	48, // 20: contribution.v1.CashierSession.deposited_at:type_name -> google.protobuf.Timestamp
-	47, // 21: contribution.v1.CreateCashContributionRequest.amount:type_name -> member.v1.Money
-	2,  // 22: contribution.v1.CreateCashContributionRequest.allocations:type_name -> contribution.v1.ContributionAllocationInput
-	47, // 23: contribution.v1.CashContributionReceipt.amount:type_name -> member.v1.Money
-	48, // 24: contribution.v1.CashContributionReceipt.received_at:type_name -> google.protobuf.Timestamp
-	34, // 25: contribution.v1.CashContributionReceipt.allocations:type_name -> contribution.v1.CashReceiptAllocation
-	32, // 26: contribution.v1.CashContributionReceipt.loans:type_name -> contribution.v1.ContributionLoanSummary
-	13, // 27: contribution.v1.CreateCashContributionResponse.receipt:type_name -> contribution.v1.CashContributionReceipt
-	47, // 28: contribution.v1.CloseCashierSessionRequest.counted_amount:type_name -> member.v1.Money
-	11, // 29: contribution.v1.CloseCashierSessionResponse.session:type_name -> contribution.v1.CashierSession
-	11, // 30: contribution.v1.AcceptCashHandoverResponse.session:type_name -> contribution.v1.CashierSession
-	47, // 31: contribution.v1.RecordCashDepositRequest.amount:type_name -> member.v1.Money
-	47, // 32: contribution.v1.CashDeposit.amount:type_name -> member.v1.Money
-	48, // 33: contribution.v1.CashDeposit.recorded_at:type_name -> google.protobuf.Timestamp
-	48, // 34: contribution.v1.CashDeposit.verified_at:type_name -> google.protobuf.Timestamp
-	20, // 35: contribution.v1.RecordCashDepositResponse.deposit:type_name -> contribution.v1.CashDeposit
-	20, // 36: contribution.v1.VerifyCashDepositResponse.deposit:type_name -> contribution.v1.CashDeposit
-	47, // 37: contribution.v1.ContributionCharge.amount:type_name -> member.v1.Money
-	47, // 38: contribution.v1.ContributionCharge.paid:type_name -> member.v1.Money
-	47, // 39: contribution.v1.ContributionCharge.outstanding:type_name -> member.v1.Money
-	48, // 40: contribution.v1.ContributionCharge.created_at:type_name -> google.protobuf.Timestamp
-	47, // 41: contribution.v1.CreateContributionChargeRequest.amount:type_name -> member.v1.Money
-	24, // 42: contribution.v1.CreateContributionChargeResponse.charge:type_name -> contribution.v1.ContributionCharge
-	24, // 43: contribution.v1.ListContributionChargesResponse.charges:type_name -> contribution.v1.ContributionCharge
-	2,  // 44: contribution.v1.GetContributionQuoteResponse.fees:type_name -> contribution.v1.ContributionAllocationInput
-	32, // 45: contribution.v1.GetContributionQuoteResponse.loans:type_name -> contribution.v1.ContributionLoanSummary
-	1,  // 46: contribution.v1.CashReceiptAllocation.type:type_name -> contribution.v1.ContributionAllocationType
-	47, // 47: contribution.v1.CashReceiptAllocation.amount:type_name -> member.v1.Money
-	11, // 48: contribution.v1.ListCashierSessionsResponse.sessions:type_name -> contribution.v1.CashierSession
-	20, // 49: contribution.v1.ListCashDepositsResponse.deposits:type_name -> contribution.v1.CashDeposit
-	13, // 50: contribution.v1.GetCashReceiptResponse.receipt:type_name -> contribution.v1.CashContributionReceipt
-	20, // 51: contribution.v1.GetCashDepositResponse.deposit:type_name -> contribution.v1.CashDeposit
-	44, // 52: contribution.v1.ListDarajaPaymentsResponse.payments:type_name -> contribution.v1.DarajaPayment
-	47, // 53: contribution.v1.DarajaPayment.amount:type_name -> member.v1.Money
-	48, // 54: contribution.v1.DarajaPayment.created_at:type_name -> google.protobuf.Timestamp
-	47, // 55: contribution.v1.RecoverDarajaPaymentRequest.amount:type_name -> member.v1.Money
-	48, // 56: contribution.v1.RecoverDarajaPaymentRequest.received_at:type_name -> google.protobuf.Timestamp
-	6,  // 57: contribution.v1.RecoverDarajaPaymentResponse.payment:type_name -> contribution.v1.GetContributionPaymentResponse
-	42, // 58: contribution.v1.ContributionService.ListDarajaPayments:input_type -> contribution.v1.ListDarajaPaymentsRequest
-	45, // 59: contribution.v1.ContributionService.RecoverDarajaPayment:input_type -> contribution.v1.RecoverDarajaPaymentRequest
-	9,  // 60: contribution.v1.ContributionService.GetCashContext:input_type -> contribution.v1.GetCashContextRequest
-	5,  // 61: contribution.v1.ContributionService.GetContributionPayment:input_type -> contribution.v1.GetContributionPaymentRequest
-	30, // 62: contribution.v1.ContributionService.GetContributionQuote:input_type -> contribution.v1.GetContributionQuoteRequest
-	33, // 63: contribution.v1.ContributionService.GetCashReceipt:input_type -> contribution.v1.GetCashReceiptRequest
-	35, // 64: contribution.v1.ContributionService.ListCashierSessions:input_type -> contribution.v1.ListCashierSessionsRequest
-	37, // 65: contribution.v1.ContributionService.ListCashDeposits:input_type -> contribution.v1.ListCashDepositsRequest
-	39, // 66: contribution.v1.ContributionService.GetCashDeposit:input_type -> contribution.v1.GetCashDepositRequest
-	25, // 67: contribution.v1.ContributionService.CreateContributionCharge:input_type -> contribution.v1.CreateContributionChargeRequest
-	27, // 68: contribution.v1.ContributionService.ListContributionCharges:input_type -> contribution.v1.ListContributionChargesRequest
-	3,  // 69: contribution.v1.ContributionService.InitiateDarajaSTKContribution:input_type -> contribution.v1.InitiateDarajaSTKContributionRequest
-	8,  // 70: contribution.v1.ContributionService.OpenCashierSession:input_type -> contribution.v1.OpenCashierSessionRequest
-	12, // 71: contribution.v1.ContributionService.CreateCashContribution:input_type -> contribution.v1.CreateCashContributionRequest
-	15, // 72: contribution.v1.ContributionService.CloseCashierSession:input_type -> contribution.v1.CloseCashierSessionRequest
-	17, // 73: contribution.v1.ContributionService.AcceptCashHandover:input_type -> contribution.v1.AcceptCashHandoverRequest
-	19, // 74: contribution.v1.ContributionService.RecordCashDeposit:input_type -> contribution.v1.RecordCashDepositRequest
-	22, // 75: contribution.v1.ContributionService.VerifyCashDeposit:input_type -> contribution.v1.VerifyCashDepositRequest
-	43, // 76: contribution.v1.ContributionService.ListDarajaPayments:output_type -> contribution.v1.ListDarajaPaymentsResponse
-	46, // 77: contribution.v1.ContributionService.RecoverDarajaPayment:output_type -> contribution.v1.RecoverDarajaPaymentResponse
-	29, // 78: contribution.v1.ContributionService.GetCashContext:output_type -> contribution.v1.GetCashContextResponse
-	6,  // 79: contribution.v1.ContributionService.GetContributionPayment:output_type -> contribution.v1.GetContributionPaymentResponse
-	31, // 80: contribution.v1.ContributionService.GetContributionQuote:output_type -> contribution.v1.GetContributionQuoteResponse
-	40, // 81: contribution.v1.ContributionService.GetCashReceipt:output_type -> contribution.v1.GetCashReceiptResponse
-	36, // 82: contribution.v1.ContributionService.ListCashierSessions:output_type -> contribution.v1.ListCashierSessionsResponse
-	38, // 83: contribution.v1.ContributionService.ListCashDeposits:output_type -> contribution.v1.ListCashDepositsResponse
-	41, // 84: contribution.v1.ContributionService.GetCashDeposit:output_type -> contribution.v1.GetCashDepositResponse
-	26, // 85: contribution.v1.ContributionService.CreateContributionCharge:output_type -> contribution.v1.CreateContributionChargeResponse
-	28, // 86: contribution.v1.ContributionService.ListContributionCharges:output_type -> contribution.v1.ListContributionChargesResponse
-	4,  // 87: contribution.v1.ContributionService.InitiateDarajaSTKContribution:output_type -> contribution.v1.InitiateDarajaSTKContributionResponse
-	10, // 88: contribution.v1.ContributionService.OpenCashierSession:output_type -> contribution.v1.OpenCashierSessionResponse
-	14, // 89: contribution.v1.ContributionService.CreateCashContribution:output_type -> contribution.v1.CreateCashContributionResponse
-	16, // 90: contribution.v1.ContributionService.CloseCashierSession:output_type -> contribution.v1.CloseCashierSessionResponse
-	18, // 91: contribution.v1.ContributionService.AcceptCashHandover:output_type -> contribution.v1.AcceptCashHandoverResponse
-	21, // 92: contribution.v1.ContributionService.RecordCashDeposit:output_type -> contribution.v1.RecordCashDepositResponse
-	23, // 93: contribution.v1.ContributionService.VerifyCashDeposit:output_type -> contribution.v1.VerifyCashDepositResponse
-	76, // [76:94] is the sub-list for method output_type
-	58, // [58:76] is the sub-list for method input_type
-	58, // [58:58] is the sub-list for extension type_name
-	58, // [58:58] is the sub-list for extension extendee
-	0,  // [0:58] is the sub-list for field type_name
+	51, // 0: contribution.v1.GetCEEPReportResponse.report:type_name -> google.protobuf.Struct
+	51, // 1: contribution.v1.FinalizeCEEPReportResponse.report:type_name -> google.protobuf.Struct
+	1,  // 2: contribution.v1.ContributionAllocationInput.type:type_name -> contribution.v1.ContributionAllocationType
+	52, // 3: contribution.v1.ContributionAllocationInput.amount:type_name -> member.v1.Money
+	52, // 4: contribution.v1.InitiateDarajaSTKContributionRequest.amount:type_name -> member.v1.Money
+	6,  // 5: contribution.v1.InitiateDarajaSTKContributionRequest.allocations:type_name -> contribution.v1.ContributionAllocationInput
+	0,  // 6: contribution.v1.InitiateDarajaSTKContributionResponse.status:type_name -> contribution.v1.ContributionPaymentRequestStatus
+	53, // 7: contribution.v1.InitiateDarajaSTKContributionResponse.created_at:type_name -> google.protobuf.Timestamp
+	0,  // 8: contribution.v1.GetContributionPaymentResponse.status:type_name -> contribution.v1.ContributionPaymentRequestStatus
+	52, // 9: contribution.v1.GetContributionPaymentResponse.amount:type_name -> member.v1.Money
+	53, // 10: contribution.v1.GetContributionPaymentResponse.created_at:type_name -> google.protobuf.Timestamp
+	11, // 11: contribution.v1.GetContributionPaymentResponse.receipt:type_name -> contribution.v1.ContributionPaymentReceipt
+	52, // 12: contribution.v1.ContributionPaymentReceipt.amount:type_name -> member.v1.Money
+	53, // 13: contribution.v1.ContributionPaymentReceipt.received_at:type_name -> google.protobuf.Timestamp
+	36, // 14: contribution.v1.ContributionPaymentReceipt.loans:type_name -> contribution.v1.ContributionLoanSummary
+	15, // 15: contribution.v1.OpenCashierSessionResponse.session:type_name -> contribution.v1.CashierSession
+	52, // 16: contribution.v1.CashierSession.expected_amount:type_name -> member.v1.Money
+	52, // 17: contribution.v1.CashierSession.counted_amount:type_name -> member.v1.Money
+	52, // 18: contribution.v1.CashierSession.variance:type_name -> member.v1.Money
+	53, // 19: contribution.v1.CashierSession.opened_at:type_name -> google.protobuf.Timestamp
+	53, // 20: contribution.v1.CashierSession.closed_at:type_name -> google.protobuf.Timestamp
+	53, // 21: contribution.v1.CashierSession.handed_over_at:type_name -> google.protobuf.Timestamp
+	53, // 22: contribution.v1.CashierSession.deposited_at:type_name -> google.protobuf.Timestamp
+	52, // 23: contribution.v1.CreateCashContributionRequest.amount:type_name -> member.v1.Money
+	6,  // 24: contribution.v1.CreateCashContributionRequest.allocations:type_name -> contribution.v1.ContributionAllocationInput
+	52, // 25: contribution.v1.CashContributionReceipt.amount:type_name -> member.v1.Money
+	53, // 26: contribution.v1.CashContributionReceipt.received_at:type_name -> google.protobuf.Timestamp
+	38, // 27: contribution.v1.CashContributionReceipt.allocations:type_name -> contribution.v1.CashReceiptAllocation
+	36, // 28: contribution.v1.CashContributionReceipt.loans:type_name -> contribution.v1.ContributionLoanSummary
+	17, // 29: contribution.v1.CreateCashContributionResponse.receipt:type_name -> contribution.v1.CashContributionReceipt
+	52, // 30: contribution.v1.CloseCashierSessionRequest.counted_amount:type_name -> member.v1.Money
+	15, // 31: contribution.v1.CloseCashierSessionResponse.session:type_name -> contribution.v1.CashierSession
+	15, // 32: contribution.v1.AcceptCashHandoverResponse.session:type_name -> contribution.v1.CashierSession
+	52, // 33: contribution.v1.RecordCashDepositRequest.amount:type_name -> member.v1.Money
+	52, // 34: contribution.v1.CashDeposit.amount:type_name -> member.v1.Money
+	53, // 35: contribution.v1.CashDeposit.recorded_at:type_name -> google.protobuf.Timestamp
+	53, // 36: contribution.v1.CashDeposit.verified_at:type_name -> google.protobuf.Timestamp
+	24, // 37: contribution.v1.RecordCashDepositResponse.deposit:type_name -> contribution.v1.CashDeposit
+	24, // 38: contribution.v1.VerifyCashDepositResponse.deposit:type_name -> contribution.v1.CashDeposit
+	52, // 39: contribution.v1.ContributionCharge.amount:type_name -> member.v1.Money
+	52, // 40: contribution.v1.ContributionCharge.paid:type_name -> member.v1.Money
+	52, // 41: contribution.v1.ContributionCharge.outstanding:type_name -> member.v1.Money
+	53, // 42: contribution.v1.ContributionCharge.created_at:type_name -> google.protobuf.Timestamp
+	52, // 43: contribution.v1.CreateContributionChargeRequest.amount:type_name -> member.v1.Money
+	28, // 44: contribution.v1.CreateContributionChargeResponse.charge:type_name -> contribution.v1.ContributionCharge
+	28, // 45: contribution.v1.ListContributionChargesResponse.charges:type_name -> contribution.v1.ContributionCharge
+	6,  // 46: contribution.v1.GetContributionQuoteResponse.fees:type_name -> contribution.v1.ContributionAllocationInput
+	36, // 47: contribution.v1.GetContributionQuoteResponse.loans:type_name -> contribution.v1.ContributionLoanSummary
+	1,  // 48: contribution.v1.CashReceiptAllocation.type:type_name -> contribution.v1.ContributionAllocationType
+	52, // 49: contribution.v1.CashReceiptAllocation.amount:type_name -> member.v1.Money
+	15, // 50: contribution.v1.ListCashierSessionsResponse.sessions:type_name -> contribution.v1.CashierSession
+	24, // 51: contribution.v1.ListCashDepositsResponse.deposits:type_name -> contribution.v1.CashDeposit
+	17, // 52: contribution.v1.GetCashReceiptResponse.receipt:type_name -> contribution.v1.CashContributionReceipt
+	24, // 53: contribution.v1.GetCashDepositResponse.deposit:type_name -> contribution.v1.CashDeposit
+	48, // 54: contribution.v1.ListDarajaPaymentsResponse.payments:type_name -> contribution.v1.DarajaPayment
+	52, // 55: contribution.v1.DarajaPayment.amount:type_name -> member.v1.Money
+	53, // 56: contribution.v1.DarajaPayment.created_at:type_name -> google.protobuf.Timestamp
+	52, // 57: contribution.v1.RecoverDarajaPaymentRequest.amount:type_name -> member.v1.Money
+	53, // 58: contribution.v1.RecoverDarajaPaymentRequest.received_at:type_name -> google.protobuf.Timestamp
+	10, // 59: contribution.v1.RecoverDarajaPaymentResponse.payment:type_name -> contribution.v1.GetContributionPaymentResponse
+	2,  // 60: contribution.v1.ContributionService.GetCEEPReport:input_type -> contribution.v1.GetCEEPReportRequest
+	4,  // 61: contribution.v1.ContributionService.FinalizeCEEPReport:input_type -> contribution.v1.FinalizeCEEPReportRequest
+	46, // 62: contribution.v1.ContributionService.ListDarajaPayments:input_type -> contribution.v1.ListDarajaPaymentsRequest
+	49, // 63: contribution.v1.ContributionService.RecoverDarajaPayment:input_type -> contribution.v1.RecoverDarajaPaymentRequest
+	13, // 64: contribution.v1.ContributionService.GetCashContext:input_type -> contribution.v1.GetCashContextRequest
+	9,  // 65: contribution.v1.ContributionService.GetContributionPayment:input_type -> contribution.v1.GetContributionPaymentRequest
+	34, // 66: contribution.v1.ContributionService.GetContributionQuote:input_type -> contribution.v1.GetContributionQuoteRequest
+	37, // 67: contribution.v1.ContributionService.GetCashReceipt:input_type -> contribution.v1.GetCashReceiptRequest
+	39, // 68: contribution.v1.ContributionService.ListCashierSessions:input_type -> contribution.v1.ListCashierSessionsRequest
+	41, // 69: contribution.v1.ContributionService.ListCashDeposits:input_type -> contribution.v1.ListCashDepositsRequest
+	43, // 70: contribution.v1.ContributionService.GetCashDeposit:input_type -> contribution.v1.GetCashDepositRequest
+	29, // 71: contribution.v1.ContributionService.CreateContributionCharge:input_type -> contribution.v1.CreateContributionChargeRequest
+	31, // 72: contribution.v1.ContributionService.ListContributionCharges:input_type -> contribution.v1.ListContributionChargesRequest
+	7,  // 73: contribution.v1.ContributionService.InitiateDarajaSTKContribution:input_type -> contribution.v1.InitiateDarajaSTKContributionRequest
+	12, // 74: contribution.v1.ContributionService.OpenCashierSession:input_type -> contribution.v1.OpenCashierSessionRequest
+	16, // 75: contribution.v1.ContributionService.CreateCashContribution:input_type -> contribution.v1.CreateCashContributionRequest
+	19, // 76: contribution.v1.ContributionService.CloseCashierSession:input_type -> contribution.v1.CloseCashierSessionRequest
+	21, // 77: contribution.v1.ContributionService.AcceptCashHandover:input_type -> contribution.v1.AcceptCashHandoverRequest
+	23, // 78: contribution.v1.ContributionService.RecordCashDeposit:input_type -> contribution.v1.RecordCashDepositRequest
+	26, // 79: contribution.v1.ContributionService.VerifyCashDeposit:input_type -> contribution.v1.VerifyCashDepositRequest
+	3,  // 80: contribution.v1.ContributionService.GetCEEPReport:output_type -> contribution.v1.GetCEEPReportResponse
+	5,  // 81: contribution.v1.ContributionService.FinalizeCEEPReport:output_type -> contribution.v1.FinalizeCEEPReportResponse
+	47, // 82: contribution.v1.ContributionService.ListDarajaPayments:output_type -> contribution.v1.ListDarajaPaymentsResponse
+	50, // 83: contribution.v1.ContributionService.RecoverDarajaPayment:output_type -> contribution.v1.RecoverDarajaPaymentResponse
+	33, // 84: contribution.v1.ContributionService.GetCashContext:output_type -> contribution.v1.GetCashContextResponse
+	10, // 85: contribution.v1.ContributionService.GetContributionPayment:output_type -> contribution.v1.GetContributionPaymentResponse
+	35, // 86: contribution.v1.ContributionService.GetContributionQuote:output_type -> contribution.v1.GetContributionQuoteResponse
+	44, // 87: contribution.v1.ContributionService.GetCashReceipt:output_type -> contribution.v1.GetCashReceiptResponse
+	40, // 88: contribution.v1.ContributionService.ListCashierSessions:output_type -> contribution.v1.ListCashierSessionsResponse
+	42, // 89: contribution.v1.ContributionService.ListCashDeposits:output_type -> contribution.v1.ListCashDepositsResponse
+	45, // 90: contribution.v1.ContributionService.GetCashDeposit:output_type -> contribution.v1.GetCashDepositResponse
+	30, // 91: contribution.v1.ContributionService.CreateContributionCharge:output_type -> contribution.v1.CreateContributionChargeResponse
+	32, // 92: contribution.v1.ContributionService.ListContributionCharges:output_type -> contribution.v1.ListContributionChargesResponse
+	8,  // 93: contribution.v1.ContributionService.InitiateDarajaSTKContribution:output_type -> contribution.v1.InitiateDarajaSTKContributionResponse
+	14, // 94: contribution.v1.ContributionService.OpenCashierSession:output_type -> contribution.v1.OpenCashierSessionResponse
+	18, // 95: contribution.v1.ContributionService.CreateCashContribution:output_type -> contribution.v1.CreateCashContributionResponse
+	20, // 96: contribution.v1.ContributionService.CloseCashierSession:output_type -> contribution.v1.CloseCashierSessionResponse
+	22, // 97: contribution.v1.ContributionService.AcceptCashHandover:output_type -> contribution.v1.AcceptCashHandoverResponse
+	25, // 98: contribution.v1.ContributionService.RecordCashDeposit:output_type -> contribution.v1.RecordCashDepositResponse
+	27, // 99: contribution.v1.ContributionService.VerifyCashDeposit:output_type -> contribution.v1.VerifyCashDepositResponse
+	80, // [80:100] is the sub-list for method output_type
+	60, // [60:80] is the sub-list for method input_type
+	60, // [60:60] is the sub-list for extension type_name
+	60, // [60:60] is the sub-list for extension extendee
+	0,  // [0:60] is the sub-list for field type_name
 }
 
 func init() { file_contribution_v1_contribution_proto_init() }
@@ -3715,7 +4001,7 @@ func file_contribution_v1_contribution_proto_init() {
 	if File_contribution_v1_contribution_proto != nil {
 		return
 	}
-	file_contribution_v1_contribution_proto_msgTypes[3].OneofWrappers = []any{
+	file_contribution_v1_contribution_proto_msgTypes[7].OneofWrappers = []any{
 		(*GetContributionPaymentRequest_PaymentRequestId)(nil),
 		(*GetContributionPaymentRequest_IdempotencyKey)(nil),
 	}
@@ -3725,7 +4011,7 @@ func file_contribution_v1_contribution_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_contribution_v1_contribution_proto_rawDesc), len(file_contribution_v1_contribution_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   45,
+			NumMessages:   49,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

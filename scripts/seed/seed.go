@@ -37,8 +37,8 @@ func main() {
 	// Fictional profiles; contact details are illustrative, not verified recipients.
 	profiles := []struct {
 		name, nationalID, phone, email, address, born, occupation, employer string
-		income                                                           int64
-		kin, kinPhone, relationship                                       string
+		income                                                              int64
+		kin, kinPhone, relationship                                         string
 	}{
 		{"Peter Mwangi Kamau", "24871635", "+254722684193", "petermkamau82@gmail.com", "Githurai 45, Ruiru, Kiambu", "1982-04-17", "Hardware shop owner", "Kamau Hardware Supplies", 85000, "Lucy Wanjiku Kamau", "+254720936482", "spouse"},
 		{"Grace Wanjiku Njoroge", "31749268", "+254710593827", "grace.wnjoroge@gmail.com", "Kahawa West, Nairobi", "1991-08-23", "Primary school teacher", "Tumaini Academy", 58000, "Daniel Maina Njoroge", "+254724861539", "spouse"},
@@ -63,7 +63,7 @@ func main() {
 			seeded, err = members.RegisterMember(ctx, member.DefaultBranchID, p.nationalID, sqlc.CreateMemberProfileParams{
 				FullName: p.name, Phone: p.phone, Email: p.email,
 				Address:               pgtype.Text{String: p.address, Valid: true},
-				DateOfBirth:            pgtype.Date{Time: born, Valid: true},
+				DateOfBirth:           pgtype.Date{Time: born, Valid: true},
 				Occupation:            pgtype.Text{String: p.occupation, Valid: true},
 				Employer:              pgtype.Text{String: p.employer, Valid: true},
 				MonthlyIncome:         pgtype.Numeric{Int: big.NewInt(p.income), Valid: true},
@@ -145,7 +145,7 @@ loan_seed AS (
 ),
 seed_loans AS (
  INSERT INTO loans (id,member_id,branch_id,principal,interest_rate,repayment_period_months,status,disbursed_at,created_at,updated_by)
- SELECT l.id,m.id,1,l.principal,1,12,'active','2026-08-20 11:00+03','2026-08-18 09:00+03',
+ SELECT l.id,m.id,1,l.principal,0.01,12,'active','2026-08-20 11:00+03','2026-08-18 09:00+03',
  (SELECT id FROM staff WHERE email='james.kariuki@caritas.co.ke') FROM loan_seed l JOIN seed_members m USING(n)
  ON CONFLICT DO NOTHING RETURNING id
 ),

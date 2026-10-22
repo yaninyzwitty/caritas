@@ -394,6 +394,7 @@ func (h *Handlers) ListLoans(ctx context.Context, req *loanv1.ListLoansRequest) 
 	})
 
 	if err != nil {
+		slog.ErrorContext(ctx, "list loans failed", "branch_id", defaultBranchID, "error", err)
 		return nil, mapServiceError(err)
 	}
 

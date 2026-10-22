@@ -41,7 +41,6 @@ func NewService(store *Store, memberService *member.Service) *Service {
 }
 
 func (s *Service) ApplyForLoan(ctx context.Context, params loansqlc.CreateLoanParams, sharePledge pgtype.Numeric, guarantors []ProposedGuarantor) (loansqlc.CreateLoanRow, error) {
-	// increase timeout to prevent defer tx rollback errors, due to context time getting done
 	applyLoanCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 	if !positive(params.Principal) {
@@ -56,12 +55,11 @@ func (s *Service) ApplyForLoan(ctx context.Context, params loansqlc.CreateLoanPa
 	if len(guarantors) > maxGuarantors {
 		return loansqlc.CreateLoanRow{}, ErrTooManyGuarantors
 	}
-	if err := s.requireActiveMember(applyLoanCtx, params.MemberID, ErrMemberNotActive); err != nil {
-		return loansqlc.CreateLoanRow{}, err
-	}
-
 	totalGuarantee := new(big.Int)
-	seen := make(map[pgtype.UUID]struct{}, len(guarantors))
+	proposedGuarantees := make(map[pgtype.UUID]pgtype.Numeric, len(guarantors))
+	memberIDs := []pgtype.UUID{params.MemberID}
+	guarantorIDs := make([]pgtype.UUID, 0, len(guarantors))
+	guaranteedAmounts := make([]pgtype.Numeric, 0, len(guarantors))
 	for _, guarantor := range guarantors {
 		if !positive(guarantor.GuaranteedAmount) {
 			return loansqlc.CreateLoanRow{}, ErrInvalidGuaranteedAmount
@@ -69,14 +67,13 @@ func (s *Service) ApplyForLoan(ctx context.Context, params loansqlc.CreateLoanPa
 		if sameUUID(params.MemberID, guarantor.GuarantorID) {
 			return loansqlc.CreateLoanRow{}, ErrSelfGuarantee
 		}
-		if _, ok := seen[guarantor.GuarantorID]; ok {
+		if _, ok := proposedGuarantees[guarantor.GuarantorID]; ok {
 			return loansqlc.CreateLoanRow{}, ErrDuplicateGuarantor
 		}
-		seen[guarantor.GuarantorID] = struct{}{}
-
-		if err := s.requireActiveMember(applyLoanCtx, guarantor.GuarantorID, ErrGuarantorNotActive); err != nil {
-			return loansqlc.CreateLoanRow{}, err
-		}
+		proposedGuarantees[guarantor.GuarantorID] = guarantor.GuaranteedAmount
+		memberIDs = append(memberIDs, guarantor.GuarantorID)
+		guarantorIDs = append(guarantorIDs, guarantor.GuarantorID)
+		guaranteedAmounts = append(guaranteedAmounts, guarantor.GuaranteedAmount)
 		totalGuarantee.Add(totalGuarantee, numericToScale(guarantor.GuaranteedAmount, -4))
 	}
 	if numericToScale(sharePledge, -4).Sign() < 0 {
@@ -88,35 +85,36 @@ func (s *Service) ApplyForLoan(ctx context.Context, params loansqlc.CreateLoanPa
 
 	var loan loansqlc.CreateLoanRow
 	err := s.store.ExecCollateralTx(applyLoanCtx, func(q *loansqlc.Queries, shares *sharesqlc.Queries, tx pgx.Tx) error {
-		if err := requireActiveMemberInTx(applyLoanCtx, tx, params.MemberID, params.BranchID, ErrMemberNotActive); err != nil {
+		activeIDs, err := member.LockActiveMembersInTx(applyLoanCtx, tx, memberIDs, params.BranchID)
+		if err != nil {
 			return err
 		}
-		for _, guarantor := range guarantors {
-			if err := requireActiveMemberInTx(applyLoanCtx, tx, guarantor.GuarantorID, params.BranchID, ErrGuarantorNotActive); err != nil {
-				return err
-			}
-			if _, err := share.CheckGuarantorSecurity(applyLoanCtx, shares, guarantor.GuarantorID, guarantor.GuaranteedAmount); err != nil {
-				return err
+		applicantActive := false
+		for _, id := range activeIDs {
+			if sameUUID(id, params.MemberID) {
+				applicantActive = true
 			}
 		}
-		var err error
+		if !applicantActive {
+			return ErrMemberNotActive
+		}
+		if len(activeIDs) != len(memberIDs) {
+			return ErrGuarantorNotActive
+		}
 		loan, err = q.CreateLoan(applyLoanCtx, params)
 		if err != nil {
 			return fmt.Errorf("create loan: %w", err)
 		}
 
-		for _, guarantor := range guarantors {
-			if _, err := q.CreateLoanGuarantor(applyLoanCtx, loansqlc.CreateLoanGuarantorParams{
-				LoanID:           loan.ID,
-				GuarantorID:      guarantor.GuarantorID,
-				GuaranteedAmount: guarantor.GuaranteedAmount,
-				Status:           loansqlc.GuarantorStatusPending,
-			}); err != nil {
-				return fmt.Errorf("create guarantor: %w", err)
-			}
-		}
-		if err := share.ProposeApplicantSecurity(applyLoanCtx, shares, loan.ID, params.MemberID, params.Principal, sharePledge); err != nil {
+		if err := share.ProposeApplicantSecurity(applyLoanCtx, shares, loan.ID, params.MemberID, params.Principal, sharePledge, proposedGuarantees); err != nil {
 			return err
+		}
+		if len(guarantors) > 0 {
+			if err := q.CreateProposedLoanGuarantors(applyLoanCtx, loansqlc.CreateProposedLoanGuarantorsParams{
+				LoanID: loan.ID, GuarantorIds: guarantorIDs, Amounts: guaranteedAmounts,
+			}); err != nil {
+				return fmt.Errorf("create guarantors: %w", err)
+			}
 		}
 
 		if _, err := q.InsertLoanAuditTrail(applyLoanCtx, loansqlc.InsertLoanAuditTrailParams{

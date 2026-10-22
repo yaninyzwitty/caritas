@@ -35,6 +35,68 @@ var (
 	_ = metadata.Join
 )
 
+var filter_ContributionService_GetCEEPReport_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
+
+func request_ContributionService_GetCEEPReport_0(ctx context.Context, marshaler runtime.Marshaler, client ContributionServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq GetCEEPReportRequest
+		metadata runtime.ServerMetadata
+	)
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
+	}
+	if err := req.ParseForm(); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_ContributionService_GetCEEPReport_0); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	msg, err := client.GetCEEPReport(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_ContributionService_GetCEEPReport_0(ctx context.Context, marshaler runtime.Marshaler, server ContributionServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq GetCEEPReportRequest
+		metadata runtime.ServerMetadata
+	)
+	if err := req.ParseForm(); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_ContributionService_GetCEEPReport_0); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	msg, err := server.GetCEEPReport(ctx, &protoReq)
+	return msg, metadata, err
+}
+
+func request_ContributionService_FinalizeCEEPReport_0(ctx context.Context, marshaler runtime.Marshaler, client ContributionServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq FinalizeCEEPReportRequest
+		metadata runtime.ServerMetadata
+	)
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
+	}
+	msg, err := client.FinalizeCEEPReport(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_ContributionService_FinalizeCEEPReport_0(ctx context.Context, marshaler runtime.Marshaler, server ContributionServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq FinalizeCEEPReportRequest
+		metadata runtime.ServerMetadata
+	)
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	msg, err := server.FinalizeCEEPReport(ctx, &protoReq)
+	return msg, metadata, err
+}
+
 var filter_ContributionService_ListDarajaPayments_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 
 func request_ContributionService_ListDarajaPayments_0(ctx context.Context, marshaler runtime.Marshaler, client ContributionServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
@@ -585,6 +647,46 @@ func local_request_ContributionService_VerifyCashDeposit_0(ctx context.Context, 
 // Note that using this registration option will cause many gRPC library features to stop working. Consider using RegisterContributionServiceHandlerFromEndpoint instead.
 // GRPC interceptors will not work for this type of registration. To use interceptors, you must use the "runtime.WithMiddlewares" option in the "runtime.NewServeMux" call.
 func RegisterContributionServiceHandlerServer(ctx context.Context, mux *runtime.ServeMux, server ContributionServiceServer) error {
+	mux.Handle(http.MethodGet, pattern_ContributionService_GetCEEPReport_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/contribution.v1.ContributionService/GetCEEPReport", runtime.WithHTTPPathPattern("/api/v1/contributions/ceep"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_ContributionService_GetCEEPReport_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_ContributionService_GetCEEPReport_0(annotatedContext, mux, outboundMarshaler, w, req, response_ContributionService_GetCEEPReport_0{resp.(*GetCEEPReportResponse)}, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodPost, pattern_ContributionService_FinalizeCEEPReport_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/contribution.v1.ContributionService/FinalizeCEEPReport", runtime.WithHTTPPathPattern("/api/v1/contributions/ceep/finalize"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_ContributionService_FinalizeCEEPReport_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_ContributionService_FinalizeCEEPReport_0(annotatedContext, mux, outboundMarshaler, w, req, response_ContributionService_FinalizeCEEPReport_0{resp.(*FinalizeCEEPReportResponse)}, mux.GetForwardResponseOptions()...)
+	})
 	mux.Handle(http.MethodGet, pattern_ContributionService_ListDarajaPayments_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
@@ -985,6 +1087,40 @@ func RegisterContributionServiceHandler(ctx context.Context, mux *runtime.ServeM
 // doesn't go through the normal gRPC flow (creating a gRPC client etc.) then it will be up to the passed in
 // "ContributionServiceClient" to call the correct interceptors. This client ignores the HTTP middlewares.
 func RegisterContributionServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux, client ContributionServiceClient) error {
+	mux.Handle(http.MethodGet, pattern_ContributionService_GetCEEPReport_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/contribution.v1.ContributionService/GetCEEPReport", runtime.WithHTTPPathPattern("/api/v1/contributions/ceep"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_ContributionService_GetCEEPReport_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_ContributionService_GetCEEPReport_0(annotatedContext, mux, outboundMarshaler, w, req, response_ContributionService_GetCEEPReport_0{resp.(*GetCEEPReportResponse)}, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodPost, pattern_ContributionService_FinalizeCEEPReport_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/contribution.v1.ContributionService/FinalizeCEEPReport", runtime.WithHTTPPathPattern("/api/v1/contributions/ceep/finalize"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_ContributionService_FinalizeCEEPReport_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_ContributionService_FinalizeCEEPReport_0(annotatedContext, mux, outboundMarshaler, w, req, response_ContributionService_FinalizeCEEPReport_0{resp.(*FinalizeCEEPReportResponse)}, mux.GetForwardResponseOptions()...)
+	})
 	mux.Handle(http.MethodGet, pattern_ContributionService_ListDarajaPayments_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
@@ -1294,7 +1430,27 @@ func RegisterContributionServiceHandlerClient(ctx context.Context, mux *runtime.
 	return nil
 }
 
+type response_ContributionService_GetCEEPReport_0 struct {
+	*GetCEEPReportResponse
+}
+
+func (m response_ContributionService_GetCEEPReport_0) XXX_ResponseBody() interface{} {
+	response := m.GetCEEPReportResponse
+	return response.Report
+}
+
+type response_ContributionService_FinalizeCEEPReport_0 struct {
+	*FinalizeCEEPReportResponse
+}
+
+func (m response_ContributionService_FinalizeCEEPReport_0) XXX_ResponseBody() interface{} {
+	response := m.FinalizeCEEPReportResponse
+	return response.Report
+}
+
 var (
+	pattern_ContributionService_GetCEEPReport_0                 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "contributions", "ceep"}, ""))
+	pattern_ContributionService_FinalizeCEEPReport_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"api", "v1", "contributions", "ceep", "finalize"}, ""))
 	pattern_ContributionService_ListDarajaPayments_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "contributions", "daraja-payments"}, ""))
 	pattern_ContributionService_RecoverDarajaPayment_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "contributions", "recover-daraja"}, ""))
 	pattern_ContributionService_GetCashContext_0                = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v1", "contributions", "cash-context"}, ""))
@@ -1316,6 +1472,8 @@ var (
 )
 
 var (
+	forward_ContributionService_GetCEEPReport_0                 = runtime.ForwardResponseMessage
+	forward_ContributionService_FinalizeCEEPReport_0            = runtime.ForwardResponseMessage
 	forward_ContributionService_ListDarajaPayments_0            = runtime.ForwardResponseMessage
 	forward_ContributionService_RecoverDarajaPayment_0          = runtime.ForwardResponseMessage
 	forward_ContributionService_GetCashContext_0                = runtime.ForwardResponseMessage

@@ -1,7 +1,15 @@
 -- name: CreateLoan :one
-INSERT INTO loans (member_id, branch_id, principal, interest_rate, repayment_period_months, updated_by)
-VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, member_id, branch_id, principal, interest_rate, repayment_period_months, status, disbursed_at, updated_by, previous_status, is_deleted, created_at, updated_at;
+INSERT INTO loans (member_id, branch_id, principal, interest_rate, repayment_period_months, updated_by, application_key, application_hash)
+VALUES ($1, $2, $3, $4, $5, $6, sqlc.narg(application_key), sqlc.narg(application_hash))
+ON CONFLICT DO NOTHING
+RETURNING id, member_id, branch_id, principal, interest_rate, repayment_period_months, status, disbursed_at, updated_by, previous_status, is_deleted, created_at, updated_at, application_key, application_hash;
+
+-- name: LockLoanApplicationKey :exec
+SELECT pg_advisory_xact_lock(hashtextextended(sqlc.arg(application_key)::text, 0));
+
+-- name: GetLoanApplicationByKey :one
+SELECT id, member_id, branch_id, principal, interest_rate, repayment_period_months, status, disbursed_at, updated_by, previous_status, is_deleted, created_at, updated_at, application_key, application_hash
+FROM loans WHERE application_key = $1;
 
 -- name: GetLoanByID :one
 SELECT id, member_id, branch_id, principal, interest_rate, repayment_period_months, status, disbursed_at, updated_by, previous_status, is_deleted, created_at, updated_at

@@ -63,13 +63,48 @@ func CheckGuarantorSecurity(ctx context.Context, q sharesqlc.Querier, memberID p
 	return account.ID, nil
 }
 
-// ProposeApplicantSecurity owns applicant pledge creation inside the loan's
-// transaction; Loans must not independently write share reservations.
-func ProposeApplicantSecurity(ctx context.Context, q sharesqlc.Querier, loanID, memberID pgtype.UUID, principal, amount pgtype.Numeric) error {
-	account, balance, pledged, err := loanSecurityBalances(ctx, q, memberID)
+// ProposeApplicantSecurity checks all proposed security in two queries and owns
+// applicant pledge creation. Call inside the loan transaction so account locks
+// remain held through commit; lock before reading to get balances after any wait.
+func ProposeApplicantSecurity(ctx context.Context, q sharesqlc.Querier, loanID, memberID pgtype.UUID, principal, amount pgtype.Numeric, guarantors map[pgtype.UUID]pgtype.Numeric) error {
+	memberIDs := []pgtype.UUID{memberID}
+	for id := range guarantors {
+		memberIDs = append(memberIDs, id)
+	}
+	// SQL orders by account ID, independent of applicant or guarantor input order.
+	if _, err := q.LockSecurityAccounts(ctx, memberIDs); err != nil {
+		return err
+	}
+	rows, err := q.GetSecurityBalances(ctx, memberIDs)
 	if err != nil {
 		return err
 	}
+	accounts := make(map[pgtype.UUID]sharesqlc.GetSecurityBalancesRow, len(rows))
+	for _, row := range rows {
+		accounts[row.MemberID] = row
+	}
+	for _, id := range memberIDs {
+		account, ok := accounts[id]
+		if !ok {
+			return ErrAccountNotFound
+		}
+		if account.Status != sharesqlc.ShareAccountStatusActive {
+			return ErrAccountNotActive
+		}
+		if guarantee, ok := guarantors[id]; ok {
+			balance, pledged := numericToNanos(account.Balance), numericToNanos(account.Pledged)
+			available := guaranteeAvailable(balance, pledged)
+			if numericToNanos(guarantee).Sign() <= 0 || numericToNanos(guarantee).Cmp(available) > 0 {
+				return fmt.Errorf("%w: this guarantor can offer at most KES %s; shares KES %s, active pledges KES %s. Reduce the guaranteed amount or choose another member",
+					ErrGuaranteeCapacity,
+					new(big.Rat).SetFrac(available, big.NewInt(1_000_000_000)).FloatString(4),
+					new(big.Rat).SetFrac(balance, big.NewInt(1_000_000_000)).FloatString(4),
+					new(big.Rat).SetFrac(pledged, big.NewInt(1_000_000_000)).FloatString(4))
+			}
+		}
+	}
+	account := accounts[memberID]
+	balance, pledged := numericToNanos(account.Balance), numericToNanos(account.Pledged)
 	if new(big.Int).Mul(new(big.Int).Set(balance), big.NewInt(3)).Cmp(numericToNanos(principal)) < 0 {
 		return fmt.Errorf("%w: principal cannot exceed three times the applicant's current shares", ErrLoanSecurity)
 	}

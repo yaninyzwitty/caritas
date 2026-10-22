@@ -12,6 +12,12 @@ import (
 
 const DefaultBranchID = 1
 
+// LockActiveMembersInTx batches eligibility checks and holds membership stable
+// through commit; callers classify missing IDs using their own domain errors.
+func LockActiveMembersInTx(ctx context.Context, tx pgx.Tx, memberIDs []pgtype.UUID, branchID int64) ([]pgtype.UUID, error) {
+	return sqlc.New(tx).LockActiveMembersInBranch(ctx, sqlc.LockActiveMembersInBranchParams{MemberIds: memberIDs, BranchID: branchID})
+}
+
 // RequireActiveMemberInTx holds eligibility stable until cash acceptance commits.
 // A separate read would allow a member suspension between validation and receipt creation.
 func RequireActiveMemberInTx(ctx context.Context, tx pgx.Tx, memberID pgtype.UUID, branchID int64) error {

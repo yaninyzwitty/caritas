@@ -8,6 +8,13 @@ SELECT loan_id, guarantor_id, guaranteed_amount, status, approved_at, approved_b
 FROM loan_guarantors
 WHERE loan_id = $1 AND guarantor_id = $2;
 
+-- name: CreateProposedLoanGuarantors :exec
+INSERT INTO loan_guarantors (loan_id, guarantor_id, guaranteed_amount, status)
+SELECT sqlc.arg(loan_id), proposal.guarantor_id, proposal.amount, 'pending'
+FROM (SELECT unnest(sqlc.arg(guarantor_ids)::uuid[]) AS guarantor_id,
+             unnest(sqlc.arg(amounts)::numeric[]) AS amount) AS proposal
+ON CONFLICT DO NOTHING;
+
 -- name: ListLoanGuarantors :many
 SELECT lg.loan_id, lg.guarantor_id, lg.guaranteed_amount, lg.status, lg.approved_at, lg.approved_by, lg.created_at,
        m.member_number AS guarantor_number, COALESCE(mp.full_name, '')::text AS guarantor_name
