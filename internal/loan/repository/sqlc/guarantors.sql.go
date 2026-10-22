@@ -59,6 +59,25 @@ func (q *Queries) CreateLoanGuarantor(ctx context.Context, arg CreateLoanGuarant
 	return i, err
 }
 
+const createProposedLoanGuarantors = `-- name: CreateProposedLoanGuarantors :exec
+INSERT INTO loan_guarantors (loan_id, guarantor_id, guaranteed_amount, status)
+SELECT $1, proposal.guarantor_id, proposal.amount, 'pending'
+FROM (SELECT unnest($2::uuid[]) AS guarantor_id,
+             unnest($3::numeric[]) AS amount) AS proposal
+ON CONFLICT DO NOTHING
+`
+
+type CreateProposedLoanGuarantorsParams struct {
+	LoanID       pgtype.UUID      `json:"loanId"`
+	GuarantorIds []pgtype.UUID    `json:"guarantorIds"`
+	Amounts      []pgtype.Numeric `json:"amounts"`
+}
+
+func (q *Queries) CreateProposedLoanGuarantors(ctx context.Context, arg CreateProposedLoanGuarantorsParams) error {
+	_, err := q.db.Exec(ctx, createProposedLoanGuarantors, arg.LoanID, arg.GuarantorIds, arg.Amounts)
+	return err
+}
+
 const getLoanGuarantor = `-- name: GetLoanGuarantor :one
 SELECT loan_id, guarantor_id, guaranteed_amount, status, approved_at, approved_by, created_at
 FROM loan_guarantors

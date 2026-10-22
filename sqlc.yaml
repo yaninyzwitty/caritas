@@ -1,6 +1,16 @@
 version: "2"
 sql:
   - engine: "postgresql"
+    queries: "internal/ceepdb/queries.sql"
+    schema: "migrations/"
+    gen:
+      go:
+        package: "ceepdb"
+        out: "internal/ceepdb"
+        sql_package: "pgx/v5"
+        emit_interface: false
+        omit_unused_structs: true
+  - engine: "postgresql"
     queries: "internal/member/"
     schema: "migrations/"
     gen:

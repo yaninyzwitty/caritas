@@ -20,6 +20,7 @@ type Querier interface {
 	GetNextMemberNumber(ctx context.Context, branchID int64) (int64, error)
 	IncrementMemberNumber(ctx context.Context, branchID int64) (int32, error)
 	ListMembersByBranchCursor(ctx context.Context, arg ListMembersByBranchCursorParams) ([]ListMembersByBranchCursorRow, error)
+	LockActiveMembersInBranch(ctx context.Context, arg LockActiveMembersInBranchParams) ([]pgtype.UUID, error)
 	MemberExistsByBranchAndNationalID(ctx context.Context, arg MemberExistsByBranchAndNationalIDParams) (MemberExistsByBranchAndNationalIDRow, error)
 	RecordMemberStatusTransition(ctx context.Context, arg RecordMemberStatusTransitionParams) error
 	RecoverMemberNumberCounter(ctx context.Context, branchID int64) error

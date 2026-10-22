@@ -12,9 +12,10 @@ import (
 )
 
 const createLoan = `-- name: CreateLoan :one
-INSERT INTO loans (member_id, branch_id, principal, interest_rate, repayment_period_months, updated_by)
-VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, member_id, branch_id, principal, interest_rate, repayment_period_months, status, disbursed_at, updated_by, previous_status, is_deleted, created_at, updated_at
+INSERT INTO loans (member_id, branch_id, principal, interest_rate, repayment_period_months, updated_by, application_key, application_hash)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+ON CONFLICT DO NOTHING
+RETURNING id, member_id, branch_id, principal, interest_rate, repayment_period_months, status, disbursed_at, updated_by, previous_status, is_deleted, created_at, updated_at, application_key, application_hash
 `
 
 type CreateLoanParams struct {
@@ -24,6 +25,8 @@ type CreateLoanParams struct {
 	InterestRate          pgtype.Numeric `json:"interestRate"`
 	RepaymentPeriodMonths int32          `json:"repaymentPeriodMonths"`
 	UpdatedBy             pgtype.UUID    `json:"updatedBy"`
+	ApplicationKey        pgtype.UUID    `json:"applicationKey"`
+	ApplicationHash       pgtype.Text    `json:"applicationHash"`
 }
 
 type CreateLoanRow struct {
@@ -40,6 +43,8 @@ type CreateLoanRow struct {
 	IsDeleted             bool               `json:"isDeleted"`
 	CreatedAt             pgtype.Timestamptz `json:"createdAt"`
 	UpdatedAt             pgtype.Timestamptz `json:"updatedAt"`
+	ApplicationKey        pgtype.UUID        `json:"applicationKey"`
+	ApplicationHash       pgtype.Text        `json:"applicationHash"`
 }
 
 func (q *Queries) CreateLoan(ctx context.Context, arg CreateLoanParams) (CreateLoanRow, error) {
@@ -50,6 +55,8 @@ func (q *Queries) CreateLoan(ctx context.Context, arg CreateLoanParams) (CreateL
 		arg.InterestRate,
 		arg.RepaymentPeriodMonths,
 		arg.UpdatedBy,
+		arg.ApplicationKey,
+		arg.ApplicationHash,
 	)
 	var i CreateLoanRow
 	err := row.Scan(
@@ -66,6 +73,54 @@ func (q *Queries) CreateLoan(ctx context.Context, arg CreateLoanParams) (CreateL
 		&i.IsDeleted,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ApplicationKey,
+		&i.ApplicationHash,
+	)
+	return i, err
+}
+
+const getLoanApplicationByKey = `-- name: GetLoanApplicationByKey :one
+SELECT id, member_id, branch_id, principal, interest_rate, repayment_period_months, status, disbursed_at, updated_by, previous_status, is_deleted, created_at, updated_at, application_key, application_hash
+FROM loans WHERE application_key = $1
+`
+
+type GetLoanApplicationByKeyRow struct {
+	ID                    pgtype.UUID        `json:"id"`
+	MemberID              pgtype.UUID        `json:"memberId"`
+	BranchID              int64              `json:"branchId"`
+	Principal             pgtype.Numeric     `json:"principal"`
+	InterestRate          pgtype.Numeric     `json:"interestRate"`
+	RepaymentPeriodMonths int32              `json:"repaymentPeriodMonths"`
+	Status                LoanStatus         `json:"status"`
+	DisbursedAt           pgtype.Timestamptz `json:"disbursedAt"`
+	UpdatedBy             pgtype.UUID        `json:"updatedBy"`
+	PreviousStatus        NullLoanStatus     `json:"previousStatus"`
+	IsDeleted             bool               `json:"isDeleted"`
+	CreatedAt             pgtype.Timestamptz `json:"createdAt"`
+	UpdatedAt             pgtype.Timestamptz `json:"updatedAt"`
+	ApplicationKey        pgtype.UUID        `json:"applicationKey"`
+	ApplicationHash       pgtype.Text        `json:"applicationHash"`
+}
+
+func (q *Queries) GetLoanApplicationByKey(ctx context.Context, applicationKey pgtype.UUID) (GetLoanApplicationByKeyRow, error) {
+	row := q.db.QueryRow(ctx, getLoanApplicationByKey, applicationKey)
+	var i GetLoanApplicationByKeyRow
+	err := row.Scan(
+		&i.ID,
+		&i.MemberID,
+		&i.BranchID,
+		&i.Principal,
+		&i.InterestRate,
+		&i.RepaymentPeriodMonths,
+		&i.Status,
+		&i.DisbursedAt,
+		&i.UpdatedBy,
+		&i.PreviousStatus,
+		&i.IsDeleted,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.ApplicationKey,
+		&i.ApplicationHash,
 	)
 	return i, err
 }
@@ -189,7 +244,7 @@ func (q *Queries) GetLoanSecuritySummary(ctx context.Context, loanID pgtype.UUID
 
 const listLoansByBranch = `-- name: ListLoansByBranch :many
 SELECT
-    l.id, l.member_id, l.branch_id, l.principal, l.interest_rate, l.interest_period, l.repayment_period_months, l.status, l.disbursed_at, l.updated_by, l.previous_status, l.is_deleted, l.created_at, l.updated_at,
+    l.id, l.member_id, l.branch_id, l.principal, l.interest_rate, l.interest_period, l.repayment_period_months, l.status, l.disbursed_at, l.updated_by, l.previous_status, l.is_deleted, l.created_at, l.updated_at, l.application_key, l.application_hash,
     m.member_number,
     m.national_id,
     mp.full_name AS member_name,
@@ -274,6 +329,8 @@ func (q *Queries) ListLoansByBranch(ctx context.Context, arg ListLoansByBranchPa
 			&i.Loan.IsDeleted,
 			&i.Loan.CreatedAt,
 			&i.Loan.UpdatedAt,
+			&i.Loan.ApplicationKey,
+			&i.Loan.ApplicationHash,
 			&i.MemberNumber,
 			&i.NationalID,
 			&i.MemberName,
@@ -420,6 +477,15 @@ func (q *Queries) ListLoansForDelinquencyUpdate(ctx context.Context, limit int32
 		return nil, err
 	}
 	return items, nil
+}
+
+const lockLoanApplicationKey = `-- name: LockLoanApplicationKey :exec
+SELECT pg_advisory_xact_lock(hashtextextended($1::text, 0))
+`
+
+func (q *Queries) LockLoanApplicationKey(ctx context.Context, applicationKey string) error {
+	_, err := q.db.Exec(ctx, lockLoanApplicationKey, applicationKey)
+	return err
 }
 
 const lockLoanByID = `-- name: LockLoanByID :one

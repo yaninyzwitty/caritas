@@ -4,9 +4,16 @@ package contribution.v1;
 
 import "google/api/annotations.proto";
 import "google/protobuf/timestamp.proto";
+import "google/protobuf/struct.proto";
 import "member/v1/member.proto";
 
 service ContributionService {
+  rpc GetCEEPReport(GetCEEPReportRequest) returns (GetCEEPReportResponse) {
+    option (google.api.http) = {get: "/api/v1/contributions/ceep" response_body: "report"};
+  }
+  rpc FinalizeCEEPReport(FinalizeCEEPReportRequest) returns (FinalizeCEEPReportResponse) {
+    option (google.api.http) = {post: "/api/v1/contributions/ceep/finalize" body: "*" response_body: "report"};
+  }
   rpc ListDarajaPayments(ListDarajaPaymentsRequest) returns (ListDarajaPaymentsResponse) {
     option (google.api.http) = {get: "/api/v1/contributions/daraja-payments"};
   }
@@ -85,6 +92,38 @@ service ContributionService {
       body: "*"
     };
   }
+}
+
+// GetCEEPReportRequest identifies a branch month; branch and officer come from authentication.
+message GetCEEPReportRequest {
+  string period = 1;
+  string cutoff = 2;
+  string title = 3;
+  string parish = 4;
+  string payment_date = 5;
+}
+
+// GetCEEPReportResponse carries the saved report's decimal-text fields without
+// converting money into protobuf Struct numbers, which use binary floating point.
+message GetCEEPReportResponse {
+  google.protobuf.Struct report = 1;
+}
+
+// FinalizeCEEPReportRequest is a separate mutation contract required by the RPC
+// conventions; its hash binds approval to the exact reviewed read response.
+message FinalizeCEEPReportRequest {
+  string period = 1;
+  string cutoff = 2;
+  string preview_hash = 3;
+  string title = 4;
+  string parish = 5;
+  string payment_date = 6;
+}
+
+// FinalizeCEEPReportResponse returns the stored winner on concurrent retries;
+// without it callers could mistake their own proposed figures for saved facts.
+message FinalizeCEEPReportResponse {
+  google.protobuf.Struct report = 1;
 }
 
 enum ContributionPaymentRequestStatus {

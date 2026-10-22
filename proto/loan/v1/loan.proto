@@ -183,6 +183,8 @@ message ApplyForLoanRequest {
   string                     officer_id                    = 6;
   repeated ProposedGuarantor guarantors                    = 7;
   member.v1.Money            applicant_share_pledge_amount = 8;
+  // Reuse this UUID when retrying the same application after an uncertain response.
+  string idempotency_key = 9;
 }
 
 // ApplyForLoanResponse returns the newly created loan application's identifiers.

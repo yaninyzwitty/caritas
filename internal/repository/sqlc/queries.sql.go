@@ -394,6 +394,39 @@ func (q *Queries) ListMembersByBranchCursor(ctx context.Context, arg ListMembers
 	return items, nil
 }
 
+const lockActiveMembersInBranch = `-- name: LockActiveMembersInBranch :many
+SELECT id FROM members
+WHERE id = ANY($1::uuid[]) AND branch_id = $2
+  AND status = 'active' AND is_deleted = FALSE
+ORDER BY id
+FOR SHARE
+`
+
+type LockActiveMembersInBranchParams struct {
+	MemberIds []pgtype.UUID `json:"memberIds"`
+	BranchID  int64         `json:"branchId"`
+}
+
+func (q *Queries) LockActiveMembersInBranch(ctx context.Context, arg LockActiveMembersInBranchParams) ([]pgtype.UUID, error) {
+	rows, err := q.db.Query(ctx, lockActiveMembersInBranch, arg.MemberIds, arg.BranchID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []pgtype.UUID
+	for rows.Next() {
+		var id pgtype.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const memberExistsByBranchAndNationalID = `-- name: MemberExistsByBranchAndNationalID :one
 SELECT id, status
 FROM members

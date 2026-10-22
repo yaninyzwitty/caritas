@@ -64,6 +64,22 @@ SELECT id, member_id, branch_id, status, opened_at, is_deleted, created_at, upda
 WHERE member_id = $1 AND is_deleted = FALSE
 FOR UPDATE;
 
+-- name: LockSecurityAccounts :many
+SELECT id, member_id, status FROM share_accounts
+WHERE member_id = ANY(sqlc.arg(member_ids)::uuid[]) AND is_deleted = FALSE
+ORDER BY id
+FOR UPDATE;
+
+-- name: GetSecurityBalances :many
+SELECT sa.id, sa.member_id, sa.status,
+       COALESCE((SELECT st.balance_after FROM share_transactions st
+                 WHERE st.share_account_id = sa.id
+                 ORDER BY st.created_at DESC, st.id DESC LIMIT 1), 0)::numeric AS balance,
+       COALESCE((SELECT SUM(sp.pledged_amount) FROM share_pledges sp
+                 WHERE sp.share_account_id = sa.id AND sp.status = 'active'), 0)::numeric AS pledged
+FROM share_accounts sa
+WHERE sa.member_id = ANY(sqlc.arg(member_ids)::uuid[]) AND sa.is_deleted = FALSE;
+
 -- name: UpdateAccountStatus :one
 UPDATE share_accounts
     SET status = $2, updated_at = NOW()

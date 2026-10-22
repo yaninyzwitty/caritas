@@ -370,6 +370,8 @@ type Loan struct {
 	IsDeleted             bool               `json:"isDeleted"`
 	CreatedAt             pgtype.Timestamptz `json:"createdAt"`
 	UpdatedAt             pgtype.Timestamptz `json:"updatedAt"`
+	ApplicationKey        pgtype.UUID        `json:"applicationKey"`
+	ApplicationHash       pgtype.Text        `json:"applicationHash"`
 }
 
 type LoanAuditTrail struct {
