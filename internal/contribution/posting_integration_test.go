@@ -36,7 +36,7 @@ func TestReceiptPostingIntegration(t *testing.T) {
 		INSERT INTO loans (id,member_id,branch_id,principal,interest_rate,repayment_period_months,status)
 		VALUES ('00000000-0000-0000-0000-000000000002','00000000-0000-0000-0000-000000000001',1,100000,0.01,20,'active');
 		INSERT INTO repayment_schedules (loan_id,installment_no,due_date,amount_due,status)
-		VALUES ('00000000-0000-0000-0000-000000000002',1,CURRENT_DATE,100000,'upcoming');
+		VALUES ('00000000-0000-0000-0000-000000000002',1,CURRENT_DATE,5000,'upcoming');
 	`); err != nil {
 		t.Fatal(err)
 	}
@@ -53,13 +53,30 @@ func TestReceiptPostingIntegration(t *testing.T) {
 	params := contributionsqlc.InsertContributionReceiptParams{
 		IdempotencyKey: text("one-connection"), CashierSessionID: session.ID, MemberID: memberID, BranchID: 1,
 		ContributionPeriod: pgtype.Date{Time: time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC), Valid: true},
-		ReceivedAmount:     mustNumeric(t, "2060"), ReceivedBy: cashier,
+		ReceivedAmount:     mustNumeric(t, "7060"), ReceivedBy: cashier,
 		ReceivedAt: pgtype.Timestamptz{Time: now, Valid: true},
 	}
 	allocations := []AllocationInput{
 		{Type: contributionsqlc.ContributionAllocationTypeSharePurchase, TargetID: account, Amount: mustNumeric(t, "1000")},
-		{Type: contributionsqlc.ContributionAllocationTypeLoanPrincipal, TargetID: loanID, Amount: mustNumeric(t, "1000")},
+		{Type: contributionsqlc.ContributionAllocationTypeLoanPrincipal, TargetID: loanID, Amount: mustNumeric(t, "6000")},
 	}
+	// Reject an underpayment before accepting cash or sending an STK prompt.
+	underpaid := append([]AllocationInput(nil), allocations...)
+	underpaid[1].Amount = mustNumeric(t, "4999")
+	underpaidCash := params
+	underpaidCash.IdempotencyKey, underpaidCash.ReceivedAmount = text("underpaid-cash"), mustNumeric(t, "6059")
+	if _, err := service.CreateCashReceipt(ctx, underpaidCash, underpaid); !errors.Is(err, ErrInvalidAllocation) {
+		t.Fatalf("cash installment minimum: %v", err)
+	}
+	provider := &testSTK{checkout: "underpaid-checkout"}
+	if _, err := service.InitiateDarajaSTKPayment(ctx, InitiateDarajaSTKPaymentParams{
+		IdempotencyKey: "underpaid-stk", PhoneNumber: "254712345678", MemberID: memberID,
+		BranchID: 1, ContributionPeriod: params.ContributionPeriod, Amount: underpaidCash.ReceivedAmount,
+		Allocations: underpaid, RequestedBy: cashier,
+	}, provider); !errors.Is(err, ErrInvalidAllocation) || provider.calls != 0 {
+		t.Fatalf("STK installment minimum: calls=%d error=%v", provider.calls, err)
+	}
+	// KES 6,000 covers the KES 5,000 installment and KES 1,000 interest.
 	receipt, err := service.CreateCashReceipt(ctx, params, allocations)
 	if err != nil || receipt.Receipt.Status != contributionsqlc.ContributionReceiptStatusCompleted {
 		t.Fatalf("single-connection payment: status=%s error=%v", receipt.Receipt.Status, err)
@@ -79,7 +96,7 @@ func TestReceiptPostingIntegration(t *testing.T) {
 	wrongTarget := append([]AllocationInput(nil), allocations...)
 	wrongTarget[0].TargetID = testUUID("00000000-0000-0000-0000-000000000006")
 	wrongPayment := params
-	wrongPayment.IdempotencyKey, wrongPayment.ReceivedAmount = text("wrong-member-target"), mustNumeric(t, "2000")
+	wrongPayment.IdempotencyKey, wrongPayment.ReceivedAmount = text("wrong-member-target"), mustNumeric(t, "7000")
 	if _, err := service.CreateCashReceipt(ctx, wrongPayment, wrongTarget); !errors.Is(err, share.ErrAccountNotFound) {
 		t.Fatalf("another member's share target: %v", err)
 	}
@@ -87,7 +104,7 @@ func TestReceiptPostingIntegration(t *testing.T) {
 	// Persist accepted money, then freeze its share target before processing.
 	params.SourceChannel = contributionsqlc.ContributionSourceChannelCash
 	params.IdempotencyKey, params.InternalReceiptReference = text("rollback"), text("CASH-ROLLBACK")
-	params.ReceivedAmount = mustNumeric(t, "2000")
+	params.ReceivedAmount = mustNumeric(t, "7000")
 	pending, err := service.CreateReceipt(ctx, params, allocations)
 	if err != nil {
 		t.Fatal(err)
@@ -131,7 +148,7 @@ func TestReceiptPostingIntegration(t *testing.T) {
 	if receipts != 2 {
 		t.Fatalf("rejected submissions persisted receipts: count=%d", receipts)
 	}
-	params.IdempotencyKey, params.ReceivedAmount = text("one-connection"), mustNumeric(t, "2060")
+	params.IdempotencyKey, params.ReceivedAmount = text("one-connection"), mustNumeric(t, "7060")
 	retry, err = service.CreateCashReceipt(ctx, params, allocations)
 	if err != nil || retry.Receipt.ID != receipt.Receipt.ID {
 		t.Fatalf("committed retry after suspension: %+v %v", retry, err)
@@ -142,7 +159,7 @@ func TestReceiptPostingIntegration(t *testing.T) {
 		t.Fatal(err)
 	}
 	params.IdempotencyKey, params.InternalReceiptReference = text("recover"), text("CASH-RECOVER")
-	params.ReceivedAmount = mustNumeric(t, "2000")
+	params.ReceivedAmount = mustNumeric(t, "7000")
 	pending, err = service.CreateReceipt(ctx, params, allocations)
 	if err != nil {
 		t.Fatal(err)

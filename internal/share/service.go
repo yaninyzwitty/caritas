@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"math/big"
 
 	"github.com/jackc/pgx/v5"
@@ -30,7 +31,11 @@ func (s *Service) OpenShareAccount(ctx context.Context, memberID pgtype.UUID, br
 	if err != nil {
 		return sharesqlc.ShareAccount{}, fmt.Errorf("begin account opening: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		if err := tx.Rollback(ctx); err != nil {
+			slog.Error("failed to rollback", "error", err)
+		}
+	}()
 	if err := member.RequireActiveMemberInTx(ctx, tx, memberID, branchID); err != nil {
 		return sharesqlc.ShareAccount{}, err
 	}

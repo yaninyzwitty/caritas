@@ -42,7 +42,7 @@ func TestCashAndSTKMonthlyCharges(t *testing.T) {
 		`INSERT INTO members (id, branch_id, member_number, national_id, status, created_at) VALUES ('00000000-0000-0000-0000-000000000001',1,1,'fees-test','active','2020-01-01')`,
 		`INSERT INTO staff_users (id, branch_id, email, name, role) VALUES ('00000000-0000-0000-0000-000000000003',1,'cashier@example.test','Test Cashier','cashier')`,
 		`INSERT INTO loans (id, member_id, branch_id, principal, interest_rate, repayment_period_months, status) VALUES ('00000000-0000-0000-0000-000000000002','00000000-0000-0000-0000-000000000001',1,100000,0.01,20,'active')`,
-		`INSERT INTO repayment_schedules (loan_id, installment_no, due_date, amount_due, status) VALUES ('00000000-0000-0000-0000-000000000002',1,CURRENT_DATE,100000,'upcoming')`,
+		`INSERT INTO repayment_schedules (loan_id, installment_no, due_date, amount_due, status) VALUES ('00000000-0000-0000-0000-000000000002',1,CURRENT_DATE,5000,'upcoming')`,
 	} {
 		if _, err := pool.Exec(ctx, stmt); err != nil {
 			t.Fatal(err)
