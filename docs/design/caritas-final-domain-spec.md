@@ -51,6 +51,15 @@ silently changing the member's instructions.
 
 ### AllocationPlan
 
+For each loan with an unpaid installment in the selected contribution month,
+the loan payment allocation must cover at least that month's remaining scheduled
+amount, rounded up to cents. Prior principal payments cover schedule rows in
+installment order, excluding superseded rows. Blank or omitted loan allocations
+count as zero. No installment minimum applies when that month's schedule is
+absent or fully paid. This rule applies before cash/manual receipt creation and
+before an STK prompt is requested; it does not change repayment allocation order
+or impose a minimum on repayments outside contributions.
+
 The allocation plan states how the received amount is applied to:
 
 - COM

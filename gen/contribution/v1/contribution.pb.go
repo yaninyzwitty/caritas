@@ -2502,6 +2502,7 @@ type ContributionLoanSummary struct {
 	InterestRemaining  string                 `protobuf:"bytes,15,opt,name=interest_remaining,json=interestRemaining,proto3" json:"interest_remaining,omitempty"`
 	PrincipalRemaining string                 `protobuf:"bytes,16,opt,name=principal_remaining,json=principalRemaining,proto3" json:"principal_remaining,omitempty"`
 	Payable            bool                   `protobuf:"varint,17,opt,name=payable,proto3" json:"payable,omitempty"`
+	InstallmentDue     string                 `protobuf:"bytes,18,opt,name=installment_due,json=installmentDue,proto3" json:"installment_due,omitempty"`
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -2653,6 +2654,13 @@ func (x *ContributionLoanSummary) GetPayable() bool {
 		return x.Payable
 	}
 	return false
+}
+
+func (x *ContributionLoanSummary) GetInstallmentDue() string {
+	if x != nil {
+		return x.InstallmentDue
+	}
+	return ""
 }
 
 type GetCashReceiptRequest struct {
@@ -3694,7 +3702,7 @@ const file_contribution_v1_contribution_proto_rawDesc = "" +
 	"\x1cGetContributionQuoteResponse\x12@\n" +
 	"\x04fees\x18\x01 \x03(\v2,.contribution.v1.ContributionAllocationInputR\x04fees\x12>\n" +
 	"\x05loans\x18\x02 \x03(\v2(.contribution.v1.ContributionLoanSummaryR\x05loans\x126\n" +
-	"\x17loan_snapshot_available\x18\x03 \x01(\bR\x15loanSnapshotAvailable\"\xfb\x04\n" +
+	"\x17loan_snapshot_available\x18\x03 \x01(\bR\x15loanSnapshotAvailable\"\xa4\x05\n" +
 	"\x17ContributionLoanSummary\x12\x17\n" +
 	"\aloan_id\x18\x01 \x01(\tR\x06loanId\x12\x16\n" +
 	"\x06period\x18\x02 \x01(\tR\x06period\x12+\n" +
@@ -3714,7 +3722,8 @@ const file_contribution_v1_contribution_proto_rawDesc = "" +
 	"\x06credit\x18\x0e \x01(\tR\x06credit\x12-\n" +
 	"\x12interest_remaining\x18\x0f \x01(\tR\x11interestRemaining\x12/\n" +
 	"\x13principal_remaining\x18\x10 \x01(\tR\x12principalRemaining\x12\x18\n" +
-	"\apayable\x18\x11 \x01(\bR\apayable\"_\n" +
+	"\apayable\x18\x11 \x01(\bR\apayable\x12'\n" +
+	"\x0finstallment_due\x18\x12 \x01(\tR\x0einstallmentDue\"_\n" +
 	"\x15GetCashReceiptRequest\x12\x1d\n" +
 	"\n" +
 	"receipt_id\x18\x01 \x01(\tR\treceiptId\x12'\n" +

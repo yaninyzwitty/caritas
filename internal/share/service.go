@@ -8,6 +8,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/yaninyzwitty/caritas-backend/internal/member"
 	sharesqlc "github.com/yaninyzwitty/caritas-backend/internal/share/repository/sqlc"
 )
 
@@ -22,20 +23,33 @@ func NewService(store *Store) *Service {
 // OpenShareAccount opens a member's share account. It refuses if the member
 // already has one, because GetAccountByMemberID assumes a single account per
 // member; a duplicate would later break every by-member lookup. The check-then-
-// insert is not wrapped in ExecTx because the write is single-table.
+// insert shares a transaction with the active-member check so status cannot
+// change between eligibility validation and account creation.
 func (s *Service) OpenShareAccount(ctx context.Context, memberID pgtype.UUID, branchID int64) (sharesqlc.ShareAccount, error) {
-	if _, err := s.store.GetAccountByMemberID(ctx, memberID); err == nil {
+	tx, err := s.store.pool.Begin(ctx)
+	if err != nil {
+		return sharesqlc.ShareAccount{}, fmt.Errorf("begin account opening: %w", err)
+	}
+	defer tx.Rollback(ctx)
+	if err := member.RequireActiveMemberInTx(ctx, tx, memberID, branchID); err != nil {
+		return sharesqlc.ShareAccount{}, err
+	}
+	q := sharesqlc.New(tx)
+	if _, err := q.GetAccountByMemberID(ctx, memberID); err == nil {
 		return sharesqlc.ShareAccount{}, ErrAccountAlreadyExists
 	} else if !errors.Is(err, pgx.ErrNoRows) {
 		return sharesqlc.ShareAccount{}, fmt.Errorf("check existing account: %w", err)
 	}
 
-	account, err := s.store.CreateShareAccount(ctx, sharesqlc.CreateShareAccountParams{
+	account, err := q.CreateShareAccount(ctx, sharesqlc.CreateShareAccountParams{
 		MemberID: memberID,
 		BranchID: branchID,
 	})
 	if err != nil {
 		return sharesqlc.ShareAccount{}, fmt.Errorf("create share account: %w", err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return sharesqlc.ShareAccount{}, fmt.Errorf("commit account opening: %w", err)
 	}
 	return account, nil
 }

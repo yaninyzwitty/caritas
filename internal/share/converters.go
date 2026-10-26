@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	memberv1 "github.com/yaninyzwitty/caritas-backend/gen/member/v1"
 	sharev1 "github.com/yaninyzwitty/caritas-backend/gen/share/v1"
+	"github.com/yaninyzwitty/caritas-backend/internal/member"
 	sharesqlc "github.com/yaninyzwitty/caritas-backend/internal/share/repository/sqlc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -163,6 +164,8 @@ func convertTransactionToProto(t sharesqlc.ShareTransaction) *sharev1.ShareTrans
 
 func mapServiceError(err error) error {
 	switch {
+	case errors.Is(err, member.ErrMemberNotActive):
+		return status.Error(codes.FailedPrecondition, "member must be active before opening a share account")
 	case errors.Is(err, ErrInvalidIdentifier):
 		return status.Error(codes.InvalidArgument, err.Error())
 	case errors.Is(err, ErrAccountNotFound), errors.Is(err, ErrTransactionNotFound), errors.Is(err, ErrAdjustmentNotFound):

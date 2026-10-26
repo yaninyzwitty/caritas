@@ -57,7 +57,8 @@ func (s *Service) CreateReceipt(
 	allocations []AllocationInput,
 ) (CreatedReceipt, error) {
 	var result CreatedReceipt
-	err := s.store.ExecTx(ctx, func(q contributionsqlc.Querier) error {
+	err := s.store.ExecReceiptTx(ctx, func(tx pgx.Tx) error {
+		q := contributionsqlc.New(tx)
 		existing, err := existingReceipt(ctx, q, params)
 		if err == nil {
 			allocations, err = allocationsForRetry(allocations, existing.AllocationPlan)
@@ -82,6 +83,9 @@ func (s *Service) CreateReceipt(
 			if err := validateChargeAllocations(ctx, q, params.MemberID, params.BranchID, allocations, pgtype.UUID{}); err != nil {
 				return err
 			}
+			if err := validateContributionLoanMinimums(ctx, loansqlc.New(tx), params.MemberID, params.BranchID, params.ContributionPeriod, allocations); err != nil {
+				return err
+			}
 		}
 		created, err := s.createReceipt(ctx, q, params, allocations)
 		result = created
@@ -91,6 +95,34 @@ func (s *Service) CreateReceipt(
 		return CreatedReceipt{}, err
 	}
 	return result, nil
+}
+
+// validateContributionLoanMinimums locks every payable loan, including omitted
+// allocations, so cash and STK cannot bypass an unpaid installment minimum.
+func validateContributionLoanMinimums(ctx context.Context, q loansqlc.Querier, memberID pgtype.UUID, branchID int64, period pgtype.Date, allocations []AllocationInput) error {
+	if _, err := q.LockMemberContributionLoans(ctx, loansqlc.LockMemberContributionLoansParams{MemberID: memberID, BranchID: branchID}); err != nil {
+		return err
+	}
+	positions, err := loan.QuoteContributionLoans(ctx, q, memberID, branchID, period)
+	if err != nil {
+		return err
+	}
+	for _, position := range positions {
+		var due pgtype.Numeric
+		if err := due.Scan(position.InstallmentDue); err != nil {
+			return err
+		}
+		payment := new(big.Int)
+		for _, allocation := range allocations {
+			if allocation.Type == contributionsqlc.ContributionAllocationTypeLoanPrincipal && allocation.TargetID.String() == position.LoanID {
+				payment.Add(payment, numericToScale(allocation.Amount, -4))
+			}
+		}
+		if payment.Cmp(numericToScale(due, -4)) < 0 {
+			return fmt.Errorf("%w: loan %s requires at least KES %s for %s", ErrInvalidAllocation, position.LoanID, position.InstallmentDue, period.Time.Format("2006-01"))
+		}
+	}
+	return nil
 }
 
 // createReceipt is the transaction-scoped body shared by manual receipt entry

@@ -61,6 +61,17 @@ WITH positions AS (
       AND NOT l.is_deleted AND l.status IN ('active', 'disbursed', 'delinquent')
 )
 SELECT id, interest_rate, opening_principal, principal_due, period_interest, penalty_due,
+    (CEIL(COALESCE((SELECT SUM(GREATEST(s.amount_due - GREATEST(
+        (positions.principal - positions.principal_due) - s.earlier_due, 0), 0))
+        FROM (
+            SELECT due_date, amount_due, status,
+                COALESCE(SUM(amount_due) OVER (ORDER BY installment_no
+                    ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING), 0) AS earlier_due
+            FROM repayment_schedules WHERE loan_id = positions.id AND status <> 'superseded'
+        ) s
+        WHERE s.due_date >= $1::date
+          AND s.due_date < ($1::date + INTERVAL '1 month')
+          AND s.status <> 'paid'), 0) * 100) / 100)::numeric(20,2) AS installment_due,
     GREATEST(assessed + unposted - interest_paid, 0)::numeric AS interest_due,
     GREATEST(earlier_assessed + unposted
         - CASE WHEN latest_assessment < $1::date THEN period_interest ELSE 0 END
@@ -84,6 +95,7 @@ type ListContributionLoanPositionsRow struct {
 	PrincipalDue       pgtype.Numeric `json:"principalDue"`
 	PeriodInterest     pgtype.Numeric `json:"periodInterest"`
 	PenaltyDue         pgtype.Numeric `json:"penaltyDue"`
+	InstallmentDue     pgtype.Numeric `json:"installmentDue"`
 	InterestDue        pgtype.Numeric `json:"interestDue"`
 	EarlierInterestDue pgtype.Numeric `json:"earlierInterestDue"`
 	Payable            bool           `json:"payable"`
@@ -105,6 +117,7 @@ func (q *Queries) ListContributionLoanPositions(ctx context.Context, arg ListCon
 			&i.PrincipalDue,
 			&i.PeriodInterest,
 			&i.PenaltyDue,
+			&i.InstallmentDue,
 			&i.InterestDue,
 			&i.EarlierInterestDue,
 			&i.Payable,
