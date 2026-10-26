@@ -132,6 +132,9 @@ func (s *Service) CreateCashReceipt(ctx context.Context, params contributionsqlc
 			return err
 		}
 		// Lock loan targets before shares, matching receipt processing and loan collateral operations.
+		if err := validateContributionLoanMinimums(ctx, loansqlc.New(tx), params.MemberID, params.BranchID, params.ContributionPeriod, allocations); err != nil {
+			return err
+		}
 		targets := append([]AllocationInput(nil), allocations...)
 		sort.Slice(targets, func(i, j int) bool {
 			if targets[i].Type != targets[j].Type {

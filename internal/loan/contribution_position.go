@@ -22,6 +22,7 @@ type ContributionLoanSummary struct {
 	InterestDue        string `json:"interest_due"`
 	PenaltyDue         string `json:"penalty_due"`
 	PrincipalDue       string `json:"principal_due"`
+	InstallmentDue     string `json:"installment_due"`
 	Payment            string `json:"payment"`
 	PenaltyPaid        string `json:"penalty_paid"`
 	InterestPaid       string `json:"interest_paid"`
@@ -46,7 +47,8 @@ func QuoteContributionLoans(ctx context.Context, q loansqlc.Querier, memberID pg
 			OpeningPrincipal: numericToString(row.OpeningPrincipal), InterestRate: numericToString(row.InterestRate),
 			PeriodInterest: numericToString(row.PeriodInterest), EarlierInterestDue: numericToString(row.EarlierInterestDue),
 			InterestDue: numericToString(row.InterestDue), PenaltyDue: numericToString(row.PenaltyDue), PrincipalDue: numericToString(row.PrincipalDue),
-			Payment: "0", PenaltyPaid: "0", InterestPaid: "0", PrincipalPaid: "0", Credit: "0",
+			InstallmentDue: numericToString(row.InstallmentDue),
+			Payment:        "0", PenaltyPaid: "0", InterestPaid: "0", PrincipalPaid: "0", Credit: "0",
 			InterestRemaining: numericToString(row.InterestDue), PrincipalRemaining: numericToString(row.PrincipalDue), Payable: row.Payable,
 		})
 	}

@@ -393,6 +393,7 @@ message ContributionLoanSummary {
   string interest_remaining = 15;
   string principal_remaining = 16;
   bool payable = 17;
+  string installment_due = 18;
 }
 
 message GetCashReceiptRequest {

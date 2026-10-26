@@ -88,6 +88,11 @@ The Shares domain owns dividend posting to share accounts. The cross-domain spec
 
 ## 3. Account State Model
 
+Only active members in the account's branch may open a share account. Check
+eligibility through Members in the account creation transaction, holding the
+member row lock until commit. Pending and other non-active members must be
+activated before account creation.
+
 ```text
 New -> Active
 Active -> Dormant

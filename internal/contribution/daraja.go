@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	contributionsqlc "github.com/yaninyzwitty/caritas-backend/internal/contribution/repository/sqlc"
+	loansqlc "github.com/yaninyzwitty/caritas-backend/internal/loan/repository/sqlc"
 )
 
 // DarajaSTKPayment is the normalized successful STK callback payload. Without
@@ -101,7 +102,8 @@ func (s *Service) InitiateDarajaSTKPayment(ctx context.Context, params InitiateD
 func (s *Service) createContributionPaymentRequest(ctx context.Context, params InitiateDarajaSTKPaymentParams) (contributionsqlc.ContributionPaymentRequest, bool, error) {
 	var request contributionsqlc.ContributionPaymentRequest
 	created := false
-	err := s.store.ExecTx(ctx, func(q contributionsqlc.Querier) error {
+	err := s.store.ExecReceiptTx(ctx, func(tx pgx.Tx) error {
+		q := contributionsqlc.New(tx)
 		existing, err := q.GetContributionPaymentRequestByIdempotencyKey(ctx, params.IdempotencyKey)
 		if err == nil {
 			allocations, err := allocationsForRetry(params.Allocations, existing.AllocationPlan)
@@ -148,6 +150,9 @@ func (s *Service) createContributionPaymentRequest(ctx context.Context, params I
 			return err
 		}
 		if err := validateChargeAllocations(ctx, q, params.MemberID, params.BranchID, allocations, pgtype.UUID{}); err != nil {
+			return err
+		}
+		if err := validateContributionLoanMinimums(ctx, loansqlc.New(tx), params.MemberID, params.BranchID, params.ContributionPeriod, allocations); err != nil {
 			return err
 		}
 		if _, err := darajaWholeAmount(params.Amount); err != nil {
