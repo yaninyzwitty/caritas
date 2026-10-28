@@ -23,11 +23,12 @@ import (
 type testSTK struct {
 	checkout string
 	calls    int
+	err      error
 }
 
 func (s *testSTK) InitiateSTK(context.Context, DarajaSTKInitiationRequest) (string, error) {
 	s.calls++
-	return s.checkout, nil
+	return s.checkout, s.err
 }
 
 func TestCashAndSTKMonthlyCharges(t *testing.T) {
@@ -67,14 +68,39 @@ func TestCashAndSTKMonthlyCharges(t *testing.T) {
 	if err != nil || retry.Receipt.ID != receipt.Receipt.ID {
 		t.Fatalf("cash retry: %+v %v", retry, err)
 	}
-	provider := &testSTK{checkout: "checkout-1"}
+	provider := &testSTK{checkout: "checkout-1", err: ErrDarajaNotSent}
 	request := InitiateDarajaSTKPaymentParams{IdempotencyKey: "stk-same-month", PhoneNumber: "254712345678", MemberID: member,
 		BranchID: 1, ContributionPeriod: period, Amount: mustNumeric(t, "6000"), Allocations: allocations, RequestedBy: cashier}
+	unsent, err := service.InitiateDarajaSTKPayment(ctx, request, provider)
+	if err != nil || unsent.RecoveryStatus != "not_sent" || unsent.CheckoutRequestID.Valid {
+		t.Fatalf("pre-STK failure must allow explicit retry: %+v %v", unsent, err)
+	}
+	provider.err = nil
 	if _, err := service.InitiateDarajaSTKPayment(ctx, request, provider); err != nil {
 		t.Fatal(err)
 	}
 	payment := DarajaSTKPayment{CheckoutRequestID: provider.checkout, MpesaReceipt: "MPESA-1", Amount: request.Amount}
+	mismatch := payment
+	mismatch.Amount = mustNumeric(t, "6001")
+	if _, err := service.ProcessDarajaSTKPayment(ctx, mismatch); !errors.Is(err, ErrPaymentAmountMismatch) {
+		t.Fatalf("mismatched amount must require review: %v", err)
+	}
+	if err := store.RecordDarajaQueryResult(ctx, contributionsqlc.RecordDarajaQueryResultParams{ID: unsent.ID, ProviderResult: text("late successful query without receipt metadata"), RecoveryStatus: "received_needs_receipt"}); err != nil {
+		t.Fatal(err)
+	}
+	review, err := store.GetContributionPaymentRequestByIdempotencyKey(ctx, request.IdempotencyKey)
+	if err != nil || review.RecoveryStatus != "received_needs_review" {
+		t.Fatalf("late query must preserve callback evidence: %+v %v", review, err)
+	}
 	stk, err := service.ProcessDarajaSTKPayment(ctx, payment)
+	if err != nil || stk.Receipt.Status != contributionsqlc.ContributionReceiptStatusPending {
+		t.Fatalf("stk callback must only record receipt: %+v %v", stk, err)
+	}
+	duplicate, err := service.ProcessDarajaSTKPayment(ctx, payment)
+	if err != nil || duplicate.Receipt.ID != stk.Receipt.ID || duplicate.Receipt.Status != contributionsqlc.ContributionReceiptStatusPending {
+		t.Fatalf("redelivery must preserve pending receipt: %+v %v", duplicate, err)
+	}
+	stk, err = service.ProcessReceipt(ctx, stk.Receipt.ID, cashier)
 	if err != nil || stk.Receipt.Status != contributionsqlc.ContributionReceiptStatusCompleted {
 		t.Fatalf("stk: %+v %v", stk, err)
 	}
@@ -84,7 +110,7 @@ func TestCashAndSTKMonthlyCharges(t *testing.T) {
 	if _, err := service.ProcessDarajaSTKPayment(ctx, payment); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := service.InitiateDarajaSTKPayment(ctx, request, provider); err != nil || provider.calls != 1 {
+	if _, err := service.InitiateDarajaSTKPayment(ctx, request, provider); err != nil || provider.calls != 2 {
 		t.Fatalf("stk retry: calls=%d error=%v", provider.calls, err)
 	}
 

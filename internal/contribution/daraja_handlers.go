@@ -1,6 +1,7 @@
 package contribution
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
@@ -91,6 +92,10 @@ func (h *DarajaHandlers) HandleSTKCallback(w http.ResponseWriter, r *http.Reques
 		Payload:           body,
 		PayloadHash:       fmt.Sprintf("%x", sha256.Sum256(body)),
 	}
+	// Bound acceptance; receipt posting runs independently after commit.
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+	r = r.WithContext(ctx)
 	if key := r.PathValue("requestKey"); key != "" {
 		mac := hmac.New(sha256.New, []byte(h.callbackKey))
 		_, _ = mac.Write([]byte("daraja-callback:" + key))

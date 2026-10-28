@@ -85,6 +85,10 @@ func TestContributionChargePaymentsIntegration(t *testing.T) {
 	settled, err := service.ProcessDarajaSTKPayment(ctx, DarajaSTKPayment{
 		CheckoutRequestID: stk.CheckoutRequestID.String, MpesaReceipt: "charges-mpesa", Amount: mustNumeric(t, "300"), ReceivedAt: time.Now(),
 	})
+	if err != nil || settled.Receipt.Status != contributionsqlc.ContributionReceiptStatusPending {
+		t.Fatalf("callback must persist before posting: %+v %v", settled, err)
+	}
+	settled, err = service.ProcessReceipt(ctx, settled.Receipt.ID, cashier)
 	if err != nil || settled.Receipt.Status != contributionsqlc.ContributionReceiptStatusCompleted {
 		t.Fatalf("settlement: %+v %v", settled, err)
 	}
@@ -136,6 +140,10 @@ func TestContributionChargePaymentsIntegration(t *testing.T) {
 	failed, err := service.ProcessDarajaSTKPayment(ctx, DarajaSTKPayment{
 		CheckoutRequestID: prompt.CheckoutRequestID.String, MpesaReceipt: "stale-mpesa", Amount: mustNumeric(t, "100"), ReceivedAt: time.Now(),
 	})
+	if err != nil || failed.Receipt.Status != contributionsqlc.ContributionReceiptStatusPending {
+		t.Fatalf("received money must have a pending receipt: %+v %v", failed, err)
+	}
+	failed, err = service.ProcessReceipt(ctx, failed.Receipt.ID, cashier)
 	if !errors.Is(err, ErrChargeOverpayment) || !failed.Receipt.ID.Valid || failed.Receipt.Status != contributionsqlc.ContributionReceiptStatusFailed {
 		t.Fatalf("collected stale STK payment must remain visible: %+v %v", failed, err)
 	}

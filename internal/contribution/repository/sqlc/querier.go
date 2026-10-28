@@ -15,6 +15,7 @@ type Querier interface {
 	AssessMonthlyFees(ctx context.Context, arg AssessMonthlyFeesParams) error
 	ClaimDarajaCallback(ctx context.Context) (DarajaCallback, error)
 	ClaimDarajaQuery(ctx context.Context) (ContributionPaymentRequest, error)
+	ClaimUnsentDarajaRequest(ctx context.Context, id pgtype.UUID) (ContributionPaymentRequest, error)
 	CloseCashierSession(ctx context.Context, arg CloseCashierSessionParams) (CashierSession, error)
 	ContributionMemberExists(ctx context.Context, arg ContributionMemberExistsParams) (bool, error)
 	CreateContributionCharge(ctx context.Context, arg CreateContributionChargeParams) (ContributionCharge, error)

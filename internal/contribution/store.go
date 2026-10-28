@@ -61,7 +61,12 @@ func (s *Store) ExecReceiptTx(ctx context.Context, fn func(pgx.Tx) error) error 
 		return fmt.Errorf("exec tx: %w", err)
 	}
 
-	if err := tx.Commit(ctx); err != nil {
+	started = time.Now()
+	err = tx.Commit(ctx)
+	if elapsed := time.Since(started); elapsed > 250*time.Millisecond || err != nil {
+		slog.Warn("commit receipt transaction", "duration", elapsed, "error", err)
+	}
+	if err != nil {
 		return fmt.Errorf("commit tx: %w", err)
 	}
 	return nil

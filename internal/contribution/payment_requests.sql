@@ -28,6 +28,13 @@ SELECT *
 FROM contribution_payment_requests
 WHERE idempotency_key = $1;
 
+-- name: ClaimUnsentDarajaRequest :one
+UPDATE contribution_payment_requests
+SET recovery_status = 'awaiting_confirmation', provider_result = NULL, updated_at = NOW()
+WHERE id = $1 AND status = 'pending' AND checkout_request_id IS NULL
+    AND recovery_status = 'not_sent'
+RETURNING *;
+
 -- name: GetContributionPaymentRequestByCheckoutID :one
 SELECT *
 FROM contribution_payment_requests

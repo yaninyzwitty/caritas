@@ -28,9 +28,23 @@ checkout and query retry budget unchanged.
 
 The response contains the stored payment under `payment`. A successful response
 means recovery was scheduled; it does not mean payment succeeded. The recovery
-worker runs every five seconds and uses bounded query retries. Check the payment
+callback worker runs every five seconds, independently of provider queries.
+Queries run at most once every ten seconds per server, with bounded retries and
+a pause of at least one minute after errors (longer when requested by
+`Retry-After`). Check the payment
 again through the existing status flow. Provider success without receipt metadata
 still needs receipt confirmation or reconciliation using verified business records.
 
 This action never sends an STK prompt, creates a receipt, or marks money received.
 It does not fix database connectivity; resolve persistent database timeouts first.
+
+Successful callbacks create pending receipts. The receipt worker posts them in
+one ledger transaction; callback redelivery never starts another posting attempt.
+Payment confirmation and completed contribution posting remain separate outcomes.
+Exhausted callbacks log `daraja callback needs attention` and remain available
+through the unresolved-payment list and existing recovery actions.
+
+An OAuth failure before STK submission sets `recovery_status = 'not_sent'`.
+The cashier can retry the same saved request; an atomic claim allows only one
+retry to send a prompt. An ambiguous STK response never enables automatic resend.
+Existing ambiguous requests are not retroactively considered safe to retry.

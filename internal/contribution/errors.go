@@ -25,7 +25,9 @@ var (
 	ErrInconsistentReceipt      = errors.New("inconsistent contribution receipt")
 	ErrDarajaClientMissing      = errors.New("daraja client is not configured")
 	// ErrDarajaRejected separates a confirmed provider rejection from an ambiguous transport failure.
-	ErrDarajaRejected         = errors.New("M-Pesa rejected the payment request")
+	ErrDarajaRejected = errors.New("M-Pesa rejected the payment request")
+	// ErrDarajaNotSent permits explicit retries only when STK was never contacted.
+	ErrDarajaNotSent          = errors.New("M-Pesa prompt was not sent")
 	ErrCashierSessionNotFound = errors.New("cashier session not found")
 	ErrCashierSessionState    = errors.New("cashier session is not in the required state")
 	ErrCashVarianceReason     = errors.New("cash variance requires a reason")

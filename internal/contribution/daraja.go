@@ -74,6 +74,17 @@ func (s *Service) InitiateDarajaSTKPayment(ctx context.Context, params InitiateD
 	})
 	if err != nil {
 		slog.Warn("initiate daraja checkout", "payment_request_id", request.ID.String(), "error", err)
+		if errors.Is(err, ErrDarajaNotSent) {
+			saveCtx, saveCancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+			defer saveCancel()
+			if saveErr := s.store.RecordDarajaQueryResult(saveCtx, contributionsqlc.RecordDarajaQueryResultParams{
+				ID: request.ID, ProviderResult: text("Prompt was not sent; retry the same request"), RecoveryStatus: "not_sent",
+			}); saveErr != nil {
+				return contributionsqlc.ContributionPaymentRequest{}, saveErr
+			}
+			request.RecoveryStatus = "not_sent"
+			return request, nil
+		}
 		// A network timeout cannot prove that Safaricom rejected the prompt.
 		// Retain the request so retries cannot charge the member again.
 		if errors.Is(err, ErrDarajaRejected) {
@@ -130,6 +141,14 @@ func (s *Service) createContributionPaymentRequest(ctx context.Context, params I
 				return ErrInconsistentReceipt
 			}
 			request = existing
+			if existing.RecoveryStatus == "not_sent" && !existing.CheckoutRequestID.Valid {
+				request, err = q.ClaimUnsentDarajaRequest(ctx, existing.ID)
+				if errors.Is(err, pgx.ErrNoRows) {
+					return ErrPaymentRequestInProgress
+				}
+				created = err == nil
+				return err
+			}
 			if !request.CheckoutRequestID.Valid {
 				return ErrPaymentRequestInProgress
 			}
@@ -178,7 +197,7 @@ func (s *Service) createContributionPaymentRequest(ctx context.Context, params I
 }
 
 // ProcessDarajaSTKPayment turns one successful Daraja STK callback into one
-// contribution receipt, then processes that receipt. Removing it would push
+// pending receipt for the receipt worker. Removing it would push
 // idempotency and request matching into the HTTP handler.
 func (s *Service) ProcessDarajaSTKPayment(ctx context.Context, payment DarajaSTKPayment) (CreatedReceipt, error) {
 	checkoutID := strings.TrimSpace(payment.CheckoutRequestID)
@@ -187,7 +206,6 @@ func (s *Service) ProcessDarajaSTKPayment(ctx context.Context, payment DarajaSTK
 		return CreatedReceipt{}, ErrInvalidPayment
 	}
 
-	var receiptID pgtype.UUID
 	var result CreatedReceipt
 	var processErr error
 	err := s.store.ExecTx(ctx, func(q contributionsqlc.Querier) error {
@@ -203,8 +221,7 @@ func (s *Service) ProcessDarajaSTKPayment(ctx context.Context, payment DarajaSTK
 				return fmt.Errorf("%w: completed payment request %s has no receipt ID", ErrReceiptNotProcessable, request.ID)
 			}
 
-			receiptID = request.ReceiptID
-			existing, err := q.GetContributionReceiptByID(ctx, receiptID)
+			existing, err := q.GetContributionReceiptByID(ctx, request.ReceiptID)
 			if err != nil {
 				return err
 			}
@@ -276,7 +293,6 @@ func (s *Service) ProcessDarajaSTKPayment(ctx context.Context, payment DarajaSTK
 		}); err != nil {
 			return fmt.Errorf("mark payment request completed: %w", err)
 		}
-		receiptID = result.Receipt.ID
 		return nil
 	})
 	if err != nil {
@@ -285,7 +301,7 @@ func (s *Service) ProcessDarajaSTKPayment(ctx context.Context, payment DarajaSTK
 	if processErr != nil {
 		return result, processErr
 	}
-	return s.ProcessReceipt(ctx, receiptID, result.Receipt.ReceivedBy)
+	return result, nil
 }
 
 // MarkDarajaSTKPaymentFailed records a terminal Daraja failure against the
