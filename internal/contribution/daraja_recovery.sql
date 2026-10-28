@@ -26,7 +26,10 @@ RETURNING *;
 -- name: RecordDarajaQueryResult :exec
 UPDATE contribution_payment_requests SET provider_result = $2,
     recovery_status = $3, updated_at = NOW()
-WHERE id = $1 AND status <> 'completed';
+WHERE id = $1 AND status <> 'completed'
+    -- A late query must not erase callback evidence.
+    AND (recovery_status NOT LIKE 'received%' OR $3 = 'received_needs_review')
+    AND (status = 'pending' OR $3 IN ('received_needs_review', 'received_needs_receipt', 'provider_failed'));
 
 -- name: ScheduleDarajaQuery :exec
 UPDATE contribution_payment_requests SET next_query_at = NOW(), query_attempts = 0, updated_at = NOW()

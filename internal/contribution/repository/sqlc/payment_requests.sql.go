@@ -11,6 +11,41 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const claimUnsentDarajaRequest = `-- name: ClaimUnsentDarajaRequest :one
+UPDATE contribution_payment_requests
+SET recovery_status = 'awaiting_confirmation', provider_result = NULL, updated_at = NOW()
+WHERE id = $1 AND status = 'pending' AND checkout_request_id IS NULL
+    AND recovery_status = 'not_sent'
+RETURNING id, checkout_request_id, member_id, branch_id, contribution_period, expected_amount, allocation_plan, status, receipt_id, failure_reason, requested_by, created_at, updated_at, idempotency_key, phone_number, recovery_status, query_attempts, next_query_at, provider_result
+`
+
+func (q *Queries) ClaimUnsentDarajaRequest(ctx context.Context, id pgtype.UUID) (ContributionPaymentRequest, error) {
+	row := q.db.QueryRow(ctx, claimUnsentDarajaRequest, id)
+	var i ContributionPaymentRequest
+	err := row.Scan(
+		&i.ID,
+		&i.CheckoutRequestID,
+		&i.MemberID,
+		&i.BranchID,
+		&i.ContributionPeriod,
+		&i.ExpectedAmount,
+		&i.AllocationPlan,
+		&i.Status,
+		&i.ReceiptID,
+		&i.FailureReason,
+		&i.RequestedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.IdempotencyKey,
+		&i.PhoneNumber,
+		&i.RecoveryStatus,
+		&i.QueryAttempts,
+		&i.NextQueryAt,
+		&i.ProviderResult,
+	)
+	return i, err
+}
+
 const getContributionPaymentRequestByCheckoutID = `-- name: GetContributionPaymentRequestByCheckoutID :one
 SELECT id, checkout_request_id, member_id, branch_id, contribution_period, expected_amount, allocation_plan, status, receipt_id, failure_reason, requested_by, created_at, updated_at, idempotency_key, phone_number, recovery_status, query_attempts, next_query_at, provider_result
 FROM contribution_payment_requests

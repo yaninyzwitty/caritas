@@ -208,19 +208,19 @@ func (s *Service) GetReceipt(ctx context.Context, id pgtype.UUID) (contributions
 // ProcessReceipt applies a persisted receipt to each owning ledger exactly once.
 // Without this gate, webhooks and manual entries could mark receipts completed
 // before Shares or Loans has accepted the money, which the final spec forbids.
-func (s *Service) ProcessReceipt(ctx context.Context, receiptID, processedBy pgtype.UUID) (CreatedReceipt, error) {
+func (s *Service) ProcessReceipt(ctx context.Context, receiptID, processedBy pgtype.UUID) (result CreatedReceipt, returnErr error) {
 	// One atomic receipt performs multiple database round trips; recovery needs
 	// enough time to reach Shares/Loans and commit, rather than restart every 5s.
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 	started := time.Now()
 	defer func() {
-		slog.Info("process contribution receipt", "receipt_id", receiptID.String(), "duration", time.Since(started))
+		slog.Info("process contribution receipt", "receipt_id", receiptID.String(), "duration", time.Since(started), "status", result.Receipt.Status, "error", returnErr)
 	}()
-	var result CreatedReceipt
 	var processErr error
 
 	err := s.store.ExecReceiptTx(ctx, func(tx pgx.Tx) error {
+		stageStarted := time.Now()
 		q := contributionsqlc.New(tx)
 		receipt, err := q.LockContributionReceiptByID(ctx, receiptID)
 		if err != nil {
@@ -237,6 +237,7 @@ func (s *Service) ProcessReceipt(ctx context.Context, receiptID, processedBy pgt
 			return fmt.Errorf("lock allocations: %w", err)
 		}
 		result.Allocations = allocations
+		slog.Info("lock contribution receipt", "receipt_id", receiptID.String(), "duration", time.Since(stageStarted))
 
 		switch receipt.Status {
 		case contributionsqlc.ContributionReceiptStatusCompleted:
@@ -268,6 +269,7 @@ func (s *Service) ProcessReceipt(ctx context.Context, receiptID, processedBy pgt
 
 		// Validate fees before posting into this transaction.
 		// Excluding this receipt makes a retry safe after a partial posting.
+		stageStarted = time.Now()
 		fees, err := monthlyFees(ctx, q, receipt.MemberID, receipt.ContributionPeriod, receipt.ID)
 		if err != nil {
 			if receiptBusinessError(err) {
@@ -296,6 +298,8 @@ func (s *Service) ProcessReceipt(ctx context.Context, receiptID, processedBy pgt
 			return failReceipt(ctx, tx, q, receipt.ID, receiptFailureStatus(receipt), processErr, &result)
 		}
 		// Keep target lock order consistent across receipts.
+		slog.Info("validate contribution obligations", "receipt_id", receiptID.String(), "duration", time.Since(stageStarted))
+		stageStarted = time.Now()
 		loanQueries := loansqlc.New(tx)
 		if _, err := loanQueries.LockMemberContributionLoans(ctx, loansqlc.LockMemberContributionLoansParams{MemberID: receipt.MemberID, BranchID: receipt.BranchID}); err != nil {
 			return fmt.Errorf("lock receipt loan positions: %w", err)
@@ -305,6 +309,7 @@ func (s *Service) ProcessReceipt(ctx context.Context, receiptID, processedBy pgt
 			return err
 		}
 		var loanAllocationIDs []string
+		slog.Info("quote contribution loans", "receipt_id", receiptID.String(), "duration", time.Since(stageStarted))
 		canSnapshot := len(receipt.LoanSnapshot) == 0
 		for _, allocation := range allocations {
 			if allocation.Type == contributionsqlc.ContributionAllocationTypeLoanPrincipal {

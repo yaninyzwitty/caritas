@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/yaninyzwitty/caritas-backend/config"
 	"github.com/yaninyzwitty/caritas-backend/internal/contribution"
@@ -29,7 +30,7 @@ func newDarajaClient(cfg config.Config) (*contribution.DarajaClient, error) {
 	if strings.TrimSpace(cfg.Daraja.CallbackURL) == "" {
 		return nil, fmt.Errorf("daraja callback_url is required when daraja is enabled")
 	}
-	return contribution.NewDarajaClient(&http.Client{Timeout: cfg.GRPC.Timeout}, contribution.DarajaClientConfig{
+	return contribution.NewDarajaClient(&http.Client{Timeout: 20 * time.Second}, contribution.DarajaClientConfig{
 		BaseURL:           cfg.Daraja.BaseURL,
 		BusinessShortCode: cfg.Daraja.BusinessShortCode,
 		Passkey:           cfg.Daraja.Passkey,

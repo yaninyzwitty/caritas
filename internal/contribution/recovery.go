@@ -12,11 +12,11 @@ import (
 // RecoverPendingReceipts retries persisted work after timeouts or server restarts.
 // The receipt lock and ledger references make concurrent RPC/worker retries safe.
 func (s *Service) RecoverPendingReceipts(ctx context.Context) {
-	ticker := time.NewTicker(30 * time.Second)
+	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
 	for {
 		params := contributionsqlc.ListPendingContributionReceiptsParams{
-			Cutoff: pgtype.Timestamptz{Time: time.Now().Add(-10 * time.Second), Valid: true},
+			Cutoff: pgtype.Timestamptz{Time: time.Now().Add(-5 * time.Second), Valid: true},
 		}
 		for ctx.Err() == nil {
 			readCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
