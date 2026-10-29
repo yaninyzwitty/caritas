@@ -24,6 +24,8 @@ var (
 	ErrPaymentAmountMismatch    = errors.New("contribution payment amount does not match request")
 	ErrInconsistentReceipt      = errors.New("inconsistent contribution receipt")
 	ErrDarajaClientMissing      = errors.New("daraja client is not configured")
+	// ErrDarajaQueryUnavailable keeps temporary provider failures out of the checkout retry budget.
+	ErrDarajaQueryUnavailable = errors.New("M-Pesa status query unavailable")
 	// ErrDarajaRejected separates a confirmed provider rejection from an ambiguous transport failure.
 	ErrDarajaRejected = errors.New("M-Pesa rejected the payment request")
 	// ErrDarajaNotSent permits explicit retries only when STK was never contacted.

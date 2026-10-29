@@ -19,6 +19,7 @@ type Querier interface {
 	CloseCashierSession(ctx context.Context, arg CloseCashierSessionParams) (CashierSession, error)
 	ContributionMemberExists(ctx context.Context, arg ContributionMemberExistsParams) (bool, error)
 	CreateContributionCharge(ctx context.Context, arg CreateContributionChargeParams) (ContributionCharge, error)
+	DeferUnavailableDarajaQuery(ctx context.Context, arg DeferUnavailableDarajaQueryParams) error
 	FinishDarajaCallback(ctx context.Context, arg FinishDarajaCallbackParams) error
 	GetCashDepositByBankReference(ctx context.Context, bankReference string) (CashDeposit, error)
 	GetCashDepositByID(ctx context.Context, id pgtype.UUID) (CashDeposit, error)

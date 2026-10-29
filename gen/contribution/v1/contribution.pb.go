@@ -719,6 +719,7 @@ type GetContributionPaymentResponse struct {
 	Receipt            *ContributionPaymentReceipt      `protobuf:"bytes,7,opt,name=receipt,proto3" json:"receipt,omitempty"`
 	CheckoutRequestId  string                           `protobuf:"bytes,8,opt,name=checkout_request_id,json=checkoutRequestId,proto3" json:"checkout_request_id,omitempty"`
 	RecoveryStatus     string                           `protobuf:"bytes,9,opt,name=recovery_status,json=recoveryStatus,proto3" json:"recovery_status,omitempty"`
+	ProviderResult     string                           `protobuf:"bytes,10,opt,name=provider_result,json=providerResult,proto3" json:"provider_result,omitempty"`
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -812,6 +813,13 @@ func (x *GetContributionPaymentResponse) GetCheckoutRequestId() string {
 func (x *GetContributionPaymentResponse) GetRecoveryStatus() string {
 	if x != nil {
 		return x.RecoveryStatus
+	}
+	return ""
+}
+
+func (x *GetContributionPaymentResponse) GetProviderResult() string {
+	if x != nil {
+		return x.ProviderResult
 	}
 	return ""
 }
@@ -3250,6 +3258,7 @@ type DarajaPayment struct {
 	LastError         string                 `protobuf:"bytes,9,opt,name=last_error,json=lastError,proto3" json:"last_error,omitempty"`
 	CreatedAt         *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	ProviderResult    string                 `protobuf:"bytes,11,opt,name=provider_result,json=providerResult,proto3" json:"provider_result,omitempty"`
+	PhoneNumber       string                 `protobuf:"bytes,12,opt,name=phone_number,json=phoneNumber,proto3" json:"phone_number,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -3357,6 +3366,13 @@ func (x *DarajaPayment) GetCreatedAt() *timestamppb.Timestamp {
 func (x *DarajaPayment) GetProviderResult() string {
 	if x != nil {
 		return x.ProviderResult
+	}
+	return ""
+}
+
+func (x *DarajaPayment) GetPhoneNumber() string {
+	if x != nil {
+		return x.PhoneNumber
 	}
 	return ""
 }
@@ -3549,7 +3565,7 @@ const file_contribution_v1_contribution_proto_rawDesc = "" +
 	"\x1dGetContributionPaymentRequest\x12.\n" +
 	"\x12payment_request_id\x18\x01 \x01(\tH\x00R\x10paymentRequestId\x12)\n" +
 	"\x0fidempotency_key\x18\x02 \x01(\tH\x00R\x0eidempotencyKeyB\b\n" +
-	"\x06lookup\"\xf6\x03\n" +
+	"\x06lookup\"\x9f\x04\n" +
 	"\x1eGetContributionPaymentResponse\x12,\n" +
 	"\x12payment_request_id\x18\x01 \x01(\tR\x10paymentRequestId\x12I\n" +
 	"\x06status\x18\x02 \x01(\x0e21.contribution.v1.ContributionPaymentRequestStatusR\x06status\x12(\n" +
@@ -3560,7 +3576,9 @@ const file_contribution_v1_contribution_proto_rawDesc = "" +
 	"\x0efailure_reason\x18\x06 \x01(\tR\rfailureReason\x12E\n" +
 	"\areceipt\x18\a \x01(\v2+.contribution.v1.ContributionPaymentReceiptR\areceipt\x12.\n" +
 	"\x13checkout_request_id\x18\b \x01(\tR\x11checkoutRequestId\x12'\n" +
-	"\x0frecovery_status\x18\t \x01(\tR\x0erecoveryStatus\"\xcc\x02\n" +
+	"\x0frecovery_status\x18\t \x01(\tR\x0erecoveryStatus\x12'\n" +
+	"\x0fprovider_result\x18\n" +
+	" \x01(\tR\x0eproviderResult\"\xcc\x02\n" +
 	"\x1aContributionPaymentReceipt\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06status\x18\x02 \x01(\tR\x06status\x12(\n" +
@@ -3761,7 +3779,7 @@ const file_contribution_v1_contribution_proto_rawDesc = "" +
 	"page_token\x18\x01 \x01(\tR\tpageToken\"\x80\x01\n" +
 	"\x1aListDarajaPaymentsResponse\x12:\n" +
 	"\bpayments\x18\x01 \x03(\v2\x1e.contribution.v1.DarajaPaymentR\bpayments\x12&\n" +
-	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"\xc8\x03\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"\xeb\x03\n" +
 	"\rDarajaPayment\x12,\n" +
 	"\x12payment_request_id\x18\x01 \x01(\tR\x10paymentRequestId\x12\x1b\n" +
 	"\tmember_id\x18\x02 \x01(\tR\bmemberId\x12.\n" +
@@ -3776,7 +3794,8 @@ const file_contribution_v1_contribution_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\n" +
 	" \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12'\n" +
-	"\x0fprovider_result\x18\v \x01(\tR\x0eproviderResult\"\xd7\x02\n" +
+	"\x0fprovider_result\x18\v \x01(\tR\x0eproviderResult\x12!\n" +
+	"\fphone_number\x18\f \x01(\tR\vphoneNumber\"\xd7\x02\n" +
 	"\x1bRecoverDarajaPaymentRequest\x12,\n" +
 	"\x12payment_request_id\x18\x01 \x01(\tR\x10paymentRequestId\x12\x16\n" +
 	"\x06action\x18\x02 \x01(\tR\x06action\x12.\n" +

@@ -62,7 +62,12 @@ func NewVerifier(ctx context.Context, store *Store, jwksURL, issuer, audience st
 	}
 	readyCtx, cancel := context.WithTimeout(ctx, jwksStartupTimeout)
 	defer cancel()
-	if err := cache.Register(readyCtx, jwksURL, jwk.WithConstantInterval(5*time.Minute), jwk.WithWaitReady(true)); err != nil {
+
+	if err := cache.Register(
+		readyCtx,
+		jwksURL,
+		jwk.WithConstantInterval(5*time.Minute),
+		jwk.WithWaitReady(true)); err != nil {
 		_ = cache.Shutdown(context.Background())
 		return nil, fmt.Errorf("fetch JWKS from %q within %s: %w", jwksURL, jwksStartupTimeout, err)
 	}

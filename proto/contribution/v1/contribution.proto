@@ -192,6 +192,7 @@ message GetContributionPaymentResponse {
   ContributionPaymentReceipt       receipt             = 7;
   string checkout_request_id = 8;
   string recovery_status = 9;
+  string provider_result = 10;
 }
 
 // The receipt's own status prevents collected money being mistaken for a posted contribution.
@@ -461,6 +462,7 @@ message DarajaPayment {
   string last_error = 9;
   google.protobuf.Timestamp created_at = 10;
   string provider_result = 11;
+  string phone_number = 12;
 }
 // Reconciliation requires verified business records; query and retry never initiate STK.
 message RecoverDarajaPaymentRequest {

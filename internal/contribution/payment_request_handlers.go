@@ -60,6 +60,7 @@ func (h *Handlers) GetContributionPayment(ctx context.Context, req *contribution
 		CreatedAt:          timestamppb.New(row.CreatedAt.Time),
 		CheckoutRequestId:  row.CheckoutRequestID.String,
 		RecoveryStatus:     row.RecoveryStatus,
+		ProviderResult:     row.ProviderResult.String,
 	}
 	if row.Status == contributionsqlc.ContributionPaymentRequestStatusFailed {
 		// Stored provider/internal errors are not safe user-facing messages.
@@ -119,11 +120,13 @@ func (h *Handlers) ListDarajaPayments(ctx context.Context, req *contributionv1.L
 		if row.Status == contributionsqlc.ContributionPaymentRequestStatusFailed && !strings.HasPrefix(recovery, "received") {
 			recovery = "provider_failed"
 		}
-		if !row.CheckoutRequestID.Valid || row.QueryAttempts >= 8 {
+		if (!row.CheckoutRequestID.Valid && recovery != "not_sent") ||
+			(row.Status == contributionsqlc.ContributionPaymentRequestStatusPending && recovery == "awaiting_confirmation" && row.QueryAttempts >= 8) {
 			recovery = "needs_review"
 		}
 		response.Payments = append(response.Payments, &contributionv1.DarajaPayment{
 			PaymentRequestId: row.ID.String(), MemberId: row.MemberID.String(), CheckoutRequestId: row.CheckoutRequestID.String,
+			PhoneNumber: row.PhoneNumber,
 			Amount: numericToMoney(row.ExpectedAmount), Status: string(row.Status), RecoveryStatus: recovery,
 			ReceiptStatus: row.ReceiptStatus, MpesaReference: row.MpesaReference, LastError: row.PostingError,
 			CreatedAt: timestamppb.New(row.CreatedAt.Time), ProviderResult: row.ProviderResult.String,

@@ -223,7 +223,7 @@ func (q *Queries) LockContributionPaymentRequestByCheckoutID(ctx context.Context
 
 const lookupContributionPaymentRequest = `-- name: LookupContributionPaymentRequest :one
 SELECT p.id, p.status, p.expected_amount, p.contribution_period,
-       p.created_at, p.failure_reason, p.checkout_request_id, p.recovery_status, p.query_attempts,
+       p.created_at, p.failure_reason, p.checkout_request_id, p.recovery_status, p.query_attempts, p.provider_result,
        r.id AS receipt_id, COALESCE(r.status::text, '')::text AS receipt_status,
        r.received_amount, r.external_transaction_id, r.received_at, r.loan_snapshot
 FROM contribution_payment_requests p
@@ -250,6 +250,7 @@ type LookupContributionPaymentRequestRow struct {
 	CheckoutRequestID     pgtype.Text                      `json:"checkoutRequestId"`
 	RecoveryStatus        string                           `json:"recoveryStatus"`
 	QueryAttempts         int32                            `json:"queryAttempts"`
+	ProviderResult        pgtype.Text                      `json:"providerResult"`
 	ReceiptID             pgtype.UUID                      `json:"receiptId"`
 	ReceiptStatus         string                           `json:"receiptStatus"`
 	ReceivedAmount        pgtype.Numeric                   `json:"receivedAmount"`
@@ -271,6 +272,7 @@ func (q *Queries) LookupContributionPaymentRequest(ctx context.Context, arg Look
 		&i.CheckoutRequestID,
 		&i.RecoveryStatus,
 		&i.QueryAttempts,
+		&i.ProviderResult,
 		&i.ReceiptID,
 		&i.ReceiptStatus,
 		&i.ReceivedAmount,
