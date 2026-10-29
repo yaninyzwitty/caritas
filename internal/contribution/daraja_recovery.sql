@@ -23,6 +23,15 @@ WHERE id = (SELECT id FROM contribution_payment_requests
     ORDER BY next_query_at, id FOR UPDATE SKIP LOCKED LIMIT 1)
 RETURNING *;
 
+-- name: DeferUnavailableDarajaQuery :exec
+UPDATE contribution_payment_requests
+SET query_attempts = query_attempts - 1,
+    next_query_at = NOW() + INTERVAL '1 minute',
+    provider_result = 'Provider query unavailable',
+    updated_at = NOW()
+WHERE id = $1 AND status = 'pending' AND recovery_status NOT LIKE 'received%'
+    AND query_attempts = $2;
+
 -- name: RecordDarajaQueryResult :exec
 UPDATE contribution_payment_requests SET provider_result = $2,
     recovery_status = $3, updated_at = NOW()

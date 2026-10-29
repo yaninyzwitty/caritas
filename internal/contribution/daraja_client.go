@@ -58,7 +58,7 @@ func (c *DarajaClient) QuerySTK(ctx context.Context, checkoutID string) (string,
 	}
 	token, err := c.accessToken(ctx)
 	if err != nil {
-		return "", "", err
+		return "", "", fmt.Errorf("%w: %v", ErrDarajaQueryUnavailable, err)
 	}
 	timestamp := time.Now().UTC().Add(3 * time.Hour).Format("20060102150405")
 	body, err := json.Marshal(map[string]string{
@@ -77,7 +77,7 @@ func (c *DarajaClient) QuerySTK(ctx context.Context, checkoutID string) (string,
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return "", "", err
+		return "", "", fmt.Errorf("%w: %v", ErrDarajaQueryUnavailable, err)
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
@@ -108,10 +108,13 @@ func (c *DarajaClient) QuerySTK(ctx context.Context, checkoutID string) (string,
 	}
 	if resp.StatusCode != http.StatusOK {
 		_ = json.NewDecoder(resp.Body).Decode(&result)
+		if resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden || resp.StatusCode >= 500 {
+			return "", "", fmt.Errorf("%w: HTTP %d", ErrDarajaQueryUnavailable, resp.StatusCode)
+		}
 		return "", "", fmt.Errorf("daraja query rejected (HTTP %d, content-type %q, error_code %q)", resp.StatusCode, resp.Header.Get("Content-Type"), result.ErrorCode)
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return "", "", fmt.Errorf("daraja query response (HTTP %d, content-type %q): %w", resp.StatusCode, resp.Header.Get("Content-Type"), err)
+		return "", "", fmt.Errorf("%w: response decode: %v", ErrDarajaQueryUnavailable, err)
 	}
 	if resp.StatusCode != http.StatusOK || result.CheckoutRequestID != checkoutID || len(result.ResultCode) == 0 {
 		return "", "", fmt.Errorf("daraja query returned no verified checkout result (HTTP %d, error_code %q, checkout_matches %t, result_present %t)", resp.StatusCode, result.ErrorCode, result.CheckoutRequestID == checkoutID, len(result.ResultCode) != 0)

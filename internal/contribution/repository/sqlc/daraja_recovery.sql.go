@@ -72,6 +72,26 @@ func (q *Queries) ClaimDarajaQuery(ctx context.Context) (ContributionPaymentRequ
 	return i, err
 }
 
+const deferUnavailableDarajaQuery = `-- name: DeferUnavailableDarajaQuery :exec
+UPDATE contribution_payment_requests
+SET query_attempts = query_attempts - 1,
+    next_query_at = NOW() + INTERVAL '1 minute',
+    provider_result = 'Provider query unavailable',
+    updated_at = NOW()
+WHERE id = $1 AND status = 'pending' AND recovery_status NOT LIKE 'received%'
+    AND query_attempts = $2
+`
+
+type DeferUnavailableDarajaQueryParams struct {
+	ID            pgtype.UUID `json:"id"`
+	QueryAttempts int32       `json:"queryAttempts"`
+}
+
+func (q *Queries) DeferUnavailableDarajaQuery(ctx context.Context, arg DeferUnavailableDarajaQueryParams) error {
+	_, err := q.db.Exec(ctx, deferUnavailableDarajaQuery, arg.ID, arg.QueryAttempts)
+	return err
+}
+
 const finishDarajaCallback = `-- name: FinishDarajaCallback :exec
 UPDATE daraja_callbacks SET processed_at = CASE WHEN $1::text = '' THEN NOW() ELSE NULL END,
     last_error = NULLIF($1, ''),

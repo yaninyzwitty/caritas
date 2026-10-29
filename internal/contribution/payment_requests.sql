@@ -42,7 +42,7 @@ WHERE checkout_request_id = $1;
 
 -- name: LookupContributionPaymentRequest :one
 SELECT p.id, p.status, p.expected_amount, p.contribution_period,
-       p.created_at, p.failure_reason, p.checkout_request_id, p.recovery_status, p.query_attempts,
+       p.created_at, p.failure_reason, p.checkout_request_id, p.recovery_status, p.query_attempts, p.provider_result,
        r.id AS receipt_id, COALESCE(r.status::text, '')::text AS receipt_status,
        r.received_amount, r.external_transaction_id, r.received_at, r.loan_snapshot
 FROM contribution_payment_requests p

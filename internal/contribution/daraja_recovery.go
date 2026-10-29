@@ -88,24 +88,33 @@ func (s *Service) QueryPendingDaraja(ctx context.Context, client *DarajaClient) 
 		}
 		code, description, queryErr := client.QuerySTK(queryCtx, request.CheckoutRequestID.String)
 		cancel()
+		if queryErr != nil {
+			slog.Warn("query daraja checkout", "payment_request_id", request.ID.String(), "error", queryErr)
+			if errors.Is(queryErr, ErrDarajaQueryUnavailable) {
+				delay = time.Minute
+				if retryDelay := time.Until(client.queryAfter); retryDelay > delay {
+					delay = retryDelay
+				}
+				saveCtx, saveCancel := context.WithTimeout(ctx, 5*time.Second)
+				if err := s.store.DeferUnavailableDarajaQuery(saveCtx, contributionsqlc.DeferUnavailableDarajaQueryParams{ID: request.ID, QueryAttempts: request.QueryAttempts}); err != nil {
+					slog.Error("defer daraja query", "payment_request_id", request.ID.String(), "error", err)
+				}
+				saveCancel()
+				continue
+			}
+			description = "Provider could not verify this checkout"
+		}
 		recovery := "awaiting_confirmation"
 		if request.QueryAttempts >= 8 {
 			recovery = "needs_review"
 		}
 		delay = 10 * time.Second
-		if queryErr != nil {
-			description = "Provider query unavailable"
-			delay = time.Minute
-			if retryDelay := time.Until(client.queryAfter); retryDelay > delay {
-				delay = retryDelay
-			}
-			slog.Warn("query daraja checkout", "payment_request_id", request.ID.String(), "error", queryErr)
-		} else if code == "0" {
+		if code == "0" {
 			// A query has no receipt metadata; confirmed money still needs reconciliation.
 			recovery = "received_needs_receipt"
 		}
 		saveCtx, saveCancel := context.WithTimeout(ctx, 5*time.Second)
-		if queryErr == nil && (code == "1032" || code == "1037" || code == "1" || code == "2001") {
+		if code == "1032" || code == "1037" || code == "1" || code == "2001" {
 			if err := s.MarkDarajaSTKPaymentFailed(saveCtx, request.CheckoutRequestID.String, description); err != nil {
 				slog.Warn("record daraja result", "error", err)
 			}
