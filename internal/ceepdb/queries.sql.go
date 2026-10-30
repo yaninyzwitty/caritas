@@ -258,6 +258,80 @@ func (q *Queries) GetCEEPReport(ctx context.Context, arg GetCEEPReportParams) ([
 	return report, err
 }
 
+const getDashboardSummary = `-- name: GetDashboardSummary :one
+WITH member_counts AS (
+    SELECT COUNT(*)::bigint AS active_members
+    FROM members m
+    WHERE m.branch_id = $1 AND NOT m.is_deleted AND m.status = 'active'
+), principal_paid AS (
+    SELECT t.loan_id, COALESCE(SUM(COALESCE(
+        (t.allocation_breakdown->>'principal')::numeric,
+        t.amount - COALESCE((t.allocation_breakdown->>'credit')::numeric, 0)
+    )), 0)::numeric AS amount
+    FROM loan_transactions t
+    JOIN loans l ON l.id = t.loan_id
+    WHERE t.type = 'repayment' AND l.branch_id = $1 AND NOT l.is_deleted
+    GROUP BY t.loan_id
+), share_total AS (
+    SELECT COALESCE(SUM(COALESCE(latest.balance_after, 0)), 0)::numeric AS share_capital
+    FROM share_accounts sa
+    LEFT JOIN LATERAL (
+        SELECT st.balance_after
+        FROM share_transactions st
+        WHERE st.share_account_id = sa.id
+        ORDER BY st.created_at DESC, st.id DESC
+        LIMIT 1
+    ) latest ON TRUE
+    WHERE sa.branch_id = $1 AND NOT sa.is_deleted
+), monthly_collections AS (
+    SELECT COALESCE(SUM(r.received_amount), 0)::numeric AS collections_this_month
+    FROM contribution_receipts r
+    WHERE r.branch_id = $1 AND NOT r.is_deleted AND r.status = 'completed'
+      AND r.received_at >= date_trunc('month', now() AT TIME ZONE 'Africa/Nairobi') AT TIME ZONE 'Africa/Nairobi'
+      AND r.received_at < (date_trunc('month', now() AT TIME ZONE 'Africa/Nairobi') + INTERVAL '1 month') AT TIME ZONE 'Africa/Nairobi'
+), loan_counts AS (
+    SELECT COUNT(*) FILTER (WHERE l.status IN ('disbursed', 'active', 'restructuring'))::bigint AS active_loans,
+        COUNT(*) FILTER (WHERE l.status IN ('pending', 'approved', 'manual_review'))::bigint AS pending_loans,
+        COUNT(*) FILTER (WHERE l.status = 'delinquent')::bigint AS delinquent_loans,
+        COUNT(*) FILTER (WHERE l.status IN ('closed', 'rejected', 'written_off'))::bigint AS closed_loans,
+        COALESCE(SUM(l.principal - COALESCE(p.amount, 0)) FILTER (
+            WHERE l.status IN ('disbursed', 'active', 'delinquent', 'restructuring', 'manual_review')
+        ), 0)::numeric AS outstanding_principal
+    FROM loans l
+    LEFT JOIN principal_paid p ON p.loan_id = l.id
+    WHERE l.branch_id = $1 AND NOT l.is_deleted
+)
+SELECT active_members, active_loans, pending_loans, delinquent_loans, closed_loans, outstanding_principal, share_capital, collections_this_month FROM member_counts CROSS JOIN loan_counts CROSS JOIN share_total CROSS JOIN monthly_collections
+`
+
+type GetDashboardSummaryRow struct {
+	ActiveMembers        int64
+	ActiveLoans          int64
+	PendingLoans         int64
+	DelinquentLoans      int64
+	ClosedLoans          int64
+	OutstandingPrincipal pgtype.Numeric
+	ShareCapital         pgtype.Numeric
+	CollectionsThisMonth pgtype.Numeric
+}
+
+// A single statement gives dashboard totals the same database snapshot.
+func (q *Queries) GetDashboardSummary(ctx context.Context, branchID int64) (GetDashboardSummaryRow, error) {
+	row := q.db.QueryRow(ctx, getDashboardSummary, branchID)
+	var i GetDashboardSummaryRow
+	err := row.Scan(
+		&i.ActiveMembers,
+		&i.ActiveLoans,
+		&i.PendingLoans,
+		&i.DelinquentLoans,
+		&i.ClosedLoans,
+		&i.OutstandingPrincipal,
+		&i.ShareCapital,
+		&i.CollectionsThisMonth,
+	)
+	return i, err
+}
+
 const saveCEEPReport = `-- name: SaveCEEPReport :exec
 WITH saved AS (
     INSERT INTO ceep_reports (branch_id, period, metadata, finalized_by)

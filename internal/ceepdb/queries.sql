@@ -227,3 +227,49 @@ SELECT jsonb_build_object('branchId', b.branch_id::text, 'period', b.period::tex
         ORDER BY i.severity, i.reference, i.message) FROM issues i), '[]'::jsonb),
     'hasErrors', EXISTS (SELECT 1 FROM issues WHERE severity = 'error')) AS report
 FROM bounds b;
+
+-- name: GetDashboardSummary :one
+-- A single statement gives dashboard totals the same database snapshot.
+WITH member_counts AS (
+    SELECT COUNT(*)::bigint AS active_members
+    FROM members m
+    WHERE m.branch_id = $1 AND NOT m.is_deleted AND m.status = 'active'
+), principal_paid AS (
+    SELECT t.loan_id, COALESCE(SUM(COALESCE(
+        (t.allocation_breakdown->>'principal')::numeric,
+        t.amount - COALESCE((t.allocation_breakdown->>'credit')::numeric, 0)
+    )), 0)::numeric AS amount
+    FROM loan_transactions t
+    JOIN loans l ON l.id = t.loan_id
+    WHERE t.type = 'repayment' AND l.branch_id = $1 AND NOT l.is_deleted
+    GROUP BY t.loan_id
+), share_total AS (
+    SELECT COALESCE(SUM(COALESCE(latest.balance_after, 0)), 0)::numeric AS share_capital
+    FROM share_accounts sa
+    LEFT JOIN LATERAL (
+        SELECT st.balance_after
+        FROM share_transactions st
+        WHERE st.share_account_id = sa.id
+        ORDER BY st.created_at DESC, st.id DESC
+        LIMIT 1
+    ) latest ON TRUE
+    WHERE sa.branch_id = $1 AND NOT sa.is_deleted
+), monthly_collections AS (
+    SELECT COALESCE(SUM(r.received_amount), 0)::numeric AS collections_this_month
+    FROM contribution_receipts r
+    WHERE r.branch_id = $1 AND NOT r.is_deleted AND r.status = 'completed'
+      AND r.received_at >= date_trunc('month', now() AT TIME ZONE 'Africa/Nairobi') AT TIME ZONE 'Africa/Nairobi'
+      AND r.received_at < (date_trunc('month', now() AT TIME ZONE 'Africa/Nairobi') + INTERVAL '1 month') AT TIME ZONE 'Africa/Nairobi'
+), loan_counts AS (
+    SELECT COUNT(*) FILTER (WHERE l.status IN ('disbursed', 'active', 'restructuring'))::bigint AS active_loans,
+        COUNT(*) FILTER (WHERE l.status IN ('pending', 'approved', 'manual_review'))::bigint AS pending_loans,
+        COUNT(*) FILTER (WHERE l.status = 'delinquent')::bigint AS delinquent_loans,
+        COUNT(*) FILTER (WHERE l.status IN ('closed', 'rejected', 'written_off'))::bigint AS closed_loans,
+        COALESCE(SUM(l.principal - COALESCE(p.amount, 0)) FILTER (
+            WHERE l.status IN ('disbursed', 'active', 'delinquent', 'restructuring', 'manual_review')
+        ), 0)::numeric AS outstanding_principal
+    FROM loans l
+    LEFT JOIN principal_paid p ON p.loan_id = l.id
+    WHERE l.branch_id = $1 AND NOT l.is_deleted
+)
+SELECT * FROM member_counts CROSS JOIN loan_counts CROSS JOIN share_total CROSS JOIN monthly_collections;

@@ -17,11 +17,14 @@ import (
 	"github.com/yaninyzwitty/caritas-backend/config"
 	authv1 "github.com/yaninyzwitty/caritas-backend/gen/auth/v1"
 	contributionv1 "github.com/yaninyzwitty/caritas-backend/gen/contribution/v1"
+	dashboardv1 "github.com/yaninyzwitty/caritas-backend/gen/dashboard/v1"
 	loanv1 "github.com/yaninyzwitty/caritas-backend/gen/loan/v1"
 	memberv1 "github.com/yaninyzwitty/caritas-backend/gen/member/v1"
 	sharev1 "github.com/yaninyzwitty/caritas-backend/gen/share/v1"
 	"github.com/yaninyzwitty/caritas-backend/internal/auth"
+	"github.com/yaninyzwitty/caritas-backend/internal/ceepdb"
 	"github.com/yaninyzwitty/caritas-backend/internal/contribution"
+	"github.com/yaninyzwitty/caritas-backend/internal/dashboard"
 	"github.com/yaninyzwitty/caritas-backend/internal/loan"
 	"github.com/yaninyzwitty/caritas-backend/internal/member"
 	"github.com/yaninyzwitty/caritas-backend/internal/share"
@@ -95,6 +98,7 @@ func main() {
 	loanStore := loan.NewStore(pool)
 	loanService := loan.NewService(loanStore, memberService)
 	loanServer := loan.NewHandlers(loanStore, loanService)
+	dashboardServer := dashboard.NewHandlers(ceepdb.New(pool))
 	contributionStore := contribution.NewStore(pool)
 	contributionService := contribution.NewService(contributionStore, shareService, loanService)
 	recoveryCtx, stopRecovery := context.WithCancel(ctx)
@@ -136,6 +140,7 @@ func main() {
 	memberv1.RegisterMemberServiceServer(s, server)
 	sharev1.RegisterShareServiceServer(s, shareServer)
 	loanv1.RegisterLoanServiceServer(s, loanServer)
+	dashboardv1.RegisterDashboardServiceServer(s, dashboardServer)
 	loanv1.RegisterRepaymentServiceServer(s, loanServer)
 	loanv1.RegisterCreditServiceServer(s, loanServer)
 	contributionv1.RegisterContributionServiceServer(s, contributionServer)
@@ -172,6 +177,7 @@ func main() {
 	exitOnError("failed to register member gateway", memberv1.RegisterMemberServiceHandler(ctx, gateway, gatewayConnection))
 	exitOnError("failed to register share gateway", sharev1.RegisterShareServiceHandler(ctx, gateway, gatewayConnection))
 	exitOnError("failed to register loan gateway", loanv1.RegisterLoanServiceHandler(ctx, gateway, gatewayConnection))
+	exitOnError("failed to register dashboard gateway", dashboardv1.RegisterDashboardServiceHandler(ctx, gateway, gatewayConnection))
 	exitOnError("failed to register repayment gateway", loanv1.RegisterRepaymentServiceHandler(ctx, gateway, gatewayConnection))
 	exitOnError("failed to register credit gateway", loanv1.RegisterCreditServiceHandler(ctx, gateway, gatewayConnection))
 	exitOnError("failed to register contribution gateway", contributionv1.RegisterContributionServiceHandler(ctx, gateway, gatewayConnection))

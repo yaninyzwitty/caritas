@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package dashboard.v1;
+
+import "google/api/annotations.proto";
+
+service DashboardService {
+  rpc GetSummary(GetSummaryRequest) returns (GetSummaryResponse) {
+    option (google.api.http) = {post: "/api/v1/dashboard/summary" body: "*"};
+  }
+}
+
+message GetSummaryRequest {
+  int64 branch_id = 1;
+}
+
+message GetSummaryResponse {
+  int64 active_members = 1;
+  int64 active_loans = 2;
+  int64 pending_loans = 3;
+  int64 delinquent_loans = 4;
+  int64 closed_loans = 5;
+  string outstanding_principal = 6;
+  string share_capital = 7;
+  string collections_this_month = 8;
+}
