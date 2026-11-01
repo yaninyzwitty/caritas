@@ -160,6 +160,8 @@ func (v *Verifier) UnaryServerInterceptor(ctx context.Context, req any, info *gr
 // access to every RPC.
 func permissionForMethod(method string) string {
 	switch method {
+	case "/contribution.v1.ContributionService/ApproveDividends", "/contribution.v1.ContributionService/RecordDividendChoice", "/contribution.v1.ContributionService/SettleDividend":
+		return permissionCashApprove
 	case "/auth.v1.AuthService/CreateStaffUser", "/auth.v1.AuthService/DeactivateStaffUser":
 		return permissionStaffManage
 	case "/member.v1.MemberService/RegisterMember", "/member.v1.MemberService/UpdateMemberProfile", "/member.v1.MemberService/UpdateMemberStatus", "/member.v1.MemberService/CloseMember":

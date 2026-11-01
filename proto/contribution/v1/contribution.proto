@@ -8,6 +8,18 @@ import "google/protobuf/struct.proto";
 import "member/v1/member.proto";
 
 service ContributionService {
+  rpc GetDividendRegister(GetDividendRegisterRequest) returns (GetDividendRegisterResponse) {
+    option (google.api.http) = {get: "/api/v1/contributions/dividends" response_body: "report"};
+  }
+  rpc ApproveDividends(ApproveDividendsRequest) returns (ApproveDividendsResponse) {
+    option (google.api.http) = {post: "/api/v1/contributions/dividends/approve" body: "*" response_body: "report"};
+  }
+  rpc RecordDividendChoice(RecordDividendChoiceRequest) returns (RecordDividendChoiceResponse) {
+    option (google.api.http) = {post: "/api/v1/contributions/dividends/choice" body: "*" response_body: "report"};
+  }
+  rpc SettleDividend(SettleDividendRequest) returns (SettleDividendResponse) {
+    option (google.api.http) = {post: "/api/v1/contributions/dividends/settle" body: "*" response_body: "report"};
+  }
   rpc GetCEEPReport(GetCEEPReportRequest) returns (GetCEEPReportResponse) {
     option (google.api.http) = {get: "/api/v1/contributions/ceep" response_body: "report"};
   }
@@ -476,3 +488,52 @@ message RecoverDarajaPaymentRequest {
   string reason = 8;
 }
 message RecoverDarajaPaymentResponse { GetContributionPaymentResponse payment = 1; }
+
+// Explicit annual inputs prevent the payment date from silently moving eligibility.
+message GetDividendRegisterRequest {
+  int32 financial_year = 1;
+  string declaration_date = 2;
+  string rate = 3;
+}
+
+// Approval binds the reviewed preview to the resolution; without the hash changed sources could be approved.
+message ApproveDividendsRequest {
+  int32 financial_year = 1;
+  string declaration_date = 2;
+  string rate = 3;
+  string preview_hash = 4;
+  string resolution_reference = 5;
+}
+
+// Choice is recorded before settlement so an officer cannot silently select a payment method during payout.
+message RecordDividendChoiceRequest {
+  string allocation_id = 1;
+  string choice = 2;
+}
+
+// Cash evidence is separate from the member's choice; choosing cash does not prove receipt.
+message SettleDividendRequest {
+  string allocation_id = 1;
+  string voucher_reference = 2;
+  string payment_date = 3;
+}
+
+// Separate response envelopes satisfy RPC conventions while retaining decimal-text report fields.
+message GetDividendRegisterResponse {
+  google.protobuf.Struct report = 1;
+}
+
+// Approval returns the stored register so callers cannot confuse preview amounts with approved facts.
+message ApproveDividendsResponse {
+  google.protobuf.Struct report = 1;
+}
+
+// Choice returns the register's recorded instruction rather than echoing unconfirmed client input.
+message RecordDividendChoiceResponse {
+  google.protobuf.Struct report = 1;
+}
+
+// Settlement returns authoritative reconciliation totals after payment or reinvestment commits.
+message SettleDividendResponse {
+  google.protobuf.Struct report = 1;
+}

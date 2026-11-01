@@ -19,6 +19,10 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
+	ContributionService_GetDividendRegister_FullMethodName           = "/contribution.v1.ContributionService/GetDividendRegister"
+	ContributionService_ApproveDividends_FullMethodName              = "/contribution.v1.ContributionService/ApproveDividends"
+	ContributionService_RecordDividendChoice_FullMethodName          = "/contribution.v1.ContributionService/RecordDividendChoice"
+	ContributionService_SettleDividend_FullMethodName                = "/contribution.v1.ContributionService/SettleDividend"
 	ContributionService_GetCEEPReport_FullMethodName                 = "/contribution.v1.ContributionService/GetCEEPReport"
 	ContributionService_FinalizeCEEPReport_FullMethodName            = "/contribution.v1.ContributionService/FinalizeCEEPReport"
 	ContributionService_ListDarajaPayments_FullMethodName            = "/contribution.v1.ContributionService/ListDarajaPayments"
@@ -45,6 +49,10 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ContributionServiceClient interface {
+	GetDividendRegister(ctx context.Context, in *GetDividendRegisterRequest, opts ...grpc.CallOption) (*GetDividendRegisterResponse, error)
+	ApproveDividends(ctx context.Context, in *ApproveDividendsRequest, opts ...grpc.CallOption) (*ApproveDividendsResponse, error)
+	RecordDividendChoice(ctx context.Context, in *RecordDividendChoiceRequest, opts ...grpc.CallOption) (*RecordDividendChoiceResponse, error)
+	SettleDividend(ctx context.Context, in *SettleDividendRequest, opts ...grpc.CallOption) (*SettleDividendResponse, error)
 	GetCEEPReport(ctx context.Context, in *GetCEEPReportRequest, opts ...grpc.CallOption) (*GetCEEPReportResponse, error)
 	FinalizeCEEPReport(ctx context.Context, in *FinalizeCEEPReportRequest, opts ...grpc.CallOption) (*FinalizeCEEPReportResponse, error)
 	ListDarajaPayments(ctx context.Context, in *ListDarajaPaymentsRequest, opts ...grpc.CallOption) (*ListDarajaPaymentsResponse, error)
@@ -73,6 +81,46 @@ type contributionServiceClient struct {
 
 func NewContributionServiceClient(cc grpc.ClientConnInterface) ContributionServiceClient {
 	return &contributionServiceClient{cc}
+}
+
+func (c *contributionServiceClient) GetDividendRegister(ctx context.Context, in *GetDividendRegisterRequest, opts ...grpc.CallOption) (*GetDividendRegisterResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetDividendRegisterResponse)
+	err := c.cc.Invoke(ctx, ContributionService_GetDividendRegister_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *contributionServiceClient) ApproveDividends(ctx context.Context, in *ApproveDividendsRequest, opts ...grpc.CallOption) (*ApproveDividendsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ApproveDividendsResponse)
+	err := c.cc.Invoke(ctx, ContributionService_ApproveDividends_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *contributionServiceClient) RecordDividendChoice(ctx context.Context, in *RecordDividendChoiceRequest, opts ...grpc.CallOption) (*RecordDividendChoiceResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RecordDividendChoiceResponse)
+	err := c.cc.Invoke(ctx, ContributionService_RecordDividendChoice_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *contributionServiceClient) SettleDividend(ctx context.Context, in *SettleDividendRequest, opts ...grpc.CallOption) (*SettleDividendResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SettleDividendResponse)
+	err := c.cc.Invoke(ctx, ContributionService_SettleDividend_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *contributionServiceClient) GetCEEPReport(ctx context.Context, in *GetCEEPReportRequest, opts ...grpc.CallOption) (*GetCEEPReportResponse, error) {
@@ -279,6 +327,10 @@ func (c *contributionServiceClient) VerifyCashDeposit(ctx context.Context, in *V
 // All implementations must embed UnimplementedContributionServiceServer
 // for forward compatibility.
 type ContributionServiceServer interface {
+	GetDividendRegister(context.Context, *GetDividendRegisterRequest) (*GetDividendRegisterResponse, error)
+	ApproveDividends(context.Context, *ApproveDividendsRequest) (*ApproveDividendsResponse, error)
+	RecordDividendChoice(context.Context, *RecordDividendChoiceRequest) (*RecordDividendChoiceResponse, error)
+	SettleDividend(context.Context, *SettleDividendRequest) (*SettleDividendResponse, error)
 	GetCEEPReport(context.Context, *GetCEEPReportRequest) (*GetCEEPReportResponse, error)
 	FinalizeCEEPReport(context.Context, *FinalizeCEEPReportRequest) (*FinalizeCEEPReportResponse, error)
 	ListDarajaPayments(context.Context, *ListDarajaPaymentsRequest) (*ListDarajaPaymentsResponse, error)
@@ -309,6 +361,18 @@ type ContributionServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedContributionServiceServer struct{}
 
+func (UnimplementedContributionServiceServer) GetDividendRegister(context.Context, *GetDividendRegisterRequest) (*GetDividendRegisterResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetDividendRegister not implemented")
+}
+func (UnimplementedContributionServiceServer) ApproveDividends(context.Context, *ApproveDividendsRequest) (*ApproveDividendsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ApproveDividends not implemented")
+}
+func (UnimplementedContributionServiceServer) RecordDividendChoice(context.Context, *RecordDividendChoiceRequest) (*RecordDividendChoiceResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RecordDividendChoice not implemented")
+}
+func (UnimplementedContributionServiceServer) SettleDividend(context.Context, *SettleDividendRequest) (*SettleDividendResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SettleDividend not implemented")
+}
 func (UnimplementedContributionServiceServer) GetCEEPReport(context.Context, *GetCEEPReportRequest) (*GetCEEPReportResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetCEEPReport not implemented")
 }
@@ -388,6 +452,78 @@ func RegisterContributionServiceServer(s grpc.ServiceRegistrar, srv Contribution
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&ContributionService_ServiceDesc, srv)
+}
+
+func _ContributionService_GetDividendRegister_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetDividendRegisterRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ContributionServiceServer).GetDividendRegister(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ContributionService_GetDividendRegister_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ContributionServiceServer).GetDividendRegister(ctx, req.(*GetDividendRegisterRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ContributionService_ApproveDividends_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ApproveDividendsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ContributionServiceServer).ApproveDividends(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ContributionService_ApproveDividends_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ContributionServiceServer).ApproveDividends(ctx, req.(*ApproveDividendsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ContributionService_RecordDividendChoice_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RecordDividendChoiceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ContributionServiceServer).RecordDividendChoice(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ContributionService_RecordDividendChoice_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ContributionServiceServer).RecordDividendChoice(ctx, req.(*RecordDividendChoiceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ContributionService_SettleDividend_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SettleDividendRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ContributionServiceServer).SettleDividend(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ContributionService_SettleDividend_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ContributionServiceServer).SettleDividend(ctx, req.(*SettleDividendRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _ContributionService_GetCEEPReport_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -757,6 +893,22 @@ var ContributionService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "contribution.v1.ContributionService",
 	HandlerType: (*ContributionServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetDividendRegister",
+			Handler:    _ContributionService_GetDividendRegister_Handler,
+		},
+		{
+			MethodName: "ApproveDividends",
+			Handler:    _ContributionService_ApproveDividends_Handler,
+		},
+		{
+			MethodName: "RecordDividendChoice",
+			Handler:    _ContributionService_RecordDividendChoice_Handler,
+		},
+		{
+			MethodName: "SettleDividend",
+			Handler:    _ContributionService_SettleDividend_Handler,
+		},
 		{
 			MethodName: "GetCEEPReport",
 			Handler:    _ContributionService_GetCEEPReport_Handler,

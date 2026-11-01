@@ -167,7 +167,9 @@ func (s *Service) postTransactionInTx(
 		return result, fmt.Errorf("lookup existing transaction: %w", err)
 	}
 
-	if account.Status != sharesqlc.ShareAccountStatusActive {
+	// An approved dividend settles an existing entitlement after inactivity;
+	// ordinary purchases and withdrawals retain their account status checks.
+	if account.Status != sharesqlc.ShareAccountStatusActive && txType != sharesqlc.ShareTransactionTypeDividend {
 		return result, ErrAccountNotActive
 	}
 
