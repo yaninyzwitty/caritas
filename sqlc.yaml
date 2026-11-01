@@ -1,7 +1,7 @@
 version: "2"
 sql:
   - engine: "postgresql"
-    queries: "internal/ceepdb/queries.sql"
+    queries: ["internal/ceepdb/queries.sql", "internal/ceepdb/dividends.sql"]
     schema: "migrations/"
     gen:
       go:

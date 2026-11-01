@@ -109,8 +109,8 @@ Rules:
 
 - `Closed` is terminal. A closed account must not reopen.
 - Closure requires zero share balance and zero active pledged shares.
-- `Dormant` accounts cannot withdraw, pledge or receive dividend postings until reactivated.
-- `Frozen` accounts cannot transact except through approved reversal, adjustment or release workflows.
+- `Dormant` accounts cannot withdraw or pledge until reactivated. Already-approved dividend reinvestment is a settlement exception.
+- `Frozen` accounts cannot transact except through approved reversal, adjustment, release or already-approved dividend settlement workflows.
 - Reactivation from `Dormant` requires approval and balance verification.
 - Unfreezing requires the incident or audit process that caused the freeze to be resolved.
 
@@ -207,7 +207,9 @@ one guarantor's pledge; loan rejection and full repayment release all pledges.
 
 Dividend calculation is defined by the cross-domain spec. Dividend posting to the share ledger is owned by the Shares domain.
 
-Posting dividends must:
+Dividends may be settled as cash or reinvested at the member's recorded choice. Cash payments do not write share transactions. Only reinvestment posts to Shares. Member eligibility is fixed at declaration; a later inactive member status must not block either settlement path. The dividend writer is restricted to approved allocations and preserves account identity, locks and idempotency without reopening accounts or enabling ordinary purchases for inactive members.
+
+Posting reinvested dividends must:
 
 - use one approved allocation per member and financial year
 - be idempotent
@@ -319,7 +321,7 @@ Do not implement cross-row business rules as `CHECK` constraints. Use foreign ke
 
 - Dividend posts more than once for same member and financial year.
 - Dividend posts from stale or unapproved allocation.
-- Dividend posts to inactive, dormant, frozen or closed account.
+- An ordinary purchase bypasses account restrictions by being mislabeled as a dividend.
 - Correction overwrites original dividend transaction.
 - Total share balance in reports differs from the Shares ledger after posting.
 
@@ -352,5 +354,5 @@ These must be settled before implementation:
 - What exact inactivity period moves an account from `Active` to `Dormant`?
 - Who can approve dormant reactivation and frozen-account unfreezing?
 - Are share withdrawals allowed outside full membership withdrawal?
-- Should dividend posting be blocked for `Dormant` accounts or only for `Frozen` and `Closed` accounts?
+- Already-approved dividend settlement remains allowed after member inactivity; it is not a new eligibility decision.
 - What exact external reference identifies the related loan when creating or releasing a pledge?

@@ -857,8 +857,10 @@ type ApplyForLoanRequest struct {
 	OfficerId                  string                 `protobuf:"bytes,6,opt,name=officer_id,json=officerId,proto3" json:"officer_id,omitempty"`
 	Guarantors                 []*ProposedGuarantor   `protobuf:"bytes,7,rep,name=guarantors,proto3" json:"guarantors,omitempty"`
 	ApplicantSharePledgeAmount *v1.Money              `protobuf:"bytes,8,opt,name=applicant_share_pledge_amount,json=applicantSharePledgeAmount,proto3" json:"applicant_share_pledge_amount,omitempty"`
-	unknownFields              protoimpl.UnknownFields
-	sizeCache                  protoimpl.SizeCache
+	// Reuse this UUID when retrying the same application after an uncertain response.
+	IdempotencyKey string `protobuf:"bytes,9,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *ApplyForLoanRequest) Reset() {
@@ -945,6 +947,13 @@ func (x *ApplyForLoanRequest) GetApplicantSharePledgeAmount() *v1.Money {
 		return x.ApplicantSharePledgeAmount
 	}
 	return nil
+}
+
+func (x *ApplyForLoanRequest) GetIdempotencyKey() string {
+	if x != nil {
+		return x.IdempotencyKey
+	}
+	return ""
 }
 
 // ApplyForLoanResponse returns the newly created loan application's identifiers.
@@ -2228,7 +2237,7 @@ const file_loan_v1_loan_proto_rawDesc = "" +
 	"usedAmount\"c\n" +
 	"\x11ProposedGuarantor\x12!\n" +
 	"\fguarantor_id\x18\x01 \x01(\tR\vguarantorId\x12+\n" +
-	"\x11guaranteed_amount\x18\x02 \x01(\tR\x10guaranteedAmount\"\xfa\x02\n" +
+	"\x11guaranteed_amount\x18\x02 \x01(\tR\x10guaranteedAmount\"\xa3\x03\n" +
 	"\x13ApplyForLoanRequest\x12\x1b\n" +
 	"\tmember_id\x18\x01 \x01(\tR\bmemberId\x12\x1b\n" +
 	"\tbranch_id\x18\x02 \x01(\x05R\bbranchId\x12\x1c\n" +
@@ -2240,7 +2249,8 @@ const file_loan_v1_loan_proto_rawDesc = "" +
 	"\n" +
 	"guarantors\x18\a \x03(\v2\x1a.loan.v1.ProposedGuarantorR\n" +
 	"guarantors\x12S\n" +
-	"\x1dapplicant_share_pledge_amount\x18\b \x01(\v2\x10.member.v1.MoneyR\x1aapplicantSharePledgeAmount\"\\\n" +
+	"\x1dapplicant_share_pledge_amount\x18\b \x01(\v2\x10.member.v1.MoneyR\x1aapplicantSharePledgeAmount\x12'\n" +
+	"\x0fidempotency_key\x18\t \x01(\tR\x0eidempotencyKey\"\\\n" +
 	"\x14ApplyForLoanResponse\x12\x17\n" +
 	"\aloan_id\x18\x01 \x01(\tR\x06loanId\x12+\n" +
 	"\x06status\x18\x02 \x01(\x0e2\x13.loan.v1.LoanStatusR\x06status\"d\n" +

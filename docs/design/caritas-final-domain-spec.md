@@ -252,21 +252,23 @@ If separation of duties is required, the same person must not prepare, check and
 
 ## 7. Dividend Rules
 
-Annual dividend allocation uses the approved dividend rate for the applicable financial year. The default rate is 5% unless another effective-dated rate has been formally approved.
+Annual dividend allocation uses a configurable percentage, defaulting to 5%, recorded on one approved declaration per branch and financial year. The year ends on 31 December in Africa/Nairobi. The rate is frozen on approval, not a guaranteed return independent of the authorized distribution.
 
-The calculation base is the member's average finalized month-end eligible share balance during the financial year.
+The calculation base is the member's Shares ledger closing balance at financial year-end. Later contributions do not increase this base. Use exact decimal arithmetic and round the final dividend to cents, with half a cent rounded up.
 
 ```text
-eligible_share_balance =
-  sum(eligible finalized month-end share balances) / eligible_month_count
-
-dividend_amount =
-  eligible_share_balance * annual_dividend_rate
+dividend_amount = round(year_end_share_balance * declared_percentage / 100, 2)
 ```
 
 Dividend calculations must use finalized historical balances from the Shares ledger. Current share balances and CEEP-calculated balances must not be substituted.
 
-Every allocation must record:
+Eligibility is checked once against the six completed calendar months before declaration. The member must be active at declaration and have at least KSh 100 total share contributions in each month. Only completed receipts with completed, matching, unreversed Shares purchase transactions qualify. Receipt time determines the payment month; the contribution period must match that month, so late arrears do not repair missed months. Fees, loan payments, adjustments and reinvested dividends do not count. New members without six qualifying months are excluded.
+
+Version one has no eligibility holds, later rechecks, catch-up allocations or carry-forwards. Ineligible members remain visible in the annual register with exclusion reasons and monthly evidence, but receive no payable allocation for that year.
+
+Preview and approval use the same source query. Approval requires the reviewed preview hash and an annual approval/resolution reference; changed source facts require a new preview. Admins and managers approve and settle within their branch. The declaration records the approving officer, timestamp and total. New declarations use today's Nairobi date; saved years retain their original date and evidence.
+
+Every register entry must record:
 
 - member ID
 - financial year
@@ -277,6 +279,12 @@ Every allocation must record:
 - status
 - calculation date
 - approving officer
+
+The member chooses either cash or full reinvestment; no default or split settlement. Record the choice, officer and timestamp before settlement. Cash confirmation requires an actual payment date and signed voucher/register reference. Reinvestment posts through Shares with the allocation ID as the idempotency reference. Settlement and the share credit commit together. Cash settlement never credits Shares. Both paths remain permitted if the member becomes inactive after approval; do not recheck member eligibility at settlement.
+
+Cash references are unique within a branch. A shared signed register must identify the individual payment by page and row, rather than reuse the register reference for multiple members.
+
+Approved but unpaid allocations remain outstanding. Reports reconcile approved total = cash paid + reinvested + outstanding. Version one excludes tax calculation, automatic loan offsets and automated disbursement integrations.
 
 There may be at most one finalized dividend allocation per member and financial year. Corrections must create traceable adjustments rather than overwrite finalized allocations.
 
@@ -370,7 +378,7 @@ There may be at most one finalized dividend allocation per member and financial 
 - Rate changes without authorization.
 - Rate is applied to wrong balance or period.
 - Current shares are used instead of finalized historical eligible balance.
-- Members who joined or withdrew mid-year receive wrong eligible month count.
+- Eligibility uses the collection date instead of the declaration's fixed six-month window.
 - Total allocated dividends exceed approved distribution amount.
 - Allocation misses calculation date or approving officer.
 - Correction overwrites finalized allocation instead of appending adjustment.
@@ -402,6 +410,6 @@ CEEP snapshots MUST be generated for every active member even if they have no co
 COM fees and LGOM fees must be deducted on every monthly contribution (assesed on the first calender day of the month)
 For withdrawal fees, fees already assessed remain payable; no future fees after the effective withdrawal date
 For principal below principal / 36, Prohibit during normal repayment; permit only through an approved restructuring
-For the dividend balance, Use the average finalized month-end eligible balance
+For the dividend balance, use the 31 December Shares ledger closing balance.
 Existing receipt does not automatically mean successful receipt.
 Existing allocation does not automatically mean complete allocation plan.
