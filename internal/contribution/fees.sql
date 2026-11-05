@@ -43,6 +43,17 @@ WHERE r.member_id = sqlc.arg(member_id)
   AND a.type = sqlc.arg(type) AND a.status = 'completed'
   AND (sqlc.narg(exclude_receipt)::uuid IS NULL OR r.id <> sqlc.narg(exclude_receipt));
 
+-- name: SumMonthlyFeePaymentsByType :many
+SELECT a.type, SUM(a.amount)::numeric AS paid
+FROM contribution_allocations a
+JOIN contribution_receipts r ON r.id = a.receipt_id
+WHERE r.member_id = sqlc.arg(member_id)
+  AND r.contribution_period >= sqlc.arg(period)::date
+  AND r.contribution_period < sqlc.arg(period)::date + INTERVAL '1 month'
+  AND a.type IN ('com', 'lgom') AND a.status = 'completed'
+  AND (sqlc.narg(exclude_receipt)::uuid IS NULL OR r.id <> sqlc.narg(exclude_receipt))
+GROUP BY a.type;
+
 -- name: GetContributionMemberBranch :one
 SELECT branch_id FROM members WHERE id = $1 AND NOT is_deleted;
 

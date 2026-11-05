@@ -201,3 +201,42 @@ func (q *Queries) SumContributionChargePayments(ctx context.Context, arg SumCont
 	err := row.Scan(&paid)
 	return paid, err
 }
+
+const sumContributionChargePaymentsByID = `-- name: SumContributionChargePaymentsByID :many
+SELECT target_id, SUM(amount)::numeric AS paid
+FROM contribution_allocations
+WHERE target_id = ANY($1::uuid[])
+  AND type IN ('other_charge', 'penalty') AND status = 'completed'
+  AND ($2::uuid IS NULL OR receipt_id <> $2)
+GROUP BY target_id
+`
+
+type SumContributionChargePaymentsByIDParams struct {
+	ChargeIds      []pgtype.UUID `json:"chargeIds"`
+	ExcludeReceipt pgtype.UUID   `json:"excludeReceipt"`
+}
+
+type SumContributionChargePaymentsByIDRow struct {
+	TargetID pgtype.UUID    `json:"targetId"`
+	Paid     pgtype.Numeric `json:"paid"`
+}
+
+func (q *Queries) SumContributionChargePaymentsByID(ctx context.Context, arg SumContributionChargePaymentsByIDParams) ([]SumContributionChargePaymentsByIDRow, error) {
+	rows, err := q.db.Query(ctx, sumContributionChargePaymentsByID, arg.ChargeIds, arg.ExcludeReceipt)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SumContributionChargePaymentsByIDRow
+	for rows.Next() {
+		var i SumContributionChargePaymentsByIDRow
+		if err := rows.Scan(&i.TargetID, &i.Paid); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

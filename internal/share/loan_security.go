@@ -194,6 +194,51 @@ func VerifyGuarantorSecurity(ctx context.Context, q sharesqlc.Querier, loanID, m
 	return nil
 }
 
+// VerifyGuarantorSecurities reads every approved guarantor's backing after
+// VerifyApplicantSecurity has locked the loan's collateral accounts.
+func VerifyGuarantorSecurities(ctx context.Context, q sharesqlc.Querier, loanID pgtype.UUID, amounts map[pgtype.UUID]pgtype.Numeric) error {
+	if len(amounts) == 0 {
+		return nil
+	}
+	ids := make([]pgtype.UUID, 0, len(amounts))
+	for id := range amounts {
+		ids = append(ids, id)
+	}
+	accounts, err := q.GetSecurityBalances(ctx, ids)
+	if err != nil {
+		return err
+	}
+	pledges, err := q.ListGuarantorSharePledges(ctx, sharesqlc.ListGuarantorSharePledgesParams{LoanID: loanID, MemberIds: ids})
+	if err != nil {
+		return err
+	}
+	byMember := make(map[pgtype.UUID]sharesqlc.GetSecurityBalancesRow, len(accounts))
+	for _, account := range accounts {
+		byMember[account.MemberID] = account
+	}
+	pledgeByMember := make(map[pgtype.UUID]sharesqlc.ListGuarantorSharePledgesRow, len(pledges))
+	for _, pledge := range pledges {
+		pledgeByMember[pledge.MemberID] = pledge
+	}
+	for id, amount := range amounts {
+		account, ok := byMember[id]
+		if !ok {
+			return ErrAccountNotFound
+		}
+		if account.Status != sharesqlc.ShareAccountStatusActive {
+			return ErrAccountNotActive
+		}
+		pledge, ok := pledgeByMember[id]
+		if !ok || pledge.Status != sharesqlc.SharePledgeStatusActive || numericToNanos(pledge.PledgedAmount).Cmp(numericToNanos(amount)) < 0 {
+			return fmt.Errorf("%w: approved guarantor is missing sufficient active share security", ErrLoanSecurity)
+		}
+		if numericToNanos(account.Pledged).Cmp(numericToNanos(account.Balance)) > 0 {
+			return fmt.Errorf("%w: approved guarantor's active pledges exceed their current shares", ErrGuaranteeCapacity)
+		}
+	}
+	return nil
+}
+
 // ReleaseLoanSecurity releases either one guarantor's pledge or all loan
 // security. Account locks keep release serialized with pledging and withdrawal.
 func ReleaseLoanSecurity(ctx context.Context, q sharesqlc.Querier, loanID, memberID pgtype.UUID) error {

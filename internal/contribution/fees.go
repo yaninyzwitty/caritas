@@ -30,16 +30,20 @@ func monthlyFees(ctx context.Context, q contributionsqlc.Querier, memberID pgtyp
 	if err != nil {
 		return nil, fmt.Errorf("lock membership fees: %w", err)
 	}
+	payments, err := q.SumMonthlyFeePaymentsByType(ctx, contributionsqlc.SumMonthlyFeePaymentsByTypeParams{
+		MemberID: memberID, Period: period, ExcludeReceipt: excludeReceipt,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("sum membership fee payments: %w", err)
+	}
+	paidByType := make(map[contributionsqlc.ContributionAllocationType]pgtype.Numeric, len(payments))
+	for _, payment := range payments {
+		paidByType[payment.Type] = payment.Paid
+	}
 	var result []AllocationInput
 	for _, fee := range fees {
-		paid, err := q.SumMonthlyFeePayments(ctx, contributionsqlc.SumMonthlyFeePaymentsParams{
-			MemberID: memberID, Period: period, Type: fee.Type, ExcludeReceipt: excludeReceipt,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("sum membership fee payments: %w", err)
-		}
 		due := numericToScale(fee.Amount, -4)
-		due.Sub(due, numericToScale(paid, -4))
+		due.Sub(due, numericToScale(paidByType[fee.Type], -4))
 		if due.Sign() > 0 {
 			result = append(result, AllocationInput{Type: fee.Type, Amount: pgtype.Numeric{Int: due, Exp: -4, Valid: true}})
 		}

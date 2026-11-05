@@ -39,6 +39,13 @@ SELECT id, share_account_id, loan_id, pledged_amount, type, status, approved_by,
 FROM share_pledges
 WHERE share_account_id = $1 AND loan_id = $2 AND type = 'guarantor_security';
 
+-- name: ListGuarantorSharePledges :many
+SELECT sa.member_id, sp.pledged_amount, sp.status
+FROM share_pledges sp
+JOIN share_accounts sa ON sa.id = sp.share_account_id
+WHERE sp.loan_id = sqlc.arg(loan_id) AND sa.member_id = ANY(sqlc.arg(member_ids)::uuid[])
+  AND sp.type = 'guarantor_security';
+
 -- name: LockLoanShareAccounts :many
 SELECT sa.id FROM share_accounts sa
 WHERE EXISTS (

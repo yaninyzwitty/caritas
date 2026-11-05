@@ -574,6 +574,11 @@ func (s *Service) DisburseLoan(
 			return ErrInvalidLoanAmount
 		}
 
+		schedules := make([]struct {
+			InstallmentNo int32  `json:"installment_no"`
+			DueDate       string `json:"due_date"`
+			AmountDue     string `json:"amount_due"`
+		}, 0, current.RepaymentPeriodMonths)
 		for installmentNo := int32(1); installmentNo <= current.RepaymentPeriodMonths; installmentNo++ {
 			amountDue := new(big.Int).Set(installment)
 			if installmentNo == current.RepaymentPeriodMonths {
@@ -581,15 +586,22 @@ func (s *Service) DisburseLoan(
 			}
 			dueSeed := loan.DisbursedAt.Time.AddDate(0, int(installmentNo), 0)
 			dueDate := time.Date(dueSeed.Year(), dueSeed.Month()+1, 0, 0, 0, 0, 0, dueSeed.Location())
-			if _, err := q.CreateRepaymentSchedule(ctx, loansqlc.CreateRepaymentScheduleParams{
-				LoanID:        loanID,
-				InstallmentNo: installmentNo,
-				DueDate:       pgtype.Date{Time: dueDate, Valid: true},
-				AmountDue:     numericFromScale(amountDue),
-				Status:        loansqlc.RepaymentScheduleStatusUpcoming,
-			}); err != nil {
-				return fmt.Errorf("create repayment schedule: %w", err)
-			}
+			schedules = append(schedules, struct {
+				InstallmentNo int32  `json:"installment_no"`
+				DueDate       string `json:"due_date"`
+				AmountDue     string `json:"amount_due"`
+			}{InstallmentNo: installmentNo, DueDate: dueDate.Format("2006-01-02"), AmountDue: numericToString(numericFromScale(amountDue))})
+		}
+		scheduleData, err := json.Marshal(schedules)
+		if err != nil {
+			return fmt.Errorf("encode repayment schedules: %w", err)
+		}
+		inserted, err := q.CreateRepaymentSchedules(ctx, loansqlc.CreateRepaymentSchedulesParams{LoanID: loanID, Schedules: scheduleData})
+		if err != nil {
+			return fmt.Errorf("create repayment schedules: %w", err)
+		}
+		if inserted != int64(len(schedules)) {
+			return fmt.Errorf("create repayment schedules: inserted %d of %d", inserted, len(schedules))
 		}
 
 		disbursed := loan.DisbursedAt.Time.In(time.FixedZone("EAT", 3*60*60))
@@ -730,9 +742,9 @@ func (s *Service) RecordRepaymentForPeriodInTx(
 	if latest.Valid {
 		first = latest.Time.AddDate(0, 1, 0)
 	}
-	for month := first; !month.After(period.Time); month = month.AddDate(0, 1, 0) {
-		if err := q.AssessLoanInterest(ctx, loansqlc.AssessLoanInterestParams{
-			LoanID: loanID, Period: pgtype.Date{Time: month, Valid: true},
+	if !first.After(period.Time) {
+		if err := q.AssessLoanInterestPeriods(ctx, loansqlc.AssessLoanInterestPeriodsParams{
+			LoanID: loanID, FirstPeriod: pgtype.Date{Time: first, Valid: true}, LastPeriod: period,
 		}); err != nil {
 			return tx, fmt.Errorf("assess monthly interest: %w", err)
 		}
@@ -936,6 +948,10 @@ func allocateRepayment(amount, priorApplied, principal, interestDue pgtype.Numer
 
 func updateScheduleStatuses(ctx context.Context, q loansqlc.Querier, schedules []loansqlc.RepaymentSchedule, applied *big.Int) error {
 	remaining := new(big.Int).Set(applied)
+	changes := make([]struct {
+		ID     string `json:"id"`
+		Status string `json:"status"`
+	}, 0, len(schedules))
 	for _, schedule := range schedules {
 		due := numericToScale(schedule.AmountDue, -4)
 		nextStatus := schedule.Status
@@ -951,12 +967,24 @@ func updateScheduleStatuses(ctx context.Context, q loansqlc.Querier, schedules [
 		if nextStatus == schedule.Status {
 			continue
 		}
-		if _, err := q.UpdateRepaymentScheduleStatus(ctx, loansqlc.UpdateRepaymentScheduleStatusParams{
-			ID:     schedule.ID,
-			Status: nextStatus,
-		}); err != nil {
-			return fmt.Errorf("update repayment schedule status: %w", err)
-		}
+		changes = append(changes, struct {
+			ID     string `json:"id"`
+			Status string `json:"status"`
+		}{ID: schedule.ID.String(), Status: string(nextStatus)})
+	}
+	if len(changes) == 0 {
+		return nil
+	}
+	data, err := json.Marshal(changes)
+	if err != nil {
+		return fmt.Errorf("encode repayment schedule statuses: %w", err)
+	}
+	updated, err := q.UpdateRepaymentScheduleStatuses(ctx, data)
+	if err != nil {
+		return fmt.Errorf("update repayment schedule statuses: %w", err)
+	}
+	if updated != int64(len(changes)) {
+		return fmt.Errorf("update repayment schedule statuses: updated %d of %d", updated, len(changes))
 	}
 	return nil
 }
@@ -989,17 +1017,27 @@ func verifyCollateral(ctx context.Context, tx pgx.Tx, q *loansqlc.Queries, share
 		return fmt.Errorf("list guarantors: %w", err)
 	}
 
+	approvedIDs := make([]pgtype.UUID, 0, len(guarantors))
+	approvedAmounts := make(map[pgtype.UUID]pgtype.Numeric, len(guarantors))
 	for _, guarantor := range guarantors {
 		if guarantor.Status != loansqlc.GuarantorStatusApproved {
 			continue
 		}
-		if err := requireActiveMemberInTx(ctx, tx, guarantor.GuarantorID, branchID, ErrGuarantorNotActive); err != nil {
-			return err
-		}
-		if err := share.VerifyGuarantorSecurity(ctx, shares, loanID, guarantor.GuarantorID, guarantor.GuaranteedAmount); err != nil {
-			return err
-		}
+		approvedIDs = append(approvedIDs, guarantor.GuarantorID)
+		approvedAmounts[guarantor.GuarantorID] = guarantor.GuaranteedAmount
 		coverage.Add(coverage, numericToScale(guarantor.GuaranteedAmount, -4))
+	}
+	if len(approvedIDs) > 0 {
+		active, err := member.LockActiveMembersInTx(ctx, tx, approvedIDs, branchID)
+		if err != nil {
+			return err
+		}
+		if len(active) != len(approvedIDs) {
+			return ErrGuarantorNotActive
+		}
+		if err := share.VerifyGuarantorSecurities(ctx, shares, loanID, approvedAmounts); err != nil {
+			return err
+		}
 	}
 	if coverage.Cmp(numericToScale(principal, -4)) < 0 {
 		return fmt.Errorf("%w: approved security is KES %s against principal KES %s. Pending guarantors do not count; approve sufficient guarantees before approving or disbursing the loan", ErrInsufficientCollateral, numericToString(pgtype.Numeric{Int: coverage, Exp: -4, Valid: true}), numericToString(principal))
