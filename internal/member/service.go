@@ -113,15 +113,11 @@ func (s *Service) RequireActiveMember(ctx context.Context, memberID pgtype.UUID)
 }
 
 func (s *Service) GetMemberByNationalID(ctx context.Context, branchID int64, nationalID string) (sqlc.GetMemberByIDRow, error) {
-	existing, err := s.store.MemberExistsByBranchAndNationalID(ctx, sqlc.MemberExistsByBranchAndNationalIDParams{
+	row, err := s.store.GetMemberByBranchAndNationalID(ctx, sqlc.GetMemberByBranchAndNationalIDParams{
 		BranchID:   branchID,
 		NationalID: nationalID,
 	})
-	if err != nil {
-		return sqlc.GetMemberByIDRow{}, fmt.Errorf("check member existence: %w", err)
-	}
-
-	return s.store.GetMemberByID(ctx, existing.ID)
+	return sqlc.GetMemberByIDRow(row), err
 }
 
 func (s *Service) ListMembers(ctx context.Context, branchID int64, cursor pgtype.Int8, limit int32, search, statusFilter string) ([]sqlc.ListMembersByBranchCursorRow, error) {

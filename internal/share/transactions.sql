@@ -4,6 +4,12 @@ WHERE share_account_id = $1
 ORDER BY created_at DESC
 LIMIT 1;
 
+-- name: GetWithdrawalPosition :one
+SELECT COALESCE((SELECT st.balance_after FROM share_transactions st
+                 WHERE st.share_account_id = sqlc.arg(share_account_id) ORDER BY st.created_at DESC LIMIT 1), 0)::numeric AS balance,
+       COALESCE((SELECT SUM(sp.pledged_amount) FROM share_pledges sp
+                 WHERE sp.share_account_id = sqlc.arg(share_account_id) AND sp.status = 'active'), 0)::numeric AS pledged;
+
 -- name: LockAndGetLatestBalance :one
 SELECT balance_after FROM share_transactions
 WHERE share_account_id = $1

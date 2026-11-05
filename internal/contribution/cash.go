@@ -38,7 +38,7 @@ func (s *Service) OpenCashierSession(ctx context.Context, branchID int64, cashie
 }
 
 func (s *Service) CreateCashReceipt(ctx context.Context, params contributionsqlc.InsertContributionReceiptParams, allocations []AllocationInput) (CreatedReceipt, error) {
-	ctx, cancel := context.WithTimeout(ctx, 8*time.Second)
+	acceptCtx, cancel := context.WithTimeout(ctx, 8*time.Second)
 	defer cancel()
 	params.SourceChannel = contributionsqlc.ContributionSourceChannelCash
 	params.IdempotencyKey = text(strings.TrimSpace(params.IdempotencyKey.String))
@@ -46,7 +46,8 @@ func (s *Service) CreateCashReceipt(ctx context.Context, params contributionsqlc
 	params.ReceivedAt = pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true}
 
 	var result CreatedReceipt
-	err := s.store.ExecReceiptTx(ctx, func(tx pgx.Tx) error {
+	err := s.store.ExecReceiptTx(acceptCtx, func(tx pgx.Tx) error {
+		ctx := acceptCtx
 		q := contributionsqlc.New(tx)
 		session, err := q.LockCashierSession(ctx, params.CashierSessionID)
 		if errors.Is(err, pgx.ErrNoRows) {

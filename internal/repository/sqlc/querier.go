@@ -14,6 +14,7 @@ type Querier interface {
 	CreateMember(ctx context.Context, arg CreateMemberParams) (pgtype.UUID, error)
 	CreateMemberProfile(ctx context.Context, arg CreateMemberProfileParams) (pgtype.UUID, error)
 	DeactivateMember(ctx context.Context, id pgtype.UUID) (DeactivateMemberRow, error)
+	GetMemberByBranchAndNationalID(ctx context.Context, arg GetMemberByBranchAndNationalIDParams) (GetMemberByBranchAndNationalIDRow, error)
 	GetMemberByBranchAndNumber(ctx context.Context, arg GetMemberByBranchAndNumberParams) (GetMemberByBranchAndNumberRow, error)
 	GetMemberByID(ctx context.Context, id pgtype.UUID) (GetMemberByIDRow, error)
 	GetMemberStatusHistory(ctx context.Context, memberID pgtype.UUID) ([]MemberStatusHistory, error)

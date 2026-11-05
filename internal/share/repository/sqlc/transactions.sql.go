@@ -113,6 +113,25 @@ func (q *Queries) GetTransactionByReference(ctx context.Context, arg GetTransact
 	return i, err
 }
 
+const getWithdrawalPosition = `-- name: GetWithdrawalPosition :one
+SELECT COALESCE((SELECT st.balance_after FROM share_transactions st
+                 WHERE st.share_account_id = $1 ORDER BY st.created_at DESC LIMIT 1), 0)::numeric AS balance,
+       COALESCE((SELECT SUM(sp.pledged_amount) FROM share_pledges sp
+                 WHERE sp.share_account_id = $1 AND sp.status = 'active'), 0)::numeric AS pledged
+`
+
+type GetWithdrawalPositionRow struct {
+	Balance pgtype.Numeric `json:"balance"`
+	Pledged pgtype.Numeric `json:"pledged"`
+}
+
+func (q *Queries) GetWithdrawalPosition(ctx context.Context, shareAccountID pgtype.UUID) (GetWithdrawalPositionRow, error) {
+	row := q.db.QueryRow(ctx, getWithdrawalPosition, shareAccountID)
+	var i GetWithdrawalPositionRow
+	err := row.Scan(&i.Balance, &i.Pledged)
+	return i, err
+}
+
 const insertShareTransaction = `-- name: InsertShareTransaction :one
 INSERT INTO share_transactions (share_account_id, type, amount, balance_after, reference_id, reversal_of, reason, originator_id)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)

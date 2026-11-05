@@ -211,3 +211,46 @@ func (q *Queries) SumMonthlyFeePayments(ctx context.Context, arg SumMonthlyFeePa
 	err := row.Scan(&paid)
 	return paid, err
 }
+
+const sumMonthlyFeePaymentsByType = `-- name: SumMonthlyFeePaymentsByType :many
+SELECT a.type, SUM(a.amount)::numeric AS paid
+FROM contribution_allocations a
+JOIN contribution_receipts r ON r.id = a.receipt_id
+WHERE r.member_id = $1
+  AND r.contribution_period >= $2::date
+  AND r.contribution_period < $2::date + INTERVAL '1 month'
+  AND a.type IN ('com', 'lgom') AND a.status = 'completed'
+  AND ($3::uuid IS NULL OR r.id <> $3)
+GROUP BY a.type
+`
+
+type SumMonthlyFeePaymentsByTypeParams struct {
+	MemberID       pgtype.UUID `json:"memberId"`
+	Period         pgtype.Date `json:"period"`
+	ExcludeReceipt pgtype.UUID `json:"excludeReceipt"`
+}
+
+type SumMonthlyFeePaymentsByTypeRow struct {
+	Type ContributionAllocationType `json:"type"`
+	Paid pgtype.Numeric             `json:"paid"`
+}
+
+func (q *Queries) SumMonthlyFeePaymentsByType(ctx context.Context, arg SumMonthlyFeePaymentsByTypeParams) ([]SumMonthlyFeePaymentsByTypeRow, error) {
+	rows, err := q.db.Query(ctx, sumMonthlyFeePaymentsByType, arg.MemberID, arg.Period, arg.ExcludeReceipt)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SumMonthlyFeePaymentsByTypeRow
+	for rows.Next() {
+		var i SumMonthlyFeePaymentsByTypeRow
+		if err := rows.Scan(&i.Type, &i.Paid); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

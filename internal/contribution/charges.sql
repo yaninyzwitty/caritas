@@ -19,6 +19,14 @@ FROM contribution_allocations
 WHERE target_id = sqlc.arg(charge_id) AND type IN ('other_charge', 'penalty') AND status = 'completed'
   AND (sqlc.narg(exclude_receipt)::uuid IS NULL OR receipt_id <> sqlc.narg(exclude_receipt));
 
+-- name: SumContributionChargePaymentsByID :many
+SELECT target_id, SUM(amount)::numeric AS paid
+FROM contribution_allocations
+WHERE target_id = ANY(sqlc.arg(charge_ids)::uuid[])
+  AND type IN ('other_charge', 'penalty') AND status = 'completed'
+  AND (sqlc.narg(exclude_receipt)::uuid IS NULL OR receipt_id <> sqlc.narg(exclude_receipt))
+GROUP BY target_id;
+
 -- name: ListContributionCharges :many
 SELECT c.*, COALESCE(p.paid, 0)::numeric AS paid
 FROM contribution_charges c

@@ -104,6 +104,74 @@ func (q *Queries) DeactivateMember(ctx context.Context, id pgtype.UUID) (Deactiv
 	return i, err
 }
 
+const getMemberByBranchAndNationalID = `-- name: GetMemberByBranchAndNationalID :one
+SELECT m.id, m.branch_id, m.member_number, m.national_id, m.status, m.is_deleted, m.created_at, m.updated_at,
+       p.full_name, p.phone, p.email, p.address, p.date_of_birth, p.occupation, p.employer,
+       p.monthly_income, p.id_document_type, p.id_document_number,
+       p.next_of_kin_name, p.next_of_kin_phone, p.next_of_kin_relationship
+FROM members m
+LEFT JOIN member_profiles p ON p.member_id = m.id
+WHERE m.branch_id = $1 AND m.national_id = $2 AND m.is_deleted = FALSE
+`
+
+type GetMemberByBranchAndNationalIDParams struct {
+	BranchID   int64  `json:"branchId"`
+	NationalID string `json:"nationalId"`
+}
+
+type GetMemberByBranchAndNationalIDRow struct {
+	ID                    pgtype.UUID        `json:"id"`
+	BranchID              int64              `json:"branchId"`
+	MemberNumber          int64              `json:"memberNumber"`
+	NationalID            string             `json:"nationalId"`
+	Status                string             `json:"status"`
+	IsDeleted             bool               `json:"isDeleted"`
+	CreatedAt             pgtype.Timestamptz `json:"createdAt"`
+	UpdatedAt             pgtype.Timestamptz `json:"updatedAt"`
+	FullName              pgtype.Text        `json:"fullName"`
+	Phone                 pgtype.Text        `json:"phone"`
+	Email                 pgtype.Text        `json:"email"`
+	Address               pgtype.Text        `json:"address"`
+	DateOfBirth           pgtype.Date        `json:"dateOfBirth"`
+	Occupation            pgtype.Text        `json:"occupation"`
+	Employer              pgtype.Text        `json:"employer"`
+	MonthlyIncome         pgtype.Numeric     `json:"monthlyIncome"`
+	IDDocumentType        pgtype.Text        `json:"idDocumentType"`
+	IDDocumentNumber      pgtype.Text        `json:"idDocumentNumber"`
+	NextOfKinName         pgtype.Text        `json:"nextOfKinName"`
+	NextOfKinPhone        pgtype.Text        `json:"nextOfKinPhone"`
+	NextOfKinRelationship pgtype.Text        `json:"nextOfKinRelationship"`
+}
+
+func (q *Queries) GetMemberByBranchAndNationalID(ctx context.Context, arg GetMemberByBranchAndNationalIDParams) (GetMemberByBranchAndNationalIDRow, error) {
+	row := q.db.QueryRow(ctx, getMemberByBranchAndNationalID, arg.BranchID, arg.NationalID)
+	var i GetMemberByBranchAndNationalIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.BranchID,
+		&i.MemberNumber,
+		&i.NationalID,
+		&i.Status,
+		&i.IsDeleted,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.FullName,
+		&i.Phone,
+		&i.Email,
+		&i.Address,
+		&i.DateOfBirth,
+		&i.Occupation,
+		&i.Employer,
+		&i.MonthlyIncome,
+		&i.IDDocumentType,
+		&i.IDDocumentNumber,
+		&i.NextOfKinName,
+		&i.NextOfKinPhone,
+		&i.NextOfKinRelationship,
+	)
+	return i, err
+}
+
 const getMemberByBranchAndNumber = `-- name: GetMemberByBranchAndNumber :one
 SELECT m.id, m.branch_id, m.member_number, m.national_id, m.status, m.is_deleted, m.created_at, m.updated_at,
        p.full_name, p.phone, p.email, p.address, p.date_of_birth, p.occupation, p.employer,

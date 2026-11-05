@@ -12,6 +12,7 @@ import (
 
 type Querier interface {
 	AssessLoanInterest(ctx context.Context, arg AssessLoanInterestParams) error
+	AssessLoanInterestPeriods(ctx context.Context, arg AssessLoanInterestPeriodsParams) error
 	CompleteCreditOperation(ctx context.Context, arg CompleteCreditOperationParams) (CreditOperation, error)
 	CountApprovedGuarantors(ctx context.Context, loanID pgtype.UUID) (int64, error)
 	CreateCreditBalance(ctx context.Context, arg CreateCreditBalanceParams) (CreditBalance, error)
@@ -19,6 +20,7 @@ type Querier interface {
 	CreateLoanGuarantor(ctx context.Context, arg CreateLoanGuarantorParams) (LoanGuarantor, error)
 	CreateProposedLoanGuarantors(ctx context.Context, arg CreateProposedLoanGuarantorsParams) error
 	CreateRepaymentSchedule(ctx context.Context, arg CreateRepaymentScheduleParams) (RepaymentSchedule, error)
+	CreateRepaymentSchedules(ctx context.Context, arg CreateRepaymentSchedulesParams) (int64, error)
 	GetCreditBalanceByID(ctx context.Context, id pgtype.UUID) (CreditBalance, error)
 	GetCreditFunds(ctx context.Context, id pgtype.UUID) (GetCreditFundsRow, error)
 	GetCreditMemberBranch(ctx context.Context, id pgtype.UUID) (int64, error)
@@ -72,6 +74,7 @@ type Querier interface {
 	UpdateGuarantorStatus(ctx context.Context, arg UpdateGuarantorStatusParams) (LoanGuarantor, error)
 	UpdateLoanStatus(ctx context.Context, arg UpdateLoanStatusParams) (UpdateLoanStatusRow, error)
 	UpdateRepaymentScheduleStatus(ctx context.Context, arg UpdateRepaymentScheduleStatusParams) (RepaymentSchedule, error)
+	UpdateRepaymentScheduleStatuses(ctx context.Context, changes []byte) (int64, error)
 }
 
 var _ Querier = (*Queries)(nil)

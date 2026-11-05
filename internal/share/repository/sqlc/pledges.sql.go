@@ -176,6 +176,45 @@ func (q *Queries) GetGuarantorSharePledge(ctx context.Context, arg GetGuarantorS
 	return i, err
 }
 
+const listGuarantorSharePledges = `-- name: ListGuarantorSharePledges :many
+SELECT sa.member_id, sp.pledged_amount, sp.status
+FROM share_pledges sp
+JOIN share_accounts sa ON sa.id = sp.share_account_id
+WHERE sp.loan_id = $1 AND sa.member_id = ANY($2::uuid[])
+  AND sp.type = 'guarantor_security'
+`
+
+type ListGuarantorSharePledgesParams struct {
+	LoanID    pgtype.UUID   `json:"loanId"`
+	MemberIds []pgtype.UUID `json:"memberIds"`
+}
+
+type ListGuarantorSharePledgesRow struct {
+	MemberID      pgtype.UUID       `json:"memberId"`
+	PledgedAmount pgtype.Numeric    `json:"pledgedAmount"`
+	Status        SharePledgeStatus `json:"status"`
+}
+
+func (q *Queries) ListGuarantorSharePledges(ctx context.Context, arg ListGuarantorSharePledgesParams) ([]ListGuarantorSharePledgesRow, error) {
+	rows, err := q.db.Query(ctx, listGuarantorSharePledges, arg.LoanID, arg.MemberIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListGuarantorSharePledgesRow
+	for rows.Next() {
+		var i ListGuarantorSharePledgesRow
+		if err := rows.Scan(&i.MemberID, &i.PledgedAmount, &i.Status); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const lockLoanShareAccounts = `-- name: LockLoanShareAccounts :many
 SELECT sa.id FROM share_accounts sa
 WHERE EXISTS (

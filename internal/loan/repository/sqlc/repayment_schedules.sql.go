@@ -48,6 +48,27 @@ func (q *Queries) CreateRepaymentSchedule(ctx context.Context, arg CreateRepayme
 	return i, err
 }
 
+const createRepaymentSchedules = `-- name: CreateRepaymentSchedules :execrows
+INSERT INTO repayment_schedules (loan_id, installment_no, due_date, amount_due, status)
+SELECT $1, item.installment_no, item.due_date, item.amount_due, 'upcoming'
+FROM jsonb_to_recordset($2::jsonb)
+  AS item(installment_no integer, due_date date, amount_due numeric)
+ON CONFLICT DO NOTHING
+`
+
+type CreateRepaymentSchedulesParams struct {
+	LoanID    pgtype.UUID `json:"loanId"`
+	Schedules []byte      `json:"schedules"`
+}
+
+func (q *Queries) CreateRepaymentSchedules(ctx context.Context, arg CreateRepaymentSchedulesParams) (int64, error) {
+	result, err := q.db.Exec(ctx, createRepaymentSchedules, arg.LoanID, arg.Schedules)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const listDueRepaymentSchedules = `-- name: ListDueRepaymentSchedules :many
 SELECT id, loan_id, installment_no, due_date, amount_due, status, created_at, updated_at
 FROM repayment_schedules
@@ -234,4 +255,20 @@ func (q *Queries) UpdateRepaymentScheduleStatus(ctx context.Context, arg UpdateR
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const updateRepaymentScheduleStatuses = `-- name: UpdateRepaymentScheduleStatuses :execrows
+UPDATE repayment_schedules AS s
+SET status = changes.status::repayment_schedule_status,
+    updated_at = NOW()
+FROM jsonb_to_recordset($1::jsonb) AS changes(id uuid, status text)
+WHERE s.id = changes.id
+`
+
+func (q *Queries) UpdateRepaymentScheduleStatuses(ctx context.Context, changes []byte) (int64, error) {
+	result, err := q.db.Exec(ctx, updateRepaymentScheduleStatuses, changes)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }

@@ -77,18 +77,24 @@ func validateChargeAllocations(ctx context.Context, q contributionsqlc.Querier, 
 	if len(charges) != len(ids) {
 		return ErrInvalidCharge
 	}
+	paidRows, err := q.SumContributionChargePaymentsByID(ctx, contributionsqlc.SumContributionChargePaymentsByIDParams{
+		ChargeIds: ids, ExcludeReceipt: excludeReceipt,
+	})
+	if err != nil {
+		return fmt.Errorf("sum charge payments: %w", err)
+	}
+	paidByID := make(map[pgtype.UUID]pgtype.Numeric, len(paidRows))
+	for _, row := range paidRows {
+		paidByID[row.TargetID] = row.Paid
+	}
 	for _, charge := range charges {
 		item := payments[charge.ID]
 		if charge.MemberID != memberID || charge.BranchID != branchID ||
 			(charge.Category == "penalty") != (item.Type == contributionsqlc.ContributionAllocationTypePenalty) {
 			return ErrInvalidCharge
 		}
-		paid, err := q.SumContributionChargePayments(ctx, contributionsqlc.SumContributionChargePaymentsParams{ChargeID: charge.ID, ExcludeReceipt: excludeReceipt})
-		if err != nil {
-			return fmt.Errorf("sum charge payments: %w", err)
-		}
 		outstanding := numericToScale(charge.Amount, -4)
-		outstanding.Sub(outstanding, numericToScale(paid, -4))
+		outstanding.Sub(outstanding, numericToScale(paidByID[charge.ID], -4))
 		if numericToScale(item.Amount, -4).Cmp(outstanding) > 0 {
 			return ErrChargeOverpayment
 		}

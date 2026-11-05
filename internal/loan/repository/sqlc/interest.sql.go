@@ -38,6 +38,35 @@ func (q *Queries) AssessLoanInterest(ctx context.Context, arg AssessLoanInterest
 	return err
 }
 
+const assessLoanInterestPeriods = `-- name: AssessLoanInterestPeriods :exec
+INSERT INTO loan_monthly_interest (loan_id, period, previous_balance, rate, amount)
+SELECT l.id, months.period::date,
+       GREATEST(l.principal - paid.principal, 0), l.interest_rate,
+       ROUND(GREATEST(l.principal - paid.principal, 0) * l.interest_rate, 4)
+FROM loans l
+CROSS JOIN generate_series($1::date, $2::date, INTERVAL '1 month') AS months(period)
+CROSS JOIN LATERAL (
+    SELECT COALESCE(SUM(COALESCE((t.allocation_breakdown->>'principal')::numeric,
+        t.amount - COALESCE((t.allocation_breakdown->>'credit')::numeric, 0))), 0)::numeric AS principal
+    FROM loan_transactions t WHERE t.loan_id = l.id AND t.type = 'repayment'
+      AND COALESCE((t.allocation_breakdown->>'period')::date,
+          date_trunc('month', t.created_at AT TIME ZONE 'Africa/Nairobi')::date) < months.period::date
+) paid
+WHERE l.id = $3
+ON CONFLICT DO NOTHING
+`
+
+type AssessLoanInterestPeriodsParams struct {
+	FirstPeriod pgtype.Date `json:"firstPeriod"`
+	LastPeriod  pgtype.Date `json:"lastPeriod"`
+	LoanID      pgtype.UUID `json:"loanId"`
+}
+
+func (q *Queries) AssessLoanInterestPeriods(ctx context.Context, arg AssessLoanInterestPeriodsParams) error {
+	_, err := q.db.Exec(ctx, assessLoanInterestPeriods, arg.FirstPeriod, arg.LastPeriod, arg.LoanID)
+	return err
+}
+
 const getLoanInterestPeriod = `-- name: GetLoanInterestPeriod :one
 SELECT MAX(period)::date AS latest_period
 FROM loan_monthly_interest WHERE loan_id = $1

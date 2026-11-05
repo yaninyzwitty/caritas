@@ -177,28 +177,28 @@ func (s *Service) postTransactionInTx(
 	// newly created account with a zero balance.
 	balanceNanos := new(big.Int)
 
-	latest, err := q.GetLatestBalance(ctx, accountID)
-	switch {
-	case err == nil:
-		balanceNanos = numericToNanos(latest)
-
-	case !errors.Is(err, pgx.ErrNoRows):
-		return result, fmt.Errorf("read latest balance: %w", err)
-	}
 	amountNanos := numericToNanos(amount)
 
 	switch txType {
 	case sharesqlc.ShareTransactionTypeWithdrawal:
-		pledged, err := q.GetActivePledgedAmount(ctx, accountID)
+		position, err := q.GetWithdrawalPosition(ctx, accountID)
 		if err != nil {
-			return result, fmt.Errorf("read active pledges: %w", err)
+			return result, fmt.Errorf("read withdrawal position: %w", err)
 		}
-		if new(big.Int).Sub(new(big.Int).Set(balanceNanos), amountNanos).Cmp(numericToNanos(pledged)) < 0 {
+		balanceNanos = numericToNanos(position.Balance)
+		if new(big.Int).Sub(new(big.Int).Set(balanceNanos), amountNanos).Cmp(numericToNanos(position.Pledged)) < 0 {
 			return result, ErrInsufficientBalance
 		}
 		balanceNanos.Sub(balanceNanos, amountNanos)
 
 	default:
+		latest, err := q.GetLatestBalance(ctx, accountID)
+		switch {
+		case err == nil:
+			balanceNanos = numericToNanos(latest)
+		case !errors.Is(err, pgx.ErrNoRows):
+			return result, fmt.Errorf("read latest balance: %w", err)
+		}
 		balanceNanos.Add(balanceNanos, amountNanos)
 	}
 
@@ -348,22 +348,14 @@ func (s *Service) ApproveShareAdjustment(
 			return ErrAccountNotActive
 		}
 
-		balanceNanos := new(big.Int)
-		latest, err := q.GetLatestBalance(ctx, adjustment.ShareAccountID)
-		switch {
-		case err == nil:
-			balanceNanos = numericToNanos(latest)
-		case !errors.Is(err, pgx.ErrNoRows):
-			return fmt.Errorf("read latest balance: %w", err)
+		position, err := q.GetWithdrawalPosition(ctx, adjustment.ShareAccountID)
+		if err != nil {
+			return fmt.Errorf("read adjustment position: %w", err)
 		}
-
+		balanceNanos := numericToNanos(position.Balance)
 		newBalance := new(big.Int).Set(balanceNanos)
 		newBalance.Add(newBalance, numericToNanos(adjustment.Amount))
-		pledged, err := q.GetActivePledgedAmount(ctx, adjustment.ShareAccountID)
-		if err != nil {
-			return fmt.Errorf("read active pledges: %w", err)
-		}
-		if newBalance.Cmp(numericToNanos(pledged)) < 0 {
+		if newBalance.Cmp(numericToNanos(position.Pledged)) < 0 {
 			return ErrInsufficientBalance
 		}
 		if reason == "" {

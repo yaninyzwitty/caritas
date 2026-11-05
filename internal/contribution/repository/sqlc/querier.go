@@ -73,7 +73,9 @@ type Querier interface {
 	ScheduleDarajaQuery(ctx context.Context, arg ScheduleDarajaQueryParams) error
 	SumCashReceiptsBySession(ctx context.Context, cashierSessionID pgtype.UUID) (pgtype.Numeric, error)
 	SumContributionChargePayments(ctx context.Context, arg SumContributionChargePaymentsParams) (pgtype.Numeric, error)
+	SumContributionChargePaymentsByID(ctx context.Context, arg SumContributionChargePaymentsByIDParams) ([]SumContributionChargePaymentsByIDRow, error)
 	SumMonthlyFeePayments(ctx context.Context, arg SumMonthlyFeePaymentsParams) (pgtype.Numeric, error)
+	SumMonthlyFeePaymentsByType(ctx context.Context, arg SumMonthlyFeePaymentsByTypeParams) ([]SumMonthlyFeePaymentsByTypeRow, error)
 	UpdateContributionAllocationCompleted(ctx context.Context, arg UpdateContributionAllocationCompletedParams) (ContributionAllocation, error)
 	UpdateContributionAllocationFailed(ctx context.Context, arg UpdateContributionAllocationFailedParams) (ContributionAllocation, error)
 	UpdateContributionPaymentRequestCheckoutID(ctx context.Context, arg UpdateContributionPaymentRequestCheckoutIDParams) (ContributionPaymentRequest, error)
