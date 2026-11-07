@@ -64,6 +64,27 @@ go run ./scripts/seed
 Seed identities and contact details are illustrative, not verified real people.
 Reruns are idempotent. Existing rows from the older seed are not removed or renamed.
 
+For dividend development data, apply the migrations and run:
+
+```bash
+go run ./scripts/seed-dividends
+```
+
+This separate seed creates nine fictional members with realistic names, imported
+year-end shares, and contribution history for the six completed months before
+today. It uses the actual calculation query at 5% and creates an approved
+register. All eligible allocations await a member choice: cash paid and
+reinvested totals start at zero. Exclusions cover a missed month, less than
+KSh 100, a new member, and inactivity.
+
+The default is branch 1 and the last completed financial year. Override with
+`go run ./scripts/seed-dividends -branch 2 -year 2025` if needed. Load that year
+in `/dashboard/dividends` while signed into the corresponding branch. The script
+preserves its approved register on reruns, refuses to overwrite other declarations,
+and never approves payable allocations for non-demo members. The original seed is
+not required. Member/account setup is reusable after failure; all financial history,
+allocations and settlements commit together.
+
 The server exposes gRPC on the configured gRPC port and generated HTTP/JSON
 routes on the configured HTTP port. Better Auth JWTs are accepted through an
 `Authorization: Bearer <token>` header on either transport.

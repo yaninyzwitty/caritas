@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"math/big"
 	"sort"
 	"strings"
@@ -168,16 +167,9 @@ func (s *Service) CreateCashReceipt(ctx context.Context, params contributionsqlc
 		return CreatedReceipt{}, err
 	}
 
-	processed, processErr := s.ProcessReceipt(ctx, result.Receipt.ID, params.ReceivedBy)
-	if processErr != nil && processed.Receipt.ID.Valid {
-		return processed, nil
-	}
-	if processErr != nil {
-		// Cash acceptance already committed; recovery will retry its pending allocation plan.
-		slog.Warn("cash receipt processing deferred", "receipt_id", result.Receipt.ID.String(), "error", processErr)
-		return result, nil
-	}
-	return processed, nil
+	// The committed receipt is authoritative. The recovery worker applies its
+	// allocations; waiting here can outlast the cashier's HTTP deadline.
+	return result, nil
 }
 
 func (s *Service) CloseCashierSession(ctx context.Context, id, cashierID pgtype.UUID, counted pgtype.Numeric, reason string) (contributionsqlc.CashierSession, error) {
