@@ -25,3 +25,11 @@ WHERE auth_user_id = sqlc.arg(auth_user_id)
 SELECT *
 FROM staff_users
 WHERE id = sqlc.arg(id) AND is_active = TRUE;
+
+-- name: ListStaffUsers :many
+SELECT * FROM staff_users
+WHERE (sqlc.arg(query)::text = '' OR name ILIKE '%' || sqlc.arg(query)::text || '%' OR email ILIKE '%' || sqlc.arg(query)::text || '%')
+  AND (sqlc.arg(role)::text = '' OR role = sqlc.arg(role)::text)
+  AND (created_at, id) < (sqlc.arg(before_created_at)::timestamptz, sqlc.arg(before_id)::uuid)
+ORDER BY created_at DESC, id DESC
+LIMIT sqlc.arg(page_limit);

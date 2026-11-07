@@ -6,6 +6,9 @@ import "google/api/annotations.proto";
 import "google/protobuf/timestamp.proto";
 
 service AuthService {
+  rpc ListStaffUsers(ListStaffUsersRequest) returns (ListStaffUsersResponse) {
+    option (google.api.http) = { get: "/api/v1/auth/staff-users" };
+  }
   rpc CreateStaffUser(CreateStaffUserRequest) returns (CreateStaffUserResponse) {
     option (google.api.http) = {
       post: "/api/v1/auth/create-staff-user"
@@ -18,6 +21,18 @@ service AuthService {
       body: "*"
     };
   }
+}
+
+message ListStaffUsersRequest {
+  string query = 1;
+  string role = 2;
+  string page_token = 3;
+  int32 page_size = 4;
+}
+
+message ListStaffUsersResponse {
+  repeated StaffUser staff_users = 1;
+  string next_page_token = 2;
 }
 
 message StaffUser {

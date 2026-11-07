@@ -258,6 +258,71 @@ func (q *Queries) GetCEEPReport(ctx context.Context, arg GetCEEPReportParams) ([
 	return report, err
 }
 
+const getDashboardHistory = `-- name: GetDashboardHistory :many
+WITH months AS (
+    SELECT generate_series(
+        date_trunc('month', now() AT TIME ZONE 'Africa/Nairobi') - INTERVAL '5 months',
+        date_trunc('month', now() AT TIME ZONE 'Africa/Nairobi'),
+        INTERVAL '1 month'
+    ) AS month
+)
+SELECT m.month::date AS month,
+    COALESCE((SELECT SUM(t.amount) FROM loan_transactions t JOIN loans l ON l.id = t.loan_id
+        WHERE l.branch_id = $1 AND t.type = 'repayment'
+          AND t.created_at >= m.month AT TIME ZONE 'Africa/Nairobi'
+          AND t.created_at < (m.month + INTERVAL '1 month') AT TIME ZONE 'Africa/Nairobi'), 0)::numeric AS loan_collections,
+    COALESCE((SELECT SUM(t.amount) FROM loan_transactions t JOIN loans l ON l.id = t.loan_id
+        WHERE l.branch_id = $1 AND t.type = 'disbursement'
+          AND t.created_at >= m.month AT TIME ZONE 'Africa/Nairobi'
+          AND t.created_at < (m.month + INTERVAL '1 month') AT TIME ZONE 'Africa/Nairobi'), 0)::numeric AS loan_disbursements,
+    COALESCE((SELECT SUM(t.amount) FROM share_transactions t JOIN share_accounts a ON a.id = t.share_account_id
+        WHERE a.branch_id = $1 AND t.type = 'purchase'
+          AND NOT EXISTS (SELECT 1 FROM share_transactions r WHERE r.reversal_of = t.id)
+          AND t.created_at >= m.month AT TIME ZONE 'Africa/Nairobi'
+          AND t.created_at < (m.month + INTERVAL '1 month') AT TIME ZONE 'Africa/Nairobi'), 0)::numeric AS share_purchases,
+    COALESCE((SELECT SUM(t.amount) FROM share_transactions t JOIN share_accounts a ON a.id = t.share_account_id
+        WHERE a.branch_id = $1 AND t.type = 'withdrawal'
+          AND NOT EXISTS (SELECT 1 FROM share_transactions r WHERE r.reversal_of = t.id)
+          AND t.created_at >= m.month AT TIME ZONE 'Africa/Nairobi'
+          AND t.created_at < (m.month + INTERVAL '1 month') AT TIME ZONE 'Africa/Nairobi'), 0)::numeric AS share_withdrawals
+FROM months m ORDER BY m.month
+`
+
+type GetDashboardHistoryRow struct {
+	Month             pgtype.Date
+	LoanCollections   pgtype.Numeric
+	LoanDisbursements pgtype.Numeric
+	SharePurchases    pgtype.Numeric
+	ShareWithdrawals  pgtype.Numeric
+}
+
+// Six Nairobi calendar months, including zeros, keep both charts aligned.
+func (q *Queries) GetDashboardHistory(ctx context.Context, branchID int64) ([]GetDashboardHistoryRow, error) {
+	rows, err := q.db.Query(ctx, getDashboardHistory, branchID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetDashboardHistoryRow
+	for rows.Next() {
+		var i GetDashboardHistoryRow
+		if err := rows.Scan(
+			&i.Month,
+			&i.LoanCollections,
+			&i.LoanDisbursements,
+			&i.SharePurchases,
+			&i.ShareWithdrawals,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getDashboardSummary = `-- name: GetDashboardSummary :one
 WITH member_counts AS (
     SELECT COUNT(*)::bigint AS active_members
@@ -289,6 +354,10 @@ WITH member_counts AS (
     WHERE r.branch_id = $1 AND NOT r.is_deleted AND r.status = 'completed'
       AND r.received_at >= date_trunc('month', now() AT TIME ZONE 'Africa/Nairobi') AT TIME ZONE 'Africa/Nairobi'
       AND r.received_at < (date_trunc('month', now() AT TIME ZONE 'Africa/Nairobi') + INTERVAL '1 month') AT TIME ZONE 'Africa/Nairobi'
+), paid_dividends AS (
+    SELECT COALESCE(SUM(a.amount), 0)::numeric AS dividends_paid
+    FROM dividend_allocations a
+    WHERE a.branch_id = $1 AND a.choice = 'cash' AND a.settled_at IS NOT NULL
 ), loan_counts AS (
     SELECT COUNT(*) FILTER (WHERE l.status IN ('disbursed', 'active', 'restructuring'))::bigint AS active_loans,
         COUNT(*) FILTER (WHERE l.status IN ('pending', 'approved', 'manual_review'))::bigint AS pending_loans,
@@ -301,7 +370,7 @@ WITH member_counts AS (
     LEFT JOIN principal_paid p ON p.loan_id = l.id
     WHERE l.branch_id = $1 AND NOT l.is_deleted
 )
-SELECT active_members, active_loans, pending_loans, delinquent_loans, closed_loans, outstanding_principal, share_capital, collections_this_month FROM member_counts CROSS JOIN loan_counts CROSS JOIN share_total CROSS JOIN monthly_collections
+SELECT active_members, active_loans, pending_loans, delinquent_loans, closed_loans, outstanding_principal, share_capital, collections_this_month, dividends_paid FROM member_counts CROSS JOIN loan_counts CROSS JOIN share_total CROSS JOIN monthly_collections CROSS JOIN paid_dividends
 `
 
 type GetDashboardSummaryRow struct {
@@ -313,6 +382,7 @@ type GetDashboardSummaryRow struct {
 	OutstandingPrincipal pgtype.Numeric
 	ShareCapital         pgtype.Numeric
 	CollectionsThisMonth pgtype.Numeric
+	DividendsPaid        pgtype.Numeric
 }
 
 // A single statement gives dashboard totals the same database snapshot.
@@ -328,6 +398,7 @@ func (q *Queries) GetDashboardSummary(ctx context.Context, branchID int64) (GetD
 		&i.OutstandingPrincipal,
 		&i.ShareCapital,
 		&i.CollectionsThisMonth,
+		&i.DividendsPaid,
 	)
 	return i, err
 }

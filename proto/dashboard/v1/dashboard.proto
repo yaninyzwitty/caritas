@@ -23,4 +23,15 @@ message GetSummaryResponse {
   string outstanding_principal = 6;
   string share_capital = 7;
   string collections_this_month = 8;
+  string dividends_paid = 9;
+  repeated MonthlyMovement monthly_movements = 10;
+}
+
+// MonthlyMovement keeps chart amounts as decimal text until display formatting.
+message MonthlyMovement {
+  string month = 1;
+  string loan_collections = 2;
+  string loan_disbursements = 3;
+  string share_purchases = 4;
+  string share_withdrawals = 5;
 }

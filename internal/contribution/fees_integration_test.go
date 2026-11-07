@@ -61,12 +61,16 @@ func TestCashAndSTKMonthlyCharges(t *testing.T) {
 		BranchID: 1, ContributionPeriod: period, ReceivedAmount: mustNumeric(t, "6060"), ReceivedBy: cashier,
 	}
 	receipt, err := service.CreateCashReceipt(ctx, cash, allocations)
-	if err != nil || receipt.Receipt.Status != contributionsqlc.ContributionReceiptStatusCompleted {
-		t.Fatalf("cash: %+v %v", receipt, err)
+	if err != nil || receipt.Receipt.Status != contributionsqlc.ContributionReceiptStatusPending {
+		t.Fatalf("cash acceptance: %+v %v", receipt, err)
 	}
 	retry, err := service.CreateCashReceipt(ctx, cash, allocations)
 	if err != nil || retry.Receipt.ID != receipt.Receipt.ID {
 		t.Fatalf("cash retry: %+v %v", retry, err)
+	}
+	receipt, err = service.ProcessReceipt(ctx, receipt.Receipt.ID, cashier)
+	if err != nil || receipt.Receipt.Status != contributionsqlc.ContributionReceiptStatusCompleted {
+		t.Fatalf("cash posting: %+v %v", receipt, err)
 	}
 	provider := &testSTK{checkout: "checkout-1", err: ErrDarajaNotSent}
 	request := InitiateDarajaSTKPaymentParams{IdempotencyKey: "stk-same-month", PhoneNumber: "254712345678", MemberID: member,
@@ -117,8 +121,12 @@ func TestCashAndSTKMonthlyCharges(t *testing.T) {
 	cash.IdempotencyKey = text("cash-next-month")
 	cash.ContributionPeriod.Time = period.Time.AddDate(0, 1, 0)
 	next, err := service.CreateCashReceipt(ctx, cash, allocations)
+	if err != nil || next.Receipt.Status != contributionsqlc.ContributionReceiptStatusPending {
+		t.Fatalf("next month acceptance: %+v %v", next, err)
+	}
+	next, err = service.ProcessReceipt(ctx, next.Receipt.ID, cashier)
 	if err != nil || next.Receipt.Status != contributionsqlc.ContributionReceiptStatusCompleted {
-		t.Fatalf("next month: %+v %v", next, err)
+		t.Fatalf("next month posting: %+v %v", next, err)
 	}
 	var breakdown []byte
 	for _, a := range next.Allocations {

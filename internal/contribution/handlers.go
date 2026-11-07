@@ -3,6 +3,7 @@ package contribution
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"math/big"
 	"regexp"
 	"strings"
@@ -149,6 +150,7 @@ func (h *Handlers) CloseCashierSession(ctx context.Context, req *contributionv1.
 	}
 	session, err := h.service.CloseCashierSession(ctx, id, actor.ID, moneyToNumeric(req.GetCountedAmount()), req.GetVarianceReason())
 	if err != nil {
+		slog.WarnContext(ctx, "close cashier session rejected", "session_id", req.GetSessionId(), "staff_id", actor.ID, "error", err)
 		return nil, mapContributionError(err)
 	}
 	result, err := cashierSessionToProto(session)
@@ -455,9 +457,11 @@ func mapContributionError(err error) error {
 		errors.Is(err, ErrCashSeparationOfDuties),
 		errors.Is(err, ErrCashDepositSelfVerify):
 		return status.Error(codes.FailedPrecondition, err.Error())
-	case errors.Is(err, ErrCashVarianceReason),
-		errors.Is(err, ErrCashDepositInvalid),
-		errors.Is(err, ErrReceiptReferenceRequired),
+	case errors.Is(err, ErrCashVarianceReason):
+		return status.Error(codes.InvalidArgument, ErrCashVarianceReason.Error())
+	case errors.Is(err, ErrCashDepositInvalid):
+		return status.Error(codes.InvalidArgument, ErrCashDepositInvalid.Error())
+	case errors.Is(err, ErrReceiptReferenceRequired),
 		errors.Is(err, ErrInconsistentReceipt):
 		return status.Error(codes.InvalidArgument, err.Error())
 	case errors.Is(err, ErrDarajaClientMissing), errors.Is(err, ErrDarajaRejected):

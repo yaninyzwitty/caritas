@@ -63,12 +63,16 @@ func TestContributionChargePaymentsIntegration(t *testing.T) {
 		{Type: contributionsqlc.ContributionAllocationTypePenalty, TargetID: penalty.ID, Amount: mustNumeric(t, "100")},
 	}
 	receipt, err := service.CreateCashReceipt(ctx, cash, items)
-	if err != nil || receipt.Receipt.Status != contributionsqlc.ContributionReceiptStatusCompleted {
-		t.Fatalf("cash payment: %+v %v", receipt, err)
+	if err != nil || receipt.Receipt.Status != contributionsqlc.ContributionReceiptStatusPending {
+		t.Fatalf("cash acceptance: %+v %v", receipt, err)
 	}
 	repeat, err := service.CreateCashReceipt(ctx, cash, items)
 	if err != nil || repeat.Receipt.ID != receipt.Receipt.ID {
 		t.Fatalf("cash retry: %+v %v", repeat, err)
+	}
+	receipt, err = service.ProcessReceipt(ctx, receipt.Receipt.ID, cashier)
+	if err != nil || receipt.Receipt.Status != contributionsqlc.ContributionReceiptStatusCompleted {
+		t.Fatalf("cash posting: %+v %v", receipt, err)
 	}
 	paid, err := service.store.SumContributionChargePayments(ctx, contributionsqlc.SumContributionChargePaymentsParams{ChargeID: charge.ID})
 	if err != nil || numericToScale(paid, -4).Cmp(numericToScale(mustNumeric(t, "200"), -4)) != 0 {
@@ -134,8 +138,13 @@ func TestContributionChargePaymentsIntegration(t *testing.T) {
 		t.Fatal(err)
 	}
 	cash.IdempotencyKey, cash.ReceivedAmount = text("stale-cash"), mustNumeric(t, "100")
-	if _, err := service.CreateCashReceipt(ctx, cash, staleItems); err != nil {
-		t.Fatal(err)
+	staleCash, err := service.CreateCashReceipt(ctx, cash, staleItems)
+	if err != nil || staleCash.Receipt.Status != contributionsqlc.ContributionReceiptStatusPending {
+		t.Fatalf("stale cash acceptance: %+v %v", staleCash, err)
+	}
+	staleCash, err = service.ProcessReceipt(ctx, staleCash.Receipt.ID, cashier)
+	if err != nil || staleCash.Receipt.Status != contributionsqlc.ContributionReceiptStatusCompleted {
+		t.Fatalf("stale cash posting: %+v %v", staleCash, err)
 	}
 	failed, err := service.ProcessDarajaSTKPayment(ctx, DarajaSTKPayment{
 		CheckoutRequestID: prompt.CheckoutRequestID.String, MpesaReceipt: "stale-mpesa", Amount: mustNumeric(t, "100"), ReceivedAt: time.Now(),

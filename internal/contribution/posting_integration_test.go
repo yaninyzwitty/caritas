@@ -78,12 +78,16 @@ func TestReceiptPostingIntegration(t *testing.T) {
 	}
 	// KES 6,000 covers the KES 5,000 installment and KES 1,000 interest.
 	receipt, err := service.CreateCashReceipt(ctx, params, allocations)
-	if err != nil || receipt.Receipt.Status != contributionsqlc.ContributionReceiptStatusCompleted {
-		t.Fatalf("single-connection payment: status=%s error=%v", receipt.Receipt.Status, err)
+	if err != nil || receipt.Receipt.Status != contributionsqlc.ContributionReceiptStatusPending {
+		t.Fatalf("single-connection acceptance: status=%s error=%v", receipt.Receipt.Status, err)
 	}
 	retry, err := service.CreateCashReceipt(ctx, params, allocations)
 	if err != nil || retry.Receipt.ID != receipt.Receipt.ID {
 		t.Fatalf("retry: %+v %v", retry, err)
+	}
+	receipt, err = service.ProcessReceipt(ctx, receipt.Receipt.ID, cashier)
+	if err != nil || receipt.Receipt.Status != contributionsqlc.ContributionReceiptStatusCompleted {
+		t.Fatalf("single-connection posting: status=%s error=%v", receipt.Receipt.Status, err)
 	}
 	if _, err := pool.Exec(ctx, `
 		INSERT INTO members (id,branch_id,member_number,national_id,status)

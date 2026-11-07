@@ -136,3 +136,57 @@ func (q *Queries) GetActiveStaffByID(ctx context.Context, id pgtype.UUID) (Staff
 	)
 	return i, err
 }
+
+const listStaffUsers = `-- name: ListStaffUsers :many
+SELECT id, branch_id, email, password_hash, role, is_active, created_at, updated_at, name, auth_user_id FROM staff_users
+WHERE ($1::text = '' OR name ILIKE '%' || $1::text || '%' OR email ILIKE '%' || $1::text || '%')
+  AND ($2::text = '' OR role = $2::text)
+  AND (created_at, id) < ($3::timestamptz, $4::uuid)
+ORDER BY created_at DESC, id DESC
+LIMIT $5
+`
+
+type ListStaffUsersParams struct {
+	Query           string             `json:"query"`
+	Role            string             `json:"role"`
+	BeforeCreatedAt pgtype.Timestamptz `json:"beforeCreatedAt"`
+	BeforeID        pgtype.UUID        `json:"beforeId"`
+	PageLimit       int32              `json:"pageLimit"`
+}
+
+func (q *Queries) ListStaffUsers(ctx context.Context, arg ListStaffUsersParams) ([]StaffUser, error) {
+	rows, err := q.db.Query(ctx, listStaffUsers,
+		arg.Query,
+		arg.Role,
+		arg.BeforeCreatedAt,
+		arg.BeforeID,
+		arg.PageLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []StaffUser
+	for rows.Next() {
+		var i StaffUser
+		if err := rows.Scan(
+			&i.ID,
+			&i.BranchID,
+			&i.Email,
+			&i.PasswordHash,
+			&i.Role,
+			&i.IsActive,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Name,
+			&i.AuthUserID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
