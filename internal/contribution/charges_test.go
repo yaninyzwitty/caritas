@@ -28,9 +28,13 @@ func (q *chargeQueries) LockContributionCharges(context.Context, []pgtype.UUID) 
 
 // SumContributionChargePayments captures retry exclusion as well as paid money;
 // without it these tests cannot detect double counting the current receipt.
-func (q *chargeQueries) SumContributionChargePayments(_ context.Context, params contributionsqlc.SumContributionChargePaymentsParams) (pgtype.Numeric, error) {
+func (q *chargeQueries) SumContributionChargePaymentsByID(_ context.Context, params contributionsqlc.SumContributionChargePaymentsByIDParams) ([]contributionsqlc.SumContributionChargePaymentsByIDRow, error) {
 	q.excludeReceipt = params.ExcludeReceipt
-	return q.paid, nil
+	rows := make([]contributionsqlc.SumContributionChargePaymentsByIDRow, 0, len(params.ChargeIds))
+	for _, id := range params.ChargeIds {
+		rows = append(rows, contributionsqlc.SumContributionChargePaymentsByIDRow{TargetID: id, Paid: q.paid})
+	}
+	return rows, nil
 }
 
 // CreateContributionCharge simulates the idempotent insert's conflict result;
