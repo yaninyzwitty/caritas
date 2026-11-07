@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/jackc/pgx/v5/pgtype"
 	dashboardv1 "github.com/yaninyzwitty/caritas-backend/gen/dashboard/v1"
 	"github.com/yaninyzwitty/caritas-backend/internal/ceepdb"
 	"google.golang.org/grpc/codes"
@@ -57,6 +58,38 @@ func (h *Handlers) GetSummary(ctx context.Context, req *dashboardv1.GetSummaryRe
 	if !ok {
 		return nil, status.Error(codes.Internal, "dashboard summary unavailable")
 	}
+	paidDividends, err := row.DividendsPaid.Value()
+	if err != nil {
+		return nil, status.Error(codes.Internal, "dashboard summary unavailable")
+	}
+	dividends, ok := paidDividends.(string)
+	if !ok {
+		return nil, status.Error(codes.Internal, "dashboard summary unavailable")
+	}
+	history, err := h.queries.GetDashboardHistory(ctx, branchID)
+	if err != nil {
+		slog.ErrorContext(ctx, "dashboard history failed", "branch_id", branchID, "error", err)
+		return nil, status.Error(codes.Internal, "dashboard history unavailable")
+	}
+	movements := make([]*dashboardv1.MonthlyMovement, 0, len(history))
+	for _, month := range history {
+		amounts := [4]string{}
+		for i, numeric := range []pgtype.Numeric{month.LoanCollections, month.LoanDisbursements, month.SharePurchases, month.ShareWithdrawals} {
+			value, err := numeric.Value()
+			if err != nil {
+				return nil, status.Error(codes.Internal, "dashboard history unavailable")
+			}
+			amount, ok := value.(string)
+			if !ok {
+				return nil, status.Error(codes.Internal, "dashboard history unavailable")
+			}
+			amounts[i] = amount
+		}
+		movements = append(movements, &dashboardv1.MonthlyMovement{
+			Month: month.Month.Time.Format("2006-01"), LoanCollections: amounts[0],
+			LoanDisbursements: amounts[1], SharePurchases: amounts[2], ShareWithdrawals: amounts[3],
+		})
+	}
 	return &dashboardv1.GetSummaryResponse{
 		ActiveMembers:        row.ActiveMembers,
 		ActiveLoans:          row.ActiveLoans,
@@ -66,5 +99,7 @@ func (h *Handlers) GetSummary(ctx context.Context, req *dashboardv1.GetSummaryRe
 		OutstandingPrincipal: amount,
 		ShareCapital:         shares,
 		CollectionsThisMonth: collections,
+		DividendsPaid:        dividends,
+		MonthlyMovements:     movements,
 	}, nil
 }

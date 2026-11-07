@@ -115,7 +115,7 @@ func main() {
 				log.Fatal(err)
 			}
 		}
-		if seeded.Status != "active" && !(i == 8 && seeded.Status == "suspended") {
+		if seeded.Status != "active" && (i != 8 || seeded.Status != "suspended") {
 			log.Fatalf("demo member %s has changed status; refusing to overwrite it", nationalID)
 		}
 		account, err := shareStore.GetAccountByMemberID(ctx, seeded.ID)

@@ -76,6 +76,8 @@ type GetSummaryResponse struct {
 	OutstandingPrincipal string                 `protobuf:"bytes,6,opt,name=outstanding_principal,json=outstandingPrincipal,proto3" json:"outstanding_principal,omitempty"`
 	ShareCapital         string                 `protobuf:"bytes,7,opt,name=share_capital,json=shareCapital,proto3" json:"share_capital,omitempty"`
 	CollectionsThisMonth string                 `protobuf:"bytes,8,opt,name=collections_this_month,json=collectionsThisMonth,proto3" json:"collections_this_month,omitempty"`
+	DividendsPaid        string                 `protobuf:"bytes,9,opt,name=dividends_paid,json=dividendsPaid,proto3" json:"dividends_paid,omitempty"`
+	MonthlyMovements     []*MonthlyMovement     `protobuf:"bytes,10,rep,name=monthly_movements,json=monthlyMovements,proto3" json:"monthly_movements,omitempty"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -166,13 +168,104 @@ func (x *GetSummaryResponse) GetCollectionsThisMonth() string {
 	return ""
 }
 
+func (x *GetSummaryResponse) GetDividendsPaid() string {
+	if x != nil {
+		return x.DividendsPaid
+	}
+	return ""
+}
+
+func (x *GetSummaryResponse) GetMonthlyMovements() []*MonthlyMovement {
+	if x != nil {
+		return x.MonthlyMovements
+	}
+	return nil
+}
+
+// MonthlyMovement keeps chart amounts as decimal text until display formatting.
+type MonthlyMovement struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Month             string                 `protobuf:"bytes,1,opt,name=month,proto3" json:"month,omitempty"`
+	LoanCollections   string                 `protobuf:"bytes,2,opt,name=loan_collections,json=loanCollections,proto3" json:"loan_collections,omitempty"`
+	LoanDisbursements string                 `protobuf:"bytes,3,opt,name=loan_disbursements,json=loanDisbursements,proto3" json:"loan_disbursements,omitempty"`
+	SharePurchases    string                 `protobuf:"bytes,4,opt,name=share_purchases,json=sharePurchases,proto3" json:"share_purchases,omitempty"`
+	ShareWithdrawals  string                 `protobuf:"bytes,5,opt,name=share_withdrawals,json=shareWithdrawals,proto3" json:"share_withdrawals,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *MonthlyMovement) Reset() {
+	*x = MonthlyMovement{}
+	mi := &file_dashboard_v1_dashboard_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MonthlyMovement) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MonthlyMovement) ProtoMessage() {}
+
+func (x *MonthlyMovement) ProtoReflect() protoreflect.Message {
+	mi := &file_dashboard_v1_dashboard_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MonthlyMovement.ProtoReflect.Descriptor instead.
+func (*MonthlyMovement) Descriptor() ([]byte, []int) {
+	return file_dashboard_v1_dashboard_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *MonthlyMovement) GetMonth() string {
+	if x != nil {
+		return x.Month
+	}
+	return ""
+}
+
+func (x *MonthlyMovement) GetLoanCollections() string {
+	if x != nil {
+		return x.LoanCollections
+	}
+	return ""
+}
+
+func (x *MonthlyMovement) GetLoanDisbursements() string {
+	if x != nil {
+		return x.LoanDisbursements
+	}
+	return ""
+}
+
+func (x *MonthlyMovement) GetSharePurchases() string {
+	if x != nil {
+		return x.SharePurchases
+	}
+	return ""
+}
+
+func (x *MonthlyMovement) GetShareWithdrawals() string {
+	if x != nil {
+		return x.ShareWithdrawals
+	}
+	return ""
+}
+
 var File_dashboard_v1_dashboard_proto protoreflect.FileDescriptor
 
 const file_dashboard_v1_dashboard_proto_rawDesc = "" +
 	"\n" +
 	"\x1cdashboard/v1/dashboard.proto\x12\fdashboard.v1\x1a\x1cgoogle/api/annotations.proto\"0\n" +
 	"\x11GetSummaryRequest\x12\x1b\n" +
-	"\tbranch_id\x18\x01 \x01(\x03R\bbranchId\"\xe1\x02\n" +
+	"\tbranch_id\x18\x01 \x01(\x03R\bbranchId\"\xd4\x03\n" +
 	"\x12GetSummaryResponse\x12%\n" +
 	"\x0eactive_members\x18\x01 \x01(\x03R\ractiveMembers\x12!\n" +
 	"\factive_loans\x18\x02 \x01(\x03R\vactiveLoans\x12#\n" +
@@ -181,7 +274,16 @@ const file_dashboard_v1_dashboard_proto_rawDesc = "" +
 	"\fclosed_loans\x18\x05 \x01(\x03R\vclosedLoans\x123\n" +
 	"\x15outstanding_principal\x18\x06 \x01(\tR\x14outstandingPrincipal\x12#\n" +
 	"\rshare_capital\x18\a \x01(\tR\fshareCapital\x124\n" +
-	"\x16collections_this_month\x18\b \x01(\tR\x14collectionsThisMonth2\x89\x01\n" +
+	"\x16collections_this_month\x18\b \x01(\tR\x14collectionsThisMonth\x12%\n" +
+	"\x0edividends_paid\x18\t \x01(\tR\rdividendsPaid\x12J\n" +
+	"\x11monthly_movements\x18\n" +
+	" \x03(\v2\x1d.dashboard.v1.MonthlyMovementR\x10monthlyMovements\"\xd7\x01\n" +
+	"\x0fMonthlyMovement\x12\x14\n" +
+	"\x05month\x18\x01 \x01(\tR\x05month\x12)\n" +
+	"\x10loan_collections\x18\x02 \x01(\tR\x0floanCollections\x12-\n" +
+	"\x12loan_disbursements\x18\x03 \x01(\tR\x11loanDisbursements\x12'\n" +
+	"\x0fshare_purchases\x18\x04 \x01(\tR\x0esharePurchases\x12+\n" +
+	"\x11share_withdrawals\x18\x05 \x01(\tR\x10shareWithdrawals2\x89\x01\n" +
 	"\x10DashboardService\x12u\n" +
 	"\n" +
 	"GetSummary\x12\x1f.dashboard.v1.GetSummaryRequest\x1a .dashboard.v1.GetSummaryResponse\"$\x82\xd3\xe4\x93\x02\x1e:\x01*\"\x19/api/v1/dashboard/summaryB\xb9\x01\n" +
@@ -199,19 +301,21 @@ func file_dashboard_v1_dashboard_proto_rawDescGZIP() []byte {
 	return file_dashboard_v1_dashboard_proto_rawDescData
 }
 
-var file_dashboard_v1_dashboard_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_dashboard_v1_dashboard_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_dashboard_v1_dashboard_proto_goTypes = []any{
 	(*GetSummaryRequest)(nil),  // 0: dashboard.v1.GetSummaryRequest
 	(*GetSummaryResponse)(nil), // 1: dashboard.v1.GetSummaryResponse
+	(*MonthlyMovement)(nil),    // 2: dashboard.v1.MonthlyMovement
 }
 var file_dashboard_v1_dashboard_proto_depIdxs = []int32{
-	0, // 0: dashboard.v1.DashboardService.GetSummary:input_type -> dashboard.v1.GetSummaryRequest
-	1, // 1: dashboard.v1.DashboardService.GetSummary:output_type -> dashboard.v1.GetSummaryResponse
-	1, // [1:2] is the sub-list for method output_type
-	0, // [0:1] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	2, // 0: dashboard.v1.GetSummaryResponse.monthly_movements:type_name -> dashboard.v1.MonthlyMovement
+	0, // 1: dashboard.v1.DashboardService.GetSummary:input_type -> dashboard.v1.GetSummaryRequest
+	1, // 2: dashboard.v1.DashboardService.GetSummary:output_type -> dashboard.v1.GetSummaryResponse
+	2, // [2:3] is the sub-list for method output_type
+	1, // [1:2] is the sub-list for method input_type
+	1, // [1:1] is the sub-list for extension type_name
+	1, // [1:1] is the sub-list for extension extendee
+	0, // [0:1] is the sub-list for field type_name
 }
 
 func init() { file_dashboard_v1_dashboard_proto_init() }
@@ -225,7 +329,7 @@ func file_dashboard_v1_dashboard_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_dashboard_v1_dashboard_proto_rawDesc), len(file_dashboard_v1_dashboard_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

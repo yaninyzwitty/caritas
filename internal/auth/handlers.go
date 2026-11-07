@@ -2,8 +2,10 @@ package auth
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -13,6 +15,60 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
+
+// ListStaffUsers returns one bounded page in stable creation order for the staff console.
+func (h *Handlers) ListStaffUsers(ctx context.Context, req *authv1.ListStaffUsersRequest) (*authv1.ListStaffUsersResponse, error) {
+	role := strings.TrimSpace(req.GetRole())
+	if role != "" && !validRole(role) {
+		return nil, status.Error(codes.InvalidArgument, "invalid staff role")
+	}
+	pageSize := req.GetPageSize()
+	if pageSize == 0 {
+		pageSize = 25
+	}
+	if pageSize < 1 || pageSize > 100 {
+		return nil, status.Error(codes.InvalidArgument, "page_size must be between 1 and 100")
+	}
+	before := time.Date(9999, 1, 1, 0, 0, 0, 0, time.UTC)
+	beforeID, _ := uuidToPG("ffffffff-ffff-ffff-ffff-ffffffffffff")
+	if req.GetPageToken() != "" {
+		decoded, err := base64.RawURLEncoding.DecodeString(req.GetPageToken())
+		if err != nil {
+			return nil, status.Error(codes.InvalidArgument, "invalid page_token")
+		}
+		parts := strings.SplitN(string(decoded), "|", 2)
+		if len(parts) != 2 {
+			return nil, status.Error(codes.InvalidArgument, "invalid page_token")
+		}
+		before, err = time.Parse(time.RFC3339Nano, parts[0])
+		if err != nil {
+			return nil, status.Error(codes.InvalidArgument, "invalid page_token")
+		}
+		beforeID, err = uuidToPG(parts[1])
+		if err != nil {
+			return nil, status.Error(codes.InvalidArgument, "invalid page_token")
+		}
+	}
+	rows, err := h.store.ListStaffUsers(ctx, authsqlc.ListStaffUsersParams{
+		Query: strings.TrimSpace(req.GetQuery()), Role: role,
+		BeforeCreatedAt: pgtype.Timestamptz{Time: before, Valid: true},
+		BeforeID:        beforeID, PageLimit: pageSize + 1,
+	})
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to list staff users")
+	}
+	result := &authv1.ListStaffUsersResponse{}
+	if len(rows) > int(pageSize) {
+		rows = rows[:pageSize]
+		last := rows[len(rows)-1]
+		id, _ := uuidFromPG(last.ID)
+		result.NextPageToken = base64.RawURLEncoding.EncodeToString([]byte(last.CreatedAt.Time.UTC().Format(time.RFC3339Nano) + "|" + id))
+	}
+	for _, row := range rows {
+		result.StaffUsers = append(result.StaffUsers, staffUserToProto(row))
+	}
+	return result, nil
+}
 
 type Handlers struct {
 	authv1.UnimplementedAuthServiceServer
@@ -54,6 +110,13 @@ func (h *Handlers) DeactivateStaffUser(ctx context.Context, req *authv1.Deactiva
 	staffID, err := uuidToPG(req.GetStaffUserId())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid staff_user_id")
+	}
+	actor, ok := PrincipalFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "authenticated staff is required")
+	}
+	if actor.ID == staffID {
+		return nil, status.Error(codes.FailedPrecondition, "you cannot deactivate your own staff access")
 	}
 
 	staff, err := h.store.DeactivateStaffUser(ctx, staffID)

@@ -162,7 +162,7 @@ func permissionForMethod(method string) string {
 	switch method {
 	case "/contribution.v1.ContributionService/ApproveDividends", "/contribution.v1.ContributionService/RecordDividendChoice", "/contribution.v1.ContributionService/SettleDividend":
 		return permissionCashApprove
-	case "/auth.v1.AuthService/CreateStaffUser", "/auth.v1.AuthService/DeactivateStaffUser":
+	case "/auth.v1.AuthService/CreateStaffUser", "/auth.v1.AuthService/DeactivateStaffUser", "/auth.v1.AuthService/ListStaffUsers":
 		return permissionStaffManage
 	case "/member.v1.MemberService/RegisterMember", "/member.v1.MemberService/UpdateMemberProfile", "/member.v1.MemberService/UpdateMemberStatus", "/member.v1.MemberService/CloseMember":
 		return permissionMemberWrite

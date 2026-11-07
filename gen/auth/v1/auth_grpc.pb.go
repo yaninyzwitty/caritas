@@ -19,6 +19,7 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
+	AuthService_ListStaffUsers_FullMethodName      = "/auth.v1.AuthService/ListStaffUsers"
 	AuthService_CreateStaffUser_FullMethodName     = "/auth.v1.AuthService/CreateStaffUser"
 	AuthService_DeactivateStaffUser_FullMethodName = "/auth.v1.AuthService/DeactivateStaffUser"
 )
@@ -27,6 +28,7 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type AuthServiceClient interface {
+	ListStaffUsers(ctx context.Context, in *ListStaffUsersRequest, opts ...grpc.CallOption) (*ListStaffUsersResponse, error)
 	CreateStaffUser(ctx context.Context, in *CreateStaffUserRequest, opts ...grpc.CallOption) (*CreateStaffUserResponse, error)
 	DeactivateStaffUser(ctx context.Context, in *DeactivateStaffUserRequest, opts ...grpc.CallOption) (*DeactivateStaffUserResponse, error)
 }
@@ -37,6 +39,16 @@ type authServiceClient struct {
 
 func NewAuthServiceClient(cc grpc.ClientConnInterface) AuthServiceClient {
 	return &authServiceClient{cc}
+}
+
+func (c *authServiceClient) ListStaffUsers(ctx context.Context, in *ListStaffUsersRequest, opts ...grpc.CallOption) (*ListStaffUsersResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListStaffUsersResponse)
+	err := c.cc.Invoke(ctx, AuthService_ListStaffUsers_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *authServiceClient) CreateStaffUser(ctx context.Context, in *CreateStaffUserRequest, opts ...grpc.CallOption) (*CreateStaffUserResponse, error) {
@@ -63,6 +75,7 @@ func (c *authServiceClient) DeactivateStaffUser(ctx context.Context, in *Deactiv
 // All implementations must embed UnimplementedAuthServiceServer
 // for forward compatibility.
 type AuthServiceServer interface {
+	ListStaffUsers(context.Context, *ListStaffUsersRequest) (*ListStaffUsersResponse, error)
 	CreateStaffUser(context.Context, *CreateStaffUserRequest) (*CreateStaffUserResponse, error)
 	DeactivateStaffUser(context.Context, *DeactivateStaffUserRequest) (*DeactivateStaffUserResponse, error)
 	mustEmbedUnimplementedAuthServiceServer()
@@ -75,6 +88,9 @@ type AuthServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedAuthServiceServer struct{}
 
+func (UnimplementedAuthServiceServer) ListStaffUsers(context.Context, *ListStaffUsersRequest) (*ListStaffUsersResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListStaffUsers not implemented")
+}
 func (UnimplementedAuthServiceServer) CreateStaffUser(context.Context, *CreateStaffUserRequest) (*CreateStaffUserResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateStaffUser not implemented")
 }
@@ -100,6 +116,24 @@ func RegisterAuthServiceServer(s grpc.ServiceRegistrar, srv AuthServiceServer) {
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&AuthService_ServiceDesc, srv)
+}
+
+func _AuthService_ListStaffUsers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListStaffUsersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).ListStaffUsers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_ListStaffUsers_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).ListStaffUsers(ctx, req.(*ListStaffUsersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _AuthService_CreateStaffUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -145,6 +179,10 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "auth.v1.AuthService",
 	HandlerType: (*AuthServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "ListStaffUsers",
+			Handler:    _AuthService_ListStaffUsers_Handler,
+		},
 		{
 			MethodName: "CreateStaffUser",
 			Handler:    _AuthService_CreateStaffUser_Handler,
