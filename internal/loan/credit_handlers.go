@@ -55,7 +55,7 @@ func (h *Handlers) ManageCredit(ctx context.Context, req *loanv1.ManageCreditReq
 		if err != nil {
 			return err
 		}
-		if branch != actor.BranchID {
+		if !auth.CanAccessBranch(actor, branch) {
 			return status.Error(codes.NotFound, "credit not found")
 		}
 		operation, err := q.GetCreditOperation(ctx, operationID)
@@ -215,7 +215,7 @@ func (h *Handlers) ListCreditOperations(ctx context.Context, req *loanv1.ListCre
 		return nil, mapServiceError(err)
 	}
 	branch, err := h.store.GetCreditMemberBranch(ctx, credit.MemberID)
-	if err != nil || branch != actor.BranchID {
+	if err != nil || !auth.CanAccessBranch(actor, branch) {
 		return nil, status.Error(codes.NotFound, "credit not found")
 	}
 	params := loansqlc.ListCreditOperationsParams{CreditBalanceID: id}

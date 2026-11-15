@@ -29,9 +29,13 @@ const (
 	roleSecretary   = "secretary"
 
 	permissionStaffManage     = "staff.manage"
+	permissionMemberRead      = "member.read"
 	permissionMemberWrite     = "member.write"
+	permissionMemberStatus    = "member.status"
+	permissionShareRead       = "share.read"
 	permissionShareWrite      = "share.write"
 	permissionShareApprove    = "share.approve"
+	permissionLoanRead        = "loan.read"
 	permissionLoanWrite       = "loan.write"
 	permissionLoanApprove     = "loan.approve"
 	permissionLoanDisburse    = "loan.disburse"
@@ -39,6 +43,13 @@ const (
 	permissionCreditWithdraw  = "credit.withdraw"
 	permissionCashRecord      = "cash.record"
 	permissionCashApprove     = "cash.approve"
+	permissionCashRead        = "cash.read"
+	permissionCreditRead      = "credit.read"
+	permissionCreditAccess    = "credit.access"
+	permissionCEEPRead        = "ceep.read"
+	permissionDividendRead    = "dividend.read"
+	permissionDashboardRead   = "dashboard.read"
+	permissionAuthenticated   = "authenticated"
 )
 
 // Verifier owns the Better Auth key cache and staff lookup used by the gRPC
@@ -136,16 +147,58 @@ func (v *Verifier) UnaryServerInterceptor(ctx context.Context, req any, info *gr
 		return nil, status.Error(codes.Unauthenticated, "active staff account required")
 	}
 	permission := permissionForMethod(info.FullMethod)
-	if permission != "" && !roleHasPermission(staff.Role, permission) {
-		return nil, status.Error(codes.PermissionDenied, "permission denied")
+	if permission == "" {
+		return nil, status.Error(codes.PermissionDenied, "This operation is unavailable to staff. Contact a system administrator.")
+	}
+	if !roleHasPermission(staff.Role, permission) {
+		action := "perform this action"
+		switch permission {
+		case permissionMemberRead:
+			action = "view member records"
+		case permissionStaffManage:
+			action = "manage staff access"
+		case permissionMemberWrite:
+			action = "change member records"
+		case permissionMemberStatus:
+			action = "change member status or close membership"
+		case permissionShareRead:
+			action = "view share records"
+		case permissionShareWrite:
+			action = "record share transactions"
+		case permissionShareApprove:
+			action = "approve share changes"
+		case permissionLoanRead:
+			action = "view loan records"
+		case permissionLoanWrite:
+			action = "prepare loans"
+		case permissionLoanApprove:
+			action = "approve loans"
+		case permissionLoanDisburse:
+			action = "disburse loans"
+		case permissionRepaymentRecord:
+			action = "record repayments or M-Pesa contributions"
+		case permissionCreditWithdraw:
+			action = "approve credit withdrawals"
+		case permissionCashRecord:
+			action = "record cash transactions"
+		case permissionCashApprove:
+			action = "approve cash transactions"
+		case permissionCashRead:
+			action = "view cash records"
+		case permissionCreditRead:
+			action = "view credit records"
+		case permissionCreditAccess:
+			action = "manage member credit"
+		case permissionCEEPRead:
+			action = "view CEEP reports"
+		case permissionDividendRead:
+			action = "view dividend records"
+		case permissionDashboardRead:
+			action = "view the dashboard"
+		}
+		return nil, status.Errorf(codes.PermissionDenied, "Your %s role cannot %s. Ask an authorized staff member.", strings.ReplaceAll(staff.Role, "_", " "), action)
 	}
 
-	if values := md.Get("x-request-id"); len(values) > 0 {
-		requestID = values[0]
-	}
-	if requestID == "" {
-		requestID = uuid.NewString()
-	}
 	_ = grpc.SetHeader(ctx, metadata.Pairs("x-request-id", requestID))
 	return handler(contextWithPrincipal(ctx, Principal{
 		ID:         staff.ID,
@@ -160,12 +213,32 @@ func (v *Verifier) UnaryServerInterceptor(ctx context.Context, req any, info *gr
 // access to every RPC.
 func permissionForMethod(method string) string {
 	switch method {
-	case "/contribution.v1.ContributionService/ApproveDividends", "/contribution.v1.ContributionService/RecordDividendChoice", "/contribution.v1.ContributionService/SettleDividend":
+	case "/dashboard.v1.DashboardService/GetSummary":
+		return permissionDashboardRead
+	case "/member.v1.MemberService/GetMember", "/member.v1.MemberService/ListMembers", "/member.v1.MemberService/GetMemberStatusHistory":
+		return permissionMemberRead
+	case "/share.v1.ShareService/GetShareAccount", "/share.v1.ShareService/ListShareAccounts", "/share.v1.ShareService/GetShareBalance", "/share.v1.ShareService/ListShareTransactions", "/share.v1.ShareService/GetShareTransaction":
+		return permissionShareRead
+	case "/loan.v1.LoanService/GetLoan", "/loan.v1.LoanService/ListLoans", "/loan.v1.LoanService/GetLoanStatus", "/loan.v1.LoanService/ListGuarantors", "/loan.v1.RepaymentService/GetRepaymentSchedule", "/loan.v1.RepaymentService/GetInstallmentDetails", "/loan.v1.RepaymentService/GetPaymentHistory":
+		return permissionLoanRead
+	case "/loan.v1.CreditService/ListCreditOperations", "/loan.v1.CreditService/GetCreditBalance":
+		return permissionCreditRead
+	case "/contribution.v1.ContributionService/GetCashContext", "/auth.v1.AuthService/GetCurrentStaff":
+		return permissionAuthenticated
+	case "/contribution.v1.ContributionService/GetCashReceipt", "/contribution.v1.ContributionService/ListCashierSessions", "/contribution.v1.ContributionService/ListCashDeposits", "/contribution.v1.ContributionService/GetCashDeposit", "/contribution.v1.ContributionService/ListContributionCharges":
+		return permissionCashRead
+	case "/contribution.v1.ContributionService/GetCEEPReport":
+		return permissionCEEPRead
+	case "/contribution.v1.ContributionService/GetDividendHistory", "/contribution.v1.ContributionService/GetDividendRegister":
+		return permissionDividendRead
+	case "/contribution.v1.ContributionService/ApproveDividends", "/contribution.v1.ContributionService/SaveDividendDraft", "/contribution.v1.ContributionService/RecordDividendChoice", "/contribution.v1.ContributionService/SettleDividend":
 		return permissionCashApprove
 	case "/auth.v1.AuthService/CreateStaffUser", "/auth.v1.AuthService/DeactivateStaffUser", "/auth.v1.AuthService/ListStaffUsers":
 		return permissionStaffManage
-	case "/member.v1.MemberService/RegisterMember", "/member.v1.MemberService/UpdateMemberProfile", "/member.v1.MemberService/UpdateMemberStatus", "/member.v1.MemberService/CloseMember":
+	case "/member.v1.MemberService/RegisterMember", "/member.v1.MemberService/UpdateMemberProfile":
 		return permissionMemberWrite
+	case "/member.v1.MemberService/UpdateMemberStatus", "/member.v1.MemberService/CloseMember":
+		return permissionMemberStatus
 	case "/share.v1.ShareService/OpenShareAccount", "/share.v1.ShareService/PurchaseShares", "/share.v1.ShareService/WithdrawShares", "/share.v1.ShareService/CreateAdjustment":
 		return permissionShareWrite
 	case "/share.v1.ShareService/ApproveShareAdjustment", "/share.v1.ShareService/ReverseShareTransaction":
@@ -176,7 +249,7 @@ func permissionForMethod(method string) string {
 		return permissionLoanApprove
 	case "/loan.v1.LoanService/DisburseLoan":
 		return permissionLoanDisburse
-	case "/loan.v1.RepaymentService/RecordRepayment", "/contribution.v1.ContributionService/InitiateDarajaSTKContribution", "/contribution.v1.ContributionService/GetContributionPaymentRequest", "/contribution.v1.ContributionService/GetContributionQuote":
+	case "/loan.v1.RepaymentService/RecordRepayment", "/contribution.v1.ContributionService/InitiateDarajaSTKContribution", "/contribution.v1.ContributionService/GetContributionPayment", "/contribution.v1.ContributionService/GetContributionQuote":
 		return permissionRepaymentRecord
 	case "/contribution.v1.ContributionService/ListDarajaPayments", "/contribution.v1.ContributionService/RecoverDarajaPayment":
 		return permissionRepaymentRecord
@@ -184,7 +257,7 @@ func permissionForMethod(method string) string {
 		return permissionRepaymentRecord
 	case "/loan.v1.CreditService/ManageCredit":
 		// The handler distinguishes recording from refund approval permissions.
-		return ""
+		return permissionCreditAccess
 	case "/contribution.v1.ContributionService/CreateContributionCharge", "/contribution.v1.ContributionService/OpenCashierSession", "/contribution.v1.ContributionService/CreateCashContribution", "/contribution.v1.ContributionService/CloseCashierSession":
 		return permissionCashRecord
 	case "/contribution.v1.ContributionService/FinalizeCEEPReport", "/contribution.v1.ContributionService/AcceptCashHandover", "/contribution.v1.ContributionService/RecordCashDeposit", "/contribution.v1.ContributionService/VerifyCashDeposit":
@@ -204,15 +277,15 @@ func roleHasPermission(role, permission string) bool {
 	case roleManager:
 		return permission != permissionStaffManage
 	case roleLoanOfficer:
-		return permission == permissionMemberWrite || permission == permissionLoanWrite
+		return permission == permissionAuthenticated || permission == permissionDashboardRead || permission == permissionMemberRead || permission == permissionMemberWrite || permission == permissionShareRead || permission == permissionLoanRead || permission == permissionLoanWrite || permission == permissionCreditRead
 	case roleCashier:
-		return permission == permissionShareWrite || permission == permissionRepaymentRecord || permission == permissionCashRecord
+		return permission == permissionAuthenticated || permission == permissionDashboardRead || permission == permissionMemberRead || permission == permissionShareRead || permission == permissionShareWrite || permission == permissionLoanRead || permission == permissionCreditRead || permission == permissionCreditAccess || permission == permissionCashRead || permission == permissionRepaymentRecord || permission == permissionCashRecord
 	case roleChairperson:
-		return permission == permissionLoanApprove || permission == permissionShareApprove || permission == permissionCreditWithdraw
+		return permission == permissionAuthenticated || permission == permissionDashboardRead || permission == permissionMemberRead || permission == permissionShareRead || permission == permissionLoanRead || permission == permissionCreditRead || permission == permissionCreditAccess || permission == permissionLoanApprove || permission == permissionShareApprove || permission == permissionCreditWithdraw
 	case roleSecretary:
-		return permission == permissionMemberWrite
+		return permission == permissionAuthenticated || permission == permissionDashboardRead || permission == permissionMemberRead || permission == permissionMemberWrite || permission == permissionShareRead || permission == permissionLoanRead
 	case roleAuditor:
-		return false
+		return permission == permissionAuthenticated || permission == permissionDashboardRead || permission == permissionMemberRead || permission == permissionShareRead || permission == permissionLoanRead || permission == permissionCreditRead || permission == permissionCashRead || permission == permissionCEEPRead || permission == permissionDividendRead
 	default:
 		return false
 	}
@@ -228,4 +301,9 @@ func CashPermissions(role string) (record, approve bool) {
 // Without it, the combined credit endpoint would let cashiers approve their own refunds.
 func CreditApprovalAllowed(role string) bool {
 	return roleHasPermission(role, permissionCreditWithdraw)
+}
+
+// CanAccessBranch keeps record access within the actor's branch while allowing managers and system admins to work across branches; without it, handlers can disagree on branch access.
+func CanAccessBranch(actor Principal, branchID int64) bool {
+	return actor.Role == roleManager || actor.Role == roleSystemAdmin || actor.BranchID == branchID
 }

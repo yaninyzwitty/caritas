@@ -16,6 +16,28 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
+// GetCurrentStaff exposes the backend's effective capabilities to the UI; without it, navigation would duplicate and drift from authorization rules.
+func (h *Handlers) GetCurrentStaff(ctx context.Context, _ *authv1.GetCurrentStaffRequest) (*authv1.GetCurrentStaffResponse, error) {
+	actor, ok := PrincipalFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "active staff account required")
+	}
+	response := &authv1.GetCurrentStaffResponse{Role: actor.Role, BranchId: actor.BranchID}
+	for _, permission := range []string{
+		permissionStaffManage, permissionMemberRead, permissionMemberWrite, permissionMemberStatus,
+		permissionShareRead, permissionShareWrite, permissionShareApprove, permissionLoanRead,
+		permissionLoanWrite, permissionLoanApprove, permissionLoanDisburse, permissionRepaymentRecord,
+		permissionCreditRead, permissionCreditAccess, permissionCreditWithdraw, permissionCashRead,
+		permissionCashRecord, permissionCashApprove, permissionCEEPRead, permissionDividendRead,
+		permissionDashboardRead,
+	} {
+		if roleHasPermission(actor.Role, permission) {
+			response.Permissions = append(response.Permissions, permission)
+		}
+	}
+	return response, nil
+}
+
 // ListStaffUsers returns one bounded page in stable creation order for the staff console.
 func (h *Handlers) ListStaffUsers(ctx context.Context, req *authv1.ListStaffUsersRequest) (*authv1.ListStaffUsersResponse, error) {
 	role := strings.TrimSpace(req.GetRole())

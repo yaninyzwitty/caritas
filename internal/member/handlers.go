@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	memberv1 "github.com/yaninyzwitty/caritas-backend/gen/member/v1"
+	"github.com/yaninyzwitty/caritas-backend/internal/auth"
 	"github.com/yaninyzwitty/caritas-backend/internal/repository/sqlc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -55,6 +56,13 @@ func mapServiceError(err error) error {
 
 func (h *Handlers) RegisterMember(ctx context.Context, req *memberv1.RegisterMemberRequest) (*memberv1.RegisterMemberResponse, error) {
 	branchID := resolveBranchID(req.BranchId)
+	actor, _ := auth.PrincipalFromContext(ctx)
+	if req.BranchId == 0 && actor.Role != "manager" && actor.Role != "system_admin" {
+		branchID = actor.BranchID
+	}
+	if !auth.CanAccessBranch(actor, branchID) {
+		return nil, status.Error(codes.PermissionDenied, "Your staff account cannot access this branch.")
+	}
 
 	var dateOfBirth pgtype.Date
 	if req.GetProfile().GetPersonal().GetDateOfBirth() != nil {
@@ -100,6 +108,14 @@ func (h *Handlers) RegisterMember(ctx context.Context, req *memberv1.RegisterMem
 }
 
 func (h *Handlers) GetMember(ctx context.Context, req *memberv1.GetMemberRequest) (*memberv1.GetMemberResponse, error) {
+	actor, _ := auth.PrincipalFromContext(ctx)
+	branchID := resolveBranchID(req.BranchId)
+	if req.BranchId == 0 && actor.Role != "manager" && actor.Role != "system_admin" {
+		branchID = actor.BranchID
+	}
+	if !auth.CanAccessBranch(actor, branchID) {
+		return nil, status.Error(codes.NotFound, "member not found")
+	}
 	var member sqlc.GetMemberByIDRow
 	var err error
 	switch identifier := req.Identifier.(type) {
@@ -113,14 +129,17 @@ func (h *Handlers) GetMember(ctx context.Context, req *memberv1.GetMemberRequest
 		if identifier.MemberNumber <= 0 {
 			return nil, status.Error(codes.InvalidArgument, "member_number must be positive")
 		}
-		member, err = h.memberService.GetMemberByNumber(ctx, resolveBranchID(req.BranchId), identifier.MemberNumber)
+		member, err = h.memberService.GetMemberByNumber(ctx, branchID, identifier.MemberNumber)
 	case *memberv1.GetMemberRequest_NationalId:
-		member, err = h.memberService.GetMemberByNationalID(ctx, resolveBranchID(req.BranchId), identifier.NationalId)
+		member, err = h.memberService.GetMemberByNationalID(ctx, branchID, identifier.NationalId)
 	default:
 		return nil, status.Error(codes.InvalidArgument, "must provide member_id, member_number or national_id")
 	}
 	if err != nil {
 		return nil, mapServiceError(err)
+	}
+	if !auth.CanAccessBranch(actor, member.BranchID) {
+		return nil, status.Error(codes.NotFound, "member not found")
 	}
 	return &memberv1.GetMemberResponse{Member: convertMemberFromRow(member)}, nil
 }
@@ -143,6 +162,13 @@ func (h *Handlers) ListMembers(
 	}
 
 	branchID := resolveBranchID(req.BranchId)
+	actor, _ := auth.PrincipalFromContext(ctx)
+	if req.BranchId == 0 && actor.Role != "manager" && actor.Role != "system_admin" {
+		branchID = actor.BranchID
+	}
+	if !auth.CanAccessBranch(actor, branchID) {
+		return nil, status.Error(codes.PermissionDenied, "Your staff account cannot access this branch.")
+	}
 
 	var cursor pgtype.Int8
 	if req.PageToken != "" {
@@ -189,6 +215,14 @@ func (h *Handlers) UpdateMemberProfile(ctx context.Context, req *memberv1.Update
 	memberID, err := stringToUUID(req.MemberId)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid member_id")
+	}
+	actor, _ := auth.PrincipalFromContext(ctx)
+	current, err := h.memberService.GetMember(ctx, memberID)
+	if err != nil {
+		return nil, mapServiceError(err)
+	}
+	if !auth.CanAccessBranch(actor, current.BranchID) {
+		return nil, status.Error(codes.NotFound, "member not found")
 	}
 
 	var dateOfBirth pgtype.Date
@@ -270,6 +304,14 @@ func (h *Handlers) GetMemberStatusHistory(ctx context.Context, req *memberv1.Get
 	memberID, err := stringToUUID(req.MemberId)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid member_id")
+	}
+	actor, _ := auth.PrincipalFromContext(ctx)
+	member, err := h.memberService.GetMember(ctx, memberID)
+	if err != nil {
+		return nil, mapServiceError(err)
+	}
+	if !auth.CanAccessBranch(actor, member.BranchID) {
+		return nil, status.Error(codes.NotFound, "member not found")
 	}
 
 	history, err := h.store.GetMemberStatusHistory(ctx, memberID)

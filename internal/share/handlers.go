@@ -31,6 +31,19 @@ func NewHandlers(service *Service, store *Store) *Handlers {
 	return &Handlers{service: service, store: store}
 }
 
+// requireAccountBranch checks an account before ID-based reads or writes; without it, a staff member could use a known account ID to reach another branch.
+func (h *Handlers) requireAccountBranch(ctx context.Context, accountID pgtype.UUID) error {
+	actor, _ := auth.PrincipalFromContext(ctx)
+	account, err := h.store.GetAccountByID(ctx, accountID)
+	if err != nil {
+		return mapServiceError(err)
+	}
+	if !auth.CanAccessBranch(actor, account.ShareAccount.BranchID) {
+		return status.Error(codes.NotFound, "share account not found")
+	}
+	return nil
+}
+
 // resolveBranchID falls back to the seeded default branch when the caller omits
 // branch_id. Without it, a zero branch_id would create/list accounts under a
 // non-existent branch 0.
@@ -95,7 +108,15 @@ func (h *Handlers) OpenShareAccount(ctx context.Context, req *sharev1.OpenShareA
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid member_id")
 	}
-	account, err := h.service.OpenShareAccount(ctx, memberID, resolveBranchID(req.GetBranchId()))
+	actor, _ := auth.PrincipalFromContext(ctx)
+	branchID := resolveBranchID(req.GetBranchId())
+	if req.GetBranchId() == 0 && actor.Role != "manager" && actor.Role != "system_admin" {
+		branchID = actor.BranchID
+	}
+	if !auth.CanAccessBranch(actor, branchID) {
+		return nil, status.Error(codes.PermissionDenied, "Your staff account cannot access this branch.")
+	}
+	account, err := h.service.OpenShareAccount(ctx, memberID, branchID)
 	if err != nil {
 		return nil, mapServiceError(err)
 	}
@@ -113,6 +134,14 @@ func (h *Handlers) OpenShareAccount(ctx context.Context, req *sharev1.OpenShareA
 // callers cannot inspect an account's status or identifiers.
 func (h *Handlers) GetShareAccount(ctx context.Context, req *sharev1.GetShareAccountRequest) (*sharev1.GetShareAccountResponse, error) {
 	var account sharesqlc.ShareAccount
+	actor, _ := auth.PrincipalFromContext(ctx)
+	branchID := resolveBranchID(req.GetBranchId())
+	if req.GetBranchId() == 0 && actor.Role != "manager" && actor.Role != "system_admin" {
+		branchID = actor.BranchID
+	}
+	if !auth.CanAccessBranch(actor, branchID) {
+		return nil, status.Error(codes.NotFound, "share account not found")
+	}
 
 	switch id := req.GetIdentifier().(type) {
 	case *sharev1.GetShareAccountRequest_AccountId:
@@ -124,6 +153,9 @@ func (h *Handlers) GetShareAccount(ctx context.Context, req *sharev1.GetShareAcc
 		row, err := h.store.GetAccountByID(ctx, accountID)
 		if err != nil {
 			return nil, mapServiceError(err)
+		}
+		if !auth.CanAccessBranch(actor, row.ShareAccount.BranchID) {
+			return nil, status.Error(codes.NotFound, "share account not found")
 		}
 		result := convertAccountToProto(row.ShareAccount)
 		result.MemberNumber = row.MemberNumber
@@ -139,13 +171,16 @@ func (h *Handlers) GetShareAccount(ctx context.Context, req *sharev1.GetShareAcc
 		if err != nil {
 			return nil, mapServiceError(err)
 		}
+		if !auth.CanAccessBranch(actor, account.BranchID) {
+			return nil, status.Error(codes.NotFound, "share account not found")
+		}
 	case *sharev1.GetShareAccountRequest_MemberNumber, *sharev1.GetShareAccountRequest_NationalId:
 		memberNumber, nationalID := req.GetMemberNumber(), strings.TrimSpace(req.GetNationalId())
 		if memberNumber <= 0 && nationalID == "" {
 			return nil, status.Error(codes.InvalidArgument, "provide a positive member_number or a non-empty national_id")
 		}
 		row, err := h.store.GetAccountByMemberIdentifier(ctx, sharesqlc.GetAccountByMemberIdentifierParams{
-			BranchID:     resolveBranchID(req.GetBranchId()),
+			BranchID:     branchID,
 			MemberNumber: pgtype.Int8{Int64: memberNumber, Valid: memberNumber > 0},
 			NationalID:   pgtype.Text{String: nationalID, Valid: nationalID != ""},
 		})
@@ -169,6 +204,14 @@ func (h *Handlers) GetShareAccount(ctx context.Context, req *sharev1.GetShareAcc
 // ListShareAccounts handles branch-scoped, cursor-paginated account listing.
 // Without it the RPC returns Unimplemented and admins cannot browse accounts.
 func (h *Handlers) ListShareAccounts(ctx context.Context, req *sharev1.ListShareAccountsRequest) (*sharev1.ListShareAccountsResponse, error) {
+	actor, _ := auth.PrincipalFromContext(ctx)
+	branchID := resolveBranchID(req.GetBranchId())
+	if req.GetBranchId() == 0 && actor.Role != "manager" && actor.Role != "system_admin" {
+		branchID = actor.BranchID
+	}
+	if !auth.CanAccessBranch(actor, branchID) {
+		return nil, status.Error(codes.PermissionDenied, "Your staff account cannot access this branch.")
+	}
 	const (
 		defaultPageSize = 50
 		maxPageSize     = 1000
@@ -209,7 +252,7 @@ func (h *Handlers) ListShareAccounts(ctx context.Context, req *sharev1.ListShare
 	}
 
 	accounts, err := h.store.ListShareAccounts(ctx, sharesqlc.ListShareAccountsParams{
-		BranchID:           resolveBranchID(req.GetBranchId()),
+		BranchID:           branchID,
 		CursorMemberNumber: cursorMemberNumber,
 		CursorID:           cursorID,
 		StatusFilter:       statusFilter,
@@ -263,6 +306,9 @@ func (h *Handlers) PurchaseShares(ctx context.Context, req *sharev1.PurchaseShar
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid account_id: %v", err)
 	}
+	if err := h.requireAccountBranch(ctx, accountID); err != nil {
+		return nil, err
+	}
 	referenceID, err := stringToUUID(req.GetReferenceId())
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid reference_id: %v", err)
@@ -291,6 +337,9 @@ func (h *Handlers) WithdrawShares(ctx context.Context, req *sharev1.WithdrawShar
 	accountID, err := stringToUUID(req.GetAccountId())
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid account_id: %v", err)
+	}
+	if err := h.requireAccountBranch(ctx, accountID); err != nil {
+		return nil, err
 	}
 	referenceID, err := stringToUUID(req.GetReferenceId())
 	if err != nil {
@@ -321,6 +370,9 @@ func (h *Handlers) GetShareBalance(ctx context.Context, req *sharev1.GetShareBal
 	accountID, err := stringToUUID(req.GetAccountId())
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid account_id: %v", err)
+	}
+	if err := h.requireAccountBranch(ctx, accountID); err != nil {
+		return nil, err
 	}
 	result := &sharev1.GetShareBalanceResponse{}
 	err = h.store.ExecTx(ctx, func(q sharesqlc.Querier) error {
@@ -376,6 +428,9 @@ func (h *Handlers) ListShareTransactions(ctx context.Context, req *sharev1.ListS
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid account_id: %v", err)
 	}
+	if err := h.requireAccountBranch(ctx, accountID); err != nil {
+		return nil, err
+	}
 	cursorTS, cursorID, err := decodeCursor(req.GetPageToken())
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid page_token: %v", err)
@@ -426,6 +481,9 @@ func (h *Handlers) GetShareTransaction(ctx context.Context, req *sharev1.GetShar
 		}
 		return nil, status.Error(codes.Internal, "failed to get transaction")
 	}
+	if err := h.requireAccountBranch(ctx, tx.ShareAccountID); err != nil {
+		return nil, err
+	}
 	return &sharev1.GetShareTransactionResponse{Transaction: convertTransactionToProto(tx)}, nil
 }
 
@@ -436,6 +494,9 @@ func (h *Handlers) CreateAdjustment(ctx context.Context, req *sharev1.CreateAdju
 	accountID, err := stringToUUID(req.GetAccountId())
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid account_id: %v", err)
+	}
+	if err := h.requireAccountBranch(ctx, accountID); err != nil {
+		return nil, err
 	}
 	referenceID, err := stringToUUID(req.GetReferenceId())
 	if err != nil {
@@ -470,6 +531,26 @@ func (h *Handlers) ApproveShareAdjustment(ctx context.Context, req *sharev1.Appr
 	if !ok {
 		return nil, status.Error(codes.Unauthenticated, "authenticated admin is required")
 	}
+	err = h.store.ExecTx(ctx, func(q sharesqlc.Querier) error {
+		adjustment, err := q.LockAdjustmentByID(ctx, adjustmentID)
+		if err != nil {
+			return err
+		}
+		account, err := q.GetAccountByID(ctx, adjustment.ShareAccountID)
+		if err != nil {
+			return err
+		}
+		if !auth.CanAccessBranch(actor, account.ShareAccount.BranchID) {
+			return status.Error(codes.NotFound, "share adjustment not found")
+		}
+		return nil
+	})
+	if err != nil {
+		if status.Code(err) == codes.NotFound {
+			return nil, status.Error(codes.NotFound, "share adjustment not found")
+		}
+		return nil, mapServiceError(err)
+	}
 	var auditReportID pgtype.UUID
 	if req.GetAuditReportId() != "" {
 		auditReportID, err = stringToUUID(req.GetAuditReportId())
@@ -499,6 +580,13 @@ func (h *Handlers) ReverseShareTransaction(ctx context.Context, req *sharev1.Rev
 	transactionID, err := stringToUUID(req.GetTransactionId())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid transaction_id")
+	}
+	original, err := h.store.GetTransactionByID(ctx, transactionID)
+	if err != nil {
+		return nil, mapServiceError(err)
+	}
+	if err := h.requireAccountBranch(ctx, original.ShareAccountID); err != nil {
+		return nil, err
 	}
 	referenceID, err := stringToUUID(req.GetReferenceId())
 	if err != nil {
