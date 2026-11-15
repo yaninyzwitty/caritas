@@ -6,6 +6,9 @@ import "google/api/annotations.proto";
 import "google/protobuf/timestamp.proto";
 
 service AuthService {
+  rpc GetCurrentStaff(GetCurrentStaffRequest) returns (GetCurrentStaffResponse) {
+    option (google.api.http) = { get: "/api/v1/auth/current-staff" };
+  }
   rpc ListStaffUsers(ListStaffUsersRequest) returns (ListStaffUsersResponse) {
     option (google.api.http) = { get: "/api/v1/auth/staff-users" };
   }
@@ -21,6 +24,13 @@ service AuthService {
       body: "*"
     };
   }
+}
+
+message GetCurrentStaffRequest {}
+message GetCurrentStaffResponse {
+  string role = 1;
+  int64 branch_id = 2;
+  repeated string permissions = 3;
 }
 
 message ListStaffUsersRequest {

@@ -3583,6 +3583,206 @@ func (x *GetDividendRegisterRequest) GetRate() string {
 	return ""
 }
 
+type SaveDividendDraftRequest struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	FinancialYear   int32                  `protobuf:"varint,1,opt,name=financial_year,json=financialYear,proto3" json:"financial_year,omitempty"`
+	DeclarationDate string                 `protobuf:"bytes,2,opt,name=declaration_date,json=declarationDate,proto3" json:"declaration_date,omitempty"`
+	Rate            string                 `protobuf:"bytes,3,opt,name=rate,proto3" json:"rate,omitempty"`
+	Reason          string                 `protobuf:"bytes,4,opt,name=reason,proto3" json:"reason,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *SaveDividendDraftRequest) Reset() {
+	*x = SaveDividendDraftRequest{}
+	mi := &file_contribution_v1_contribution_proto_msgTypes[50]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SaveDividendDraftRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SaveDividendDraftRequest) ProtoMessage() {}
+
+func (x *SaveDividendDraftRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_contribution_v1_contribution_proto_msgTypes[50]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SaveDividendDraftRequest.ProtoReflect.Descriptor instead.
+func (*SaveDividendDraftRequest) Descriptor() ([]byte, []int) {
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{50}
+}
+
+func (x *SaveDividendDraftRequest) GetFinancialYear() int32 {
+	if x != nil {
+		return x.FinancialYear
+	}
+	return 0
+}
+
+func (x *SaveDividendDraftRequest) GetDeclarationDate() string {
+	if x != nil {
+		return x.DeclarationDate
+	}
+	return ""
+}
+
+func (x *SaveDividendDraftRequest) GetRate() string {
+	if x != nil {
+		return x.Rate
+	}
+	return ""
+}
+
+func (x *SaveDividendDraftRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+type SaveDividendDraftResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Report        *structpb.Struct       `protobuf:"bytes,1,opt,name=report,proto3" json:"report,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SaveDividendDraftResponse) Reset() {
+	*x = SaveDividendDraftResponse{}
+	mi := &file_contribution_v1_contribution_proto_msgTypes[51]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SaveDividendDraftResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SaveDividendDraftResponse) ProtoMessage() {}
+
+func (x *SaveDividendDraftResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_contribution_v1_contribution_proto_msgTypes[51]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SaveDividendDraftResponse.ProtoReflect.Descriptor instead.
+func (*SaveDividendDraftResponse) Descriptor() ([]byte, []int) {
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{51}
+}
+
+func (x *SaveDividendDraftResponse) GetReport() *structpb.Struct {
+	if x != nil {
+		return x.Report
+	}
+	return nil
+}
+
+type GetDividendHistoryRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	FinancialYear int32                  `protobuf:"varint,1,opt,name=financial_year,json=financialYear,proto3" json:"financial_year,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetDividendHistoryRequest) Reset() {
+	*x = GetDividendHistoryRequest{}
+	mi := &file_contribution_v1_contribution_proto_msgTypes[52]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetDividendHistoryRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetDividendHistoryRequest) ProtoMessage() {}
+
+func (x *GetDividendHistoryRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_contribution_v1_contribution_proto_msgTypes[52]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetDividendHistoryRequest.ProtoReflect.Descriptor instead.
+func (*GetDividendHistoryRequest) Descriptor() ([]byte, []int) {
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{52}
+}
+
+func (x *GetDividendHistoryRequest) GetFinancialYear() int32 {
+	if x != nil {
+		return x.FinancialYear
+	}
+	return 0
+}
+
+type GetDividendHistoryResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	History       *structpb.Struct       `protobuf:"bytes,1,opt,name=history,proto3" json:"history,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetDividendHistoryResponse) Reset() {
+	*x = GetDividendHistoryResponse{}
+	mi := &file_contribution_v1_contribution_proto_msgTypes[53]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetDividendHistoryResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetDividendHistoryResponse) ProtoMessage() {}
+
+func (x *GetDividendHistoryResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_contribution_v1_contribution_proto_msgTypes[53]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetDividendHistoryResponse.ProtoReflect.Descriptor instead.
+func (*GetDividendHistoryResponse) Descriptor() ([]byte, []int) {
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{53}
+}
+
+func (x *GetDividendHistoryResponse) GetHistory() *structpb.Struct {
+	if x != nil {
+		return x.History
+	}
+	return nil
+}
+
 // Approval binds the reviewed preview to the resolution; without the hash changed sources could be approved.
 type ApproveDividendsRequest struct {
 	state               protoimpl.MessageState `protogen:"open.v1"`
@@ -3597,7 +3797,7 @@ type ApproveDividendsRequest struct {
 
 func (x *ApproveDividendsRequest) Reset() {
 	*x = ApproveDividendsRequest{}
-	mi := &file_contribution_v1_contribution_proto_msgTypes[50]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[54]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3609,7 +3809,7 @@ func (x *ApproveDividendsRequest) String() string {
 func (*ApproveDividendsRequest) ProtoMessage() {}
 
 func (x *ApproveDividendsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_contribution_v1_contribution_proto_msgTypes[50]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[54]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3622,7 +3822,7 @@ func (x *ApproveDividendsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ApproveDividendsRequest.ProtoReflect.Descriptor instead.
 func (*ApproveDividendsRequest) Descriptor() ([]byte, []int) {
-	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{50}
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{54}
 }
 
 func (x *ApproveDividendsRequest) GetFinancialYear() int32 {
@@ -3671,7 +3871,7 @@ type RecordDividendChoiceRequest struct {
 
 func (x *RecordDividendChoiceRequest) Reset() {
 	*x = RecordDividendChoiceRequest{}
-	mi := &file_contribution_v1_contribution_proto_msgTypes[51]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[55]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3683,7 +3883,7 @@ func (x *RecordDividendChoiceRequest) String() string {
 func (*RecordDividendChoiceRequest) ProtoMessage() {}
 
 func (x *RecordDividendChoiceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_contribution_v1_contribution_proto_msgTypes[51]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[55]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3696,7 +3896,7 @@ func (x *RecordDividendChoiceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RecordDividendChoiceRequest.ProtoReflect.Descriptor instead.
 func (*RecordDividendChoiceRequest) Descriptor() ([]byte, []int) {
-	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{51}
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{55}
 }
 
 func (x *RecordDividendChoiceRequest) GetAllocationId() string {
@@ -3725,7 +3925,7 @@ type SettleDividendRequest struct {
 
 func (x *SettleDividendRequest) Reset() {
 	*x = SettleDividendRequest{}
-	mi := &file_contribution_v1_contribution_proto_msgTypes[52]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[56]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3737,7 +3937,7 @@ func (x *SettleDividendRequest) String() string {
 func (*SettleDividendRequest) ProtoMessage() {}
 
 func (x *SettleDividendRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_contribution_v1_contribution_proto_msgTypes[52]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[56]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3750,7 +3950,7 @@ func (x *SettleDividendRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SettleDividendRequest.ProtoReflect.Descriptor instead.
 func (*SettleDividendRequest) Descriptor() ([]byte, []int) {
-	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{52}
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{56}
 }
 
 func (x *SettleDividendRequest) GetAllocationId() string {
@@ -3784,7 +3984,7 @@ type GetDividendRegisterResponse struct {
 
 func (x *GetDividendRegisterResponse) Reset() {
 	*x = GetDividendRegisterResponse{}
-	mi := &file_contribution_v1_contribution_proto_msgTypes[53]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[57]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3796,7 +3996,7 @@ func (x *GetDividendRegisterResponse) String() string {
 func (*GetDividendRegisterResponse) ProtoMessage() {}
 
 func (x *GetDividendRegisterResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_contribution_v1_contribution_proto_msgTypes[53]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[57]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3809,7 +4009,7 @@ func (x *GetDividendRegisterResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetDividendRegisterResponse.ProtoReflect.Descriptor instead.
 func (*GetDividendRegisterResponse) Descriptor() ([]byte, []int) {
-	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{53}
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{57}
 }
 
 func (x *GetDividendRegisterResponse) GetReport() *structpb.Struct {
@@ -3829,7 +4029,7 @@ type ApproveDividendsResponse struct {
 
 func (x *ApproveDividendsResponse) Reset() {
 	*x = ApproveDividendsResponse{}
-	mi := &file_contribution_v1_contribution_proto_msgTypes[54]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[58]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3841,7 +4041,7 @@ func (x *ApproveDividendsResponse) String() string {
 func (*ApproveDividendsResponse) ProtoMessage() {}
 
 func (x *ApproveDividendsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_contribution_v1_contribution_proto_msgTypes[54]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[58]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3854,7 +4054,7 @@ func (x *ApproveDividendsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ApproveDividendsResponse.ProtoReflect.Descriptor instead.
 func (*ApproveDividendsResponse) Descriptor() ([]byte, []int) {
-	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{54}
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{58}
 }
 
 func (x *ApproveDividendsResponse) GetReport() *structpb.Struct {
@@ -3874,7 +4074,7 @@ type RecordDividendChoiceResponse struct {
 
 func (x *RecordDividendChoiceResponse) Reset() {
 	*x = RecordDividendChoiceResponse{}
-	mi := &file_contribution_v1_contribution_proto_msgTypes[55]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[59]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3886,7 +4086,7 @@ func (x *RecordDividendChoiceResponse) String() string {
 func (*RecordDividendChoiceResponse) ProtoMessage() {}
 
 func (x *RecordDividendChoiceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_contribution_v1_contribution_proto_msgTypes[55]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[59]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3899,7 +4099,7 @@ func (x *RecordDividendChoiceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RecordDividendChoiceResponse.ProtoReflect.Descriptor instead.
 func (*RecordDividendChoiceResponse) Descriptor() ([]byte, []int) {
-	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{55}
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{59}
 }
 
 func (x *RecordDividendChoiceResponse) GetReport() *structpb.Struct {
@@ -3919,7 +4119,7 @@ type SettleDividendResponse struct {
 
 func (x *SettleDividendResponse) Reset() {
 	*x = SettleDividendResponse{}
-	mi := &file_contribution_v1_contribution_proto_msgTypes[56]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[60]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3931,7 +4131,7 @@ func (x *SettleDividendResponse) String() string {
 func (*SettleDividendResponse) ProtoMessage() {}
 
 func (x *SettleDividendResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_contribution_v1_contribution_proto_msgTypes[56]
+	mi := &file_contribution_v1_contribution_proto_msgTypes[60]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3944,7 +4144,7 @@ func (x *SettleDividendResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SettleDividendResponse.ProtoReflect.Descriptor instead.
 func (*SettleDividendResponse) Descriptor() ([]byte, []int) {
-	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{56}
+	return file_contribution_v1_contribution_proto_rawDescGZIP(), []int{60}
 }
 
 func (x *SettleDividendResponse) GetReport() *structpb.Struct {
@@ -4243,7 +4443,18 @@ const file_contribution_v1_contribution_proto_rawDesc = "" +
 	"\x1aGetDividendRegisterRequest\x12%\n" +
 	"\x0efinancial_year\x18\x01 \x01(\x05R\rfinancialYear\x12)\n" +
 	"\x10declaration_date\x18\x02 \x01(\tR\x0fdeclarationDate\x12\x12\n" +
-	"\x04rate\x18\x03 \x01(\tR\x04rate\"\xd5\x01\n" +
+	"\x04rate\x18\x03 \x01(\tR\x04rate\"\x98\x01\n" +
+	"\x18SaveDividendDraftRequest\x12%\n" +
+	"\x0efinancial_year\x18\x01 \x01(\x05R\rfinancialYear\x12)\n" +
+	"\x10declaration_date\x18\x02 \x01(\tR\x0fdeclarationDate\x12\x12\n" +
+	"\x04rate\x18\x03 \x01(\tR\x04rate\x12\x16\n" +
+	"\x06reason\x18\x04 \x01(\tR\x06reason\"L\n" +
+	"\x19SaveDividendDraftResponse\x12/\n" +
+	"\x06report\x18\x01 \x01(\v2\x17.google.protobuf.StructR\x06report\"B\n" +
+	"\x19GetDividendHistoryRequest\x12%\n" +
+	"\x0efinancial_year\x18\x01 \x01(\x05R\rfinancialYear\"O\n" +
+	"\x1aGetDividendHistoryResponse\x121\n" +
+	"\ahistory\x18\x01 \x01(\v2\x17.google.protobuf.StructR\ahistory\"\xd5\x01\n" +
 	"\x17ApproveDividendsRequest\x12%\n" +
 	"\x0efinancial_year\x18\x01 \x01(\x05R\rfinancialYear\x12)\n" +
 	"\x10declaration_date\x18\x02 \x01(\tR\x0fdeclarationDate\x12\x12\n" +
@@ -4279,8 +4490,10 @@ const file_contribution_v1_contribution_proto_rawDesc = "" +
 	"*CONTRIBUTION_ALLOCATION_TYPE_LOAN_INTEREST\x10\x05\x12(\n" +
 	"$CONTRIBUTION_ALLOCATION_TYPE_PENALTY\x10\x06\x12-\n" +
 	")CONTRIBUTION_ALLOCATION_TYPE_OTHER_CHARGE\x10\a\x123\n" +
-	"/CONTRIBUTION_ALLOCATION_TYPE_OVERPAYMENT_CREDIT\x10\b2\xdc\x1e\n" +
-	"\x13ContributionService\x12\xa1\x01\n" +
+	"/CONTRIBUTION_ALLOCATION_TYPE_OVERPAYMENT_CREDIT\x10\b2\xad!\n" +
+	"\x13ContributionService\x12\xa4\x01\n" +
+	"\x11SaveDividendDraft\x12).contribution.v1.SaveDividendDraftRequest\x1a*.contribution.v1.SaveDividendDraftResponse\"8\x82\xd3\xe4\x93\x022:\x01*b\x06report\x1a%/api/v1/contributions/dividends/draft\x12\xa7\x01\n" +
+	"\x12GetDividendHistory\x12*.contribution.v1.GetDividendHistoryRequest\x1a+.contribution.v1.GetDividendHistoryResponse\"8\x82\xd3\xe4\x93\x022b\ahistory\x12'/api/v1/contributions/dividends/history\x12\xa1\x01\n" +
 	"\x13GetDividendRegister\x12+.contribution.v1.GetDividendRegisterRequest\x1a,.contribution.v1.GetDividendRegisterResponse\"/\x82\xd3\xe4\x93\x02)b\x06report\x12\x1f/api/v1/contributions/dividends\x12\xa3\x01\n" +
 	"\x10ApproveDividends\x12(.contribution.v1.ApproveDividendsRequest\x1a).contribution.v1.ApproveDividendsResponse\":\x82\xd3\xe4\x93\x024:\x01*b\x06report\"'/api/v1/contributions/dividends/approve\x12\xae\x01\n" +
 	"\x14RecordDividendChoice\x12,.contribution.v1.RecordDividendChoiceRequest\x1a-.contribution.v1.RecordDividendChoiceResponse\"9\x82\xd3\xe4\x93\x023:\x01*b\x06report\"&/api/v1/contributions/dividends/choice\x12\x9c\x01\n" +
@@ -4320,7 +4533,7 @@ func file_contribution_v1_contribution_proto_rawDescGZIP() []byte {
 }
 
 var file_contribution_v1_contribution_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_contribution_v1_contribution_proto_msgTypes = make([]protoimpl.MessageInfo, 57)
+var file_contribution_v1_contribution_proto_msgTypes = make([]protoimpl.MessageInfo, 61)
 var file_contribution_v1_contribution_proto_goTypes = []any{
 	(ContributionPaymentRequestStatus)(0),         // 0: contribution.v1.ContributionPaymentRequestStatus
 	(ContributionAllocationType)(0),               // 1: contribution.v1.ContributionAllocationType
@@ -4374,135 +4587,145 @@ var file_contribution_v1_contribution_proto_goTypes = []any{
 	(*RecoverDarajaPaymentRequest)(nil),           // 49: contribution.v1.RecoverDarajaPaymentRequest
 	(*RecoverDarajaPaymentResponse)(nil),          // 50: contribution.v1.RecoverDarajaPaymentResponse
 	(*GetDividendRegisterRequest)(nil),            // 51: contribution.v1.GetDividendRegisterRequest
-	(*ApproveDividendsRequest)(nil),               // 52: contribution.v1.ApproveDividendsRequest
-	(*RecordDividendChoiceRequest)(nil),           // 53: contribution.v1.RecordDividendChoiceRequest
-	(*SettleDividendRequest)(nil),                 // 54: contribution.v1.SettleDividendRequest
-	(*GetDividendRegisterResponse)(nil),           // 55: contribution.v1.GetDividendRegisterResponse
-	(*ApproveDividendsResponse)(nil),              // 56: contribution.v1.ApproveDividendsResponse
-	(*RecordDividendChoiceResponse)(nil),          // 57: contribution.v1.RecordDividendChoiceResponse
-	(*SettleDividendResponse)(nil),                // 58: contribution.v1.SettleDividendResponse
-	(*structpb.Struct)(nil),                       // 59: google.protobuf.Struct
-	(*v1.Money)(nil),                              // 60: member.v1.Money
-	(*timestamppb.Timestamp)(nil),                 // 61: google.protobuf.Timestamp
+	(*SaveDividendDraftRequest)(nil),              // 52: contribution.v1.SaveDividendDraftRequest
+	(*SaveDividendDraftResponse)(nil),             // 53: contribution.v1.SaveDividendDraftResponse
+	(*GetDividendHistoryRequest)(nil),             // 54: contribution.v1.GetDividendHistoryRequest
+	(*GetDividendHistoryResponse)(nil),            // 55: contribution.v1.GetDividendHistoryResponse
+	(*ApproveDividendsRequest)(nil),               // 56: contribution.v1.ApproveDividendsRequest
+	(*RecordDividendChoiceRequest)(nil),           // 57: contribution.v1.RecordDividendChoiceRequest
+	(*SettleDividendRequest)(nil),                 // 58: contribution.v1.SettleDividendRequest
+	(*GetDividendRegisterResponse)(nil),           // 59: contribution.v1.GetDividendRegisterResponse
+	(*ApproveDividendsResponse)(nil),              // 60: contribution.v1.ApproveDividendsResponse
+	(*RecordDividendChoiceResponse)(nil),          // 61: contribution.v1.RecordDividendChoiceResponse
+	(*SettleDividendResponse)(nil),                // 62: contribution.v1.SettleDividendResponse
+	(*structpb.Struct)(nil),                       // 63: google.protobuf.Struct
+	(*v1.Money)(nil),                              // 64: member.v1.Money
+	(*timestamppb.Timestamp)(nil),                 // 65: google.protobuf.Timestamp
 }
 var file_contribution_v1_contribution_proto_depIdxs = []int32{
-	59, // 0: contribution.v1.GetCEEPReportResponse.report:type_name -> google.protobuf.Struct
-	59, // 1: contribution.v1.FinalizeCEEPReportResponse.report:type_name -> google.protobuf.Struct
+	63, // 0: contribution.v1.GetCEEPReportResponse.report:type_name -> google.protobuf.Struct
+	63, // 1: contribution.v1.FinalizeCEEPReportResponse.report:type_name -> google.protobuf.Struct
 	1,  // 2: contribution.v1.ContributionAllocationInput.type:type_name -> contribution.v1.ContributionAllocationType
-	60, // 3: contribution.v1.ContributionAllocationInput.amount:type_name -> member.v1.Money
-	60, // 4: contribution.v1.InitiateDarajaSTKContributionRequest.amount:type_name -> member.v1.Money
+	64, // 3: contribution.v1.ContributionAllocationInput.amount:type_name -> member.v1.Money
+	64, // 4: contribution.v1.InitiateDarajaSTKContributionRequest.amount:type_name -> member.v1.Money
 	6,  // 5: contribution.v1.InitiateDarajaSTKContributionRequest.allocations:type_name -> contribution.v1.ContributionAllocationInput
 	0,  // 6: contribution.v1.InitiateDarajaSTKContributionResponse.status:type_name -> contribution.v1.ContributionPaymentRequestStatus
-	61, // 7: contribution.v1.InitiateDarajaSTKContributionResponse.created_at:type_name -> google.protobuf.Timestamp
+	65, // 7: contribution.v1.InitiateDarajaSTKContributionResponse.created_at:type_name -> google.protobuf.Timestamp
 	0,  // 8: contribution.v1.GetContributionPaymentResponse.status:type_name -> contribution.v1.ContributionPaymentRequestStatus
-	60, // 9: contribution.v1.GetContributionPaymentResponse.amount:type_name -> member.v1.Money
-	61, // 10: contribution.v1.GetContributionPaymentResponse.created_at:type_name -> google.protobuf.Timestamp
+	64, // 9: contribution.v1.GetContributionPaymentResponse.amount:type_name -> member.v1.Money
+	65, // 10: contribution.v1.GetContributionPaymentResponse.created_at:type_name -> google.protobuf.Timestamp
 	11, // 11: contribution.v1.GetContributionPaymentResponse.receipt:type_name -> contribution.v1.ContributionPaymentReceipt
-	60, // 12: contribution.v1.ContributionPaymentReceipt.amount:type_name -> member.v1.Money
-	61, // 13: contribution.v1.ContributionPaymentReceipt.received_at:type_name -> google.protobuf.Timestamp
+	64, // 12: contribution.v1.ContributionPaymentReceipt.amount:type_name -> member.v1.Money
+	65, // 13: contribution.v1.ContributionPaymentReceipt.received_at:type_name -> google.protobuf.Timestamp
 	36, // 14: contribution.v1.ContributionPaymentReceipt.loans:type_name -> contribution.v1.ContributionLoanSummary
 	15, // 15: contribution.v1.OpenCashierSessionResponse.session:type_name -> contribution.v1.CashierSession
-	60, // 16: contribution.v1.CashierSession.expected_amount:type_name -> member.v1.Money
-	60, // 17: contribution.v1.CashierSession.counted_amount:type_name -> member.v1.Money
-	60, // 18: contribution.v1.CashierSession.variance:type_name -> member.v1.Money
-	61, // 19: contribution.v1.CashierSession.opened_at:type_name -> google.protobuf.Timestamp
-	61, // 20: contribution.v1.CashierSession.closed_at:type_name -> google.protobuf.Timestamp
-	61, // 21: contribution.v1.CashierSession.handed_over_at:type_name -> google.protobuf.Timestamp
-	61, // 22: contribution.v1.CashierSession.deposited_at:type_name -> google.protobuf.Timestamp
-	60, // 23: contribution.v1.CreateCashContributionRequest.amount:type_name -> member.v1.Money
+	64, // 16: contribution.v1.CashierSession.expected_amount:type_name -> member.v1.Money
+	64, // 17: contribution.v1.CashierSession.counted_amount:type_name -> member.v1.Money
+	64, // 18: contribution.v1.CashierSession.variance:type_name -> member.v1.Money
+	65, // 19: contribution.v1.CashierSession.opened_at:type_name -> google.protobuf.Timestamp
+	65, // 20: contribution.v1.CashierSession.closed_at:type_name -> google.protobuf.Timestamp
+	65, // 21: contribution.v1.CashierSession.handed_over_at:type_name -> google.protobuf.Timestamp
+	65, // 22: contribution.v1.CashierSession.deposited_at:type_name -> google.protobuf.Timestamp
+	64, // 23: contribution.v1.CreateCashContributionRequest.amount:type_name -> member.v1.Money
 	6,  // 24: contribution.v1.CreateCashContributionRequest.allocations:type_name -> contribution.v1.ContributionAllocationInput
-	60, // 25: contribution.v1.CashContributionReceipt.amount:type_name -> member.v1.Money
-	61, // 26: contribution.v1.CashContributionReceipt.received_at:type_name -> google.protobuf.Timestamp
+	64, // 25: contribution.v1.CashContributionReceipt.amount:type_name -> member.v1.Money
+	65, // 26: contribution.v1.CashContributionReceipt.received_at:type_name -> google.protobuf.Timestamp
 	38, // 27: contribution.v1.CashContributionReceipt.allocations:type_name -> contribution.v1.CashReceiptAllocation
 	36, // 28: contribution.v1.CashContributionReceipt.loans:type_name -> contribution.v1.ContributionLoanSummary
 	17, // 29: contribution.v1.CreateCashContributionResponse.receipt:type_name -> contribution.v1.CashContributionReceipt
-	60, // 30: contribution.v1.CloseCashierSessionRequest.counted_amount:type_name -> member.v1.Money
+	64, // 30: contribution.v1.CloseCashierSessionRequest.counted_amount:type_name -> member.v1.Money
 	15, // 31: contribution.v1.CloseCashierSessionResponse.session:type_name -> contribution.v1.CashierSession
 	15, // 32: contribution.v1.AcceptCashHandoverResponse.session:type_name -> contribution.v1.CashierSession
-	60, // 33: contribution.v1.RecordCashDepositRequest.amount:type_name -> member.v1.Money
-	60, // 34: contribution.v1.CashDeposit.amount:type_name -> member.v1.Money
-	61, // 35: contribution.v1.CashDeposit.recorded_at:type_name -> google.protobuf.Timestamp
-	61, // 36: contribution.v1.CashDeposit.verified_at:type_name -> google.protobuf.Timestamp
+	64, // 33: contribution.v1.RecordCashDepositRequest.amount:type_name -> member.v1.Money
+	64, // 34: contribution.v1.CashDeposit.amount:type_name -> member.v1.Money
+	65, // 35: contribution.v1.CashDeposit.recorded_at:type_name -> google.protobuf.Timestamp
+	65, // 36: contribution.v1.CashDeposit.verified_at:type_name -> google.protobuf.Timestamp
 	24, // 37: contribution.v1.RecordCashDepositResponse.deposit:type_name -> contribution.v1.CashDeposit
 	24, // 38: contribution.v1.VerifyCashDepositResponse.deposit:type_name -> contribution.v1.CashDeposit
-	60, // 39: contribution.v1.ContributionCharge.amount:type_name -> member.v1.Money
-	60, // 40: contribution.v1.ContributionCharge.paid:type_name -> member.v1.Money
-	60, // 41: contribution.v1.ContributionCharge.outstanding:type_name -> member.v1.Money
-	61, // 42: contribution.v1.ContributionCharge.created_at:type_name -> google.protobuf.Timestamp
-	60, // 43: contribution.v1.CreateContributionChargeRequest.amount:type_name -> member.v1.Money
+	64, // 39: contribution.v1.ContributionCharge.amount:type_name -> member.v1.Money
+	64, // 40: contribution.v1.ContributionCharge.paid:type_name -> member.v1.Money
+	64, // 41: contribution.v1.ContributionCharge.outstanding:type_name -> member.v1.Money
+	65, // 42: contribution.v1.ContributionCharge.created_at:type_name -> google.protobuf.Timestamp
+	64, // 43: contribution.v1.CreateContributionChargeRequest.amount:type_name -> member.v1.Money
 	28, // 44: contribution.v1.CreateContributionChargeResponse.charge:type_name -> contribution.v1.ContributionCharge
 	28, // 45: contribution.v1.ListContributionChargesResponse.charges:type_name -> contribution.v1.ContributionCharge
 	6,  // 46: contribution.v1.GetContributionQuoteResponse.fees:type_name -> contribution.v1.ContributionAllocationInput
 	36, // 47: contribution.v1.GetContributionQuoteResponse.loans:type_name -> contribution.v1.ContributionLoanSummary
 	1,  // 48: contribution.v1.CashReceiptAllocation.type:type_name -> contribution.v1.ContributionAllocationType
-	60, // 49: contribution.v1.CashReceiptAllocation.amount:type_name -> member.v1.Money
+	64, // 49: contribution.v1.CashReceiptAllocation.amount:type_name -> member.v1.Money
 	15, // 50: contribution.v1.ListCashierSessionsResponse.sessions:type_name -> contribution.v1.CashierSession
 	24, // 51: contribution.v1.ListCashDepositsResponse.deposits:type_name -> contribution.v1.CashDeposit
 	17, // 52: contribution.v1.GetCashReceiptResponse.receipt:type_name -> contribution.v1.CashContributionReceipt
 	24, // 53: contribution.v1.GetCashDepositResponse.deposit:type_name -> contribution.v1.CashDeposit
 	48, // 54: contribution.v1.ListDarajaPaymentsResponse.payments:type_name -> contribution.v1.DarajaPayment
-	60, // 55: contribution.v1.DarajaPayment.amount:type_name -> member.v1.Money
-	61, // 56: contribution.v1.DarajaPayment.created_at:type_name -> google.protobuf.Timestamp
-	60, // 57: contribution.v1.RecoverDarajaPaymentRequest.amount:type_name -> member.v1.Money
-	61, // 58: contribution.v1.RecoverDarajaPaymentRequest.received_at:type_name -> google.protobuf.Timestamp
+	64, // 55: contribution.v1.DarajaPayment.amount:type_name -> member.v1.Money
+	65, // 56: contribution.v1.DarajaPayment.created_at:type_name -> google.protobuf.Timestamp
+	64, // 57: contribution.v1.RecoverDarajaPaymentRequest.amount:type_name -> member.v1.Money
+	65, // 58: contribution.v1.RecoverDarajaPaymentRequest.received_at:type_name -> google.protobuf.Timestamp
 	10, // 59: contribution.v1.RecoverDarajaPaymentResponse.payment:type_name -> contribution.v1.GetContributionPaymentResponse
-	59, // 60: contribution.v1.GetDividendRegisterResponse.report:type_name -> google.protobuf.Struct
-	59, // 61: contribution.v1.ApproveDividendsResponse.report:type_name -> google.protobuf.Struct
-	59, // 62: contribution.v1.RecordDividendChoiceResponse.report:type_name -> google.protobuf.Struct
-	59, // 63: contribution.v1.SettleDividendResponse.report:type_name -> google.protobuf.Struct
-	51, // 64: contribution.v1.ContributionService.GetDividendRegister:input_type -> contribution.v1.GetDividendRegisterRequest
-	52, // 65: contribution.v1.ContributionService.ApproveDividends:input_type -> contribution.v1.ApproveDividendsRequest
-	53, // 66: contribution.v1.ContributionService.RecordDividendChoice:input_type -> contribution.v1.RecordDividendChoiceRequest
-	54, // 67: contribution.v1.ContributionService.SettleDividend:input_type -> contribution.v1.SettleDividendRequest
-	2,  // 68: contribution.v1.ContributionService.GetCEEPReport:input_type -> contribution.v1.GetCEEPReportRequest
-	4,  // 69: contribution.v1.ContributionService.FinalizeCEEPReport:input_type -> contribution.v1.FinalizeCEEPReportRequest
-	46, // 70: contribution.v1.ContributionService.ListDarajaPayments:input_type -> contribution.v1.ListDarajaPaymentsRequest
-	49, // 71: contribution.v1.ContributionService.RecoverDarajaPayment:input_type -> contribution.v1.RecoverDarajaPaymentRequest
-	13, // 72: contribution.v1.ContributionService.GetCashContext:input_type -> contribution.v1.GetCashContextRequest
-	9,  // 73: contribution.v1.ContributionService.GetContributionPayment:input_type -> contribution.v1.GetContributionPaymentRequest
-	34, // 74: contribution.v1.ContributionService.GetContributionQuote:input_type -> contribution.v1.GetContributionQuoteRequest
-	37, // 75: contribution.v1.ContributionService.GetCashReceipt:input_type -> contribution.v1.GetCashReceiptRequest
-	39, // 76: contribution.v1.ContributionService.ListCashierSessions:input_type -> contribution.v1.ListCashierSessionsRequest
-	41, // 77: contribution.v1.ContributionService.ListCashDeposits:input_type -> contribution.v1.ListCashDepositsRequest
-	43, // 78: contribution.v1.ContributionService.GetCashDeposit:input_type -> contribution.v1.GetCashDepositRequest
-	29, // 79: contribution.v1.ContributionService.CreateContributionCharge:input_type -> contribution.v1.CreateContributionChargeRequest
-	31, // 80: contribution.v1.ContributionService.ListContributionCharges:input_type -> contribution.v1.ListContributionChargesRequest
-	7,  // 81: contribution.v1.ContributionService.InitiateDarajaSTKContribution:input_type -> contribution.v1.InitiateDarajaSTKContributionRequest
-	12, // 82: contribution.v1.ContributionService.OpenCashierSession:input_type -> contribution.v1.OpenCashierSessionRequest
-	16, // 83: contribution.v1.ContributionService.CreateCashContribution:input_type -> contribution.v1.CreateCashContributionRequest
-	19, // 84: contribution.v1.ContributionService.CloseCashierSession:input_type -> contribution.v1.CloseCashierSessionRequest
-	21, // 85: contribution.v1.ContributionService.AcceptCashHandover:input_type -> contribution.v1.AcceptCashHandoverRequest
-	23, // 86: contribution.v1.ContributionService.RecordCashDeposit:input_type -> contribution.v1.RecordCashDepositRequest
-	26, // 87: contribution.v1.ContributionService.VerifyCashDeposit:input_type -> contribution.v1.VerifyCashDepositRequest
-	55, // 88: contribution.v1.ContributionService.GetDividendRegister:output_type -> contribution.v1.GetDividendRegisterResponse
-	56, // 89: contribution.v1.ContributionService.ApproveDividends:output_type -> contribution.v1.ApproveDividendsResponse
-	57, // 90: contribution.v1.ContributionService.RecordDividendChoice:output_type -> contribution.v1.RecordDividendChoiceResponse
-	58, // 91: contribution.v1.ContributionService.SettleDividend:output_type -> contribution.v1.SettleDividendResponse
-	3,  // 92: contribution.v1.ContributionService.GetCEEPReport:output_type -> contribution.v1.GetCEEPReportResponse
-	5,  // 93: contribution.v1.ContributionService.FinalizeCEEPReport:output_type -> contribution.v1.FinalizeCEEPReportResponse
-	47, // 94: contribution.v1.ContributionService.ListDarajaPayments:output_type -> contribution.v1.ListDarajaPaymentsResponse
-	50, // 95: contribution.v1.ContributionService.RecoverDarajaPayment:output_type -> contribution.v1.RecoverDarajaPaymentResponse
-	33, // 96: contribution.v1.ContributionService.GetCashContext:output_type -> contribution.v1.GetCashContextResponse
-	10, // 97: contribution.v1.ContributionService.GetContributionPayment:output_type -> contribution.v1.GetContributionPaymentResponse
-	35, // 98: contribution.v1.ContributionService.GetContributionQuote:output_type -> contribution.v1.GetContributionQuoteResponse
-	44, // 99: contribution.v1.ContributionService.GetCashReceipt:output_type -> contribution.v1.GetCashReceiptResponse
-	40, // 100: contribution.v1.ContributionService.ListCashierSessions:output_type -> contribution.v1.ListCashierSessionsResponse
-	42, // 101: contribution.v1.ContributionService.ListCashDeposits:output_type -> contribution.v1.ListCashDepositsResponse
-	45, // 102: contribution.v1.ContributionService.GetCashDeposit:output_type -> contribution.v1.GetCashDepositResponse
-	30, // 103: contribution.v1.ContributionService.CreateContributionCharge:output_type -> contribution.v1.CreateContributionChargeResponse
-	32, // 104: contribution.v1.ContributionService.ListContributionCharges:output_type -> contribution.v1.ListContributionChargesResponse
-	8,  // 105: contribution.v1.ContributionService.InitiateDarajaSTKContribution:output_type -> contribution.v1.InitiateDarajaSTKContributionResponse
-	14, // 106: contribution.v1.ContributionService.OpenCashierSession:output_type -> contribution.v1.OpenCashierSessionResponse
-	18, // 107: contribution.v1.ContributionService.CreateCashContribution:output_type -> contribution.v1.CreateCashContributionResponse
-	20, // 108: contribution.v1.ContributionService.CloseCashierSession:output_type -> contribution.v1.CloseCashierSessionResponse
-	22, // 109: contribution.v1.ContributionService.AcceptCashHandover:output_type -> contribution.v1.AcceptCashHandoverResponse
-	25, // 110: contribution.v1.ContributionService.RecordCashDeposit:output_type -> contribution.v1.RecordCashDepositResponse
-	27, // 111: contribution.v1.ContributionService.VerifyCashDeposit:output_type -> contribution.v1.VerifyCashDepositResponse
-	88, // [88:112] is the sub-list for method output_type
-	64, // [64:88] is the sub-list for method input_type
-	64, // [64:64] is the sub-list for extension type_name
-	64, // [64:64] is the sub-list for extension extendee
-	0,  // [0:64] is the sub-list for field type_name
+	63, // 60: contribution.v1.SaveDividendDraftResponse.report:type_name -> google.protobuf.Struct
+	63, // 61: contribution.v1.GetDividendHistoryResponse.history:type_name -> google.protobuf.Struct
+	63, // 62: contribution.v1.GetDividendRegisterResponse.report:type_name -> google.protobuf.Struct
+	63, // 63: contribution.v1.ApproveDividendsResponse.report:type_name -> google.protobuf.Struct
+	63, // 64: contribution.v1.RecordDividendChoiceResponse.report:type_name -> google.protobuf.Struct
+	63, // 65: contribution.v1.SettleDividendResponse.report:type_name -> google.protobuf.Struct
+	52, // 66: contribution.v1.ContributionService.SaveDividendDraft:input_type -> contribution.v1.SaveDividendDraftRequest
+	54, // 67: contribution.v1.ContributionService.GetDividendHistory:input_type -> contribution.v1.GetDividendHistoryRequest
+	51, // 68: contribution.v1.ContributionService.GetDividendRegister:input_type -> contribution.v1.GetDividendRegisterRequest
+	56, // 69: contribution.v1.ContributionService.ApproveDividends:input_type -> contribution.v1.ApproveDividendsRequest
+	57, // 70: contribution.v1.ContributionService.RecordDividendChoice:input_type -> contribution.v1.RecordDividendChoiceRequest
+	58, // 71: contribution.v1.ContributionService.SettleDividend:input_type -> contribution.v1.SettleDividendRequest
+	2,  // 72: contribution.v1.ContributionService.GetCEEPReport:input_type -> contribution.v1.GetCEEPReportRequest
+	4,  // 73: contribution.v1.ContributionService.FinalizeCEEPReport:input_type -> contribution.v1.FinalizeCEEPReportRequest
+	46, // 74: contribution.v1.ContributionService.ListDarajaPayments:input_type -> contribution.v1.ListDarajaPaymentsRequest
+	49, // 75: contribution.v1.ContributionService.RecoverDarajaPayment:input_type -> contribution.v1.RecoverDarajaPaymentRequest
+	13, // 76: contribution.v1.ContributionService.GetCashContext:input_type -> contribution.v1.GetCashContextRequest
+	9,  // 77: contribution.v1.ContributionService.GetContributionPayment:input_type -> contribution.v1.GetContributionPaymentRequest
+	34, // 78: contribution.v1.ContributionService.GetContributionQuote:input_type -> contribution.v1.GetContributionQuoteRequest
+	37, // 79: contribution.v1.ContributionService.GetCashReceipt:input_type -> contribution.v1.GetCashReceiptRequest
+	39, // 80: contribution.v1.ContributionService.ListCashierSessions:input_type -> contribution.v1.ListCashierSessionsRequest
+	41, // 81: contribution.v1.ContributionService.ListCashDeposits:input_type -> contribution.v1.ListCashDepositsRequest
+	43, // 82: contribution.v1.ContributionService.GetCashDeposit:input_type -> contribution.v1.GetCashDepositRequest
+	29, // 83: contribution.v1.ContributionService.CreateContributionCharge:input_type -> contribution.v1.CreateContributionChargeRequest
+	31, // 84: contribution.v1.ContributionService.ListContributionCharges:input_type -> contribution.v1.ListContributionChargesRequest
+	7,  // 85: contribution.v1.ContributionService.InitiateDarajaSTKContribution:input_type -> contribution.v1.InitiateDarajaSTKContributionRequest
+	12, // 86: contribution.v1.ContributionService.OpenCashierSession:input_type -> contribution.v1.OpenCashierSessionRequest
+	16, // 87: contribution.v1.ContributionService.CreateCashContribution:input_type -> contribution.v1.CreateCashContributionRequest
+	19, // 88: contribution.v1.ContributionService.CloseCashierSession:input_type -> contribution.v1.CloseCashierSessionRequest
+	21, // 89: contribution.v1.ContributionService.AcceptCashHandover:input_type -> contribution.v1.AcceptCashHandoverRequest
+	23, // 90: contribution.v1.ContributionService.RecordCashDeposit:input_type -> contribution.v1.RecordCashDepositRequest
+	26, // 91: contribution.v1.ContributionService.VerifyCashDeposit:input_type -> contribution.v1.VerifyCashDepositRequest
+	53, // 92: contribution.v1.ContributionService.SaveDividendDraft:output_type -> contribution.v1.SaveDividendDraftResponse
+	55, // 93: contribution.v1.ContributionService.GetDividendHistory:output_type -> contribution.v1.GetDividendHistoryResponse
+	59, // 94: contribution.v1.ContributionService.GetDividendRegister:output_type -> contribution.v1.GetDividendRegisterResponse
+	60, // 95: contribution.v1.ContributionService.ApproveDividends:output_type -> contribution.v1.ApproveDividendsResponse
+	61, // 96: contribution.v1.ContributionService.RecordDividendChoice:output_type -> contribution.v1.RecordDividendChoiceResponse
+	62, // 97: contribution.v1.ContributionService.SettleDividend:output_type -> contribution.v1.SettleDividendResponse
+	3,  // 98: contribution.v1.ContributionService.GetCEEPReport:output_type -> contribution.v1.GetCEEPReportResponse
+	5,  // 99: contribution.v1.ContributionService.FinalizeCEEPReport:output_type -> contribution.v1.FinalizeCEEPReportResponse
+	47, // 100: contribution.v1.ContributionService.ListDarajaPayments:output_type -> contribution.v1.ListDarajaPaymentsResponse
+	50, // 101: contribution.v1.ContributionService.RecoverDarajaPayment:output_type -> contribution.v1.RecoverDarajaPaymentResponse
+	33, // 102: contribution.v1.ContributionService.GetCashContext:output_type -> contribution.v1.GetCashContextResponse
+	10, // 103: contribution.v1.ContributionService.GetContributionPayment:output_type -> contribution.v1.GetContributionPaymentResponse
+	35, // 104: contribution.v1.ContributionService.GetContributionQuote:output_type -> contribution.v1.GetContributionQuoteResponse
+	44, // 105: contribution.v1.ContributionService.GetCashReceipt:output_type -> contribution.v1.GetCashReceiptResponse
+	40, // 106: contribution.v1.ContributionService.ListCashierSessions:output_type -> contribution.v1.ListCashierSessionsResponse
+	42, // 107: contribution.v1.ContributionService.ListCashDeposits:output_type -> contribution.v1.ListCashDepositsResponse
+	45, // 108: contribution.v1.ContributionService.GetCashDeposit:output_type -> contribution.v1.GetCashDepositResponse
+	30, // 109: contribution.v1.ContributionService.CreateContributionCharge:output_type -> contribution.v1.CreateContributionChargeResponse
+	32, // 110: contribution.v1.ContributionService.ListContributionCharges:output_type -> contribution.v1.ListContributionChargesResponse
+	8,  // 111: contribution.v1.ContributionService.InitiateDarajaSTKContribution:output_type -> contribution.v1.InitiateDarajaSTKContributionResponse
+	14, // 112: contribution.v1.ContributionService.OpenCashierSession:output_type -> contribution.v1.OpenCashierSessionResponse
+	18, // 113: contribution.v1.ContributionService.CreateCashContribution:output_type -> contribution.v1.CreateCashContributionResponse
+	20, // 114: contribution.v1.ContributionService.CloseCashierSession:output_type -> contribution.v1.CloseCashierSessionResponse
+	22, // 115: contribution.v1.ContributionService.AcceptCashHandover:output_type -> contribution.v1.AcceptCashHandoverResponse
+	25, // 116: contribution.v1.ContributionService.RecordCashDeposit:output_type -> contribution.v1.RecordCashDepositResponse
+	27, // 117: contribution.v1.ContributionService.VerifyCashDeposit:output_type -> contribution.v1.VerifyCashDepositResponse
+	92, // [92:118] is the sub-list for method output_type
+	66, // [66:92] is the sub-list for method input_type
+	66, // [66:66] is the sub-list for extension type_name
+	66, // [66:66] is the sub-list for extension extendee
+	0,  // [0:66] is the sub-list for field type_name
 }
 
 func init() { file_contribution_v1_contribution_proto_init() }
@@ -4520,7 +4743,7 @@ func file_contribution_v1_contribution_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_contribution_v1_contribution_proto_rawDesc), len(file_contribution_v1_contribution_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   57,
+			NumMessages:   61,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

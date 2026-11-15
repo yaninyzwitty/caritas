@@ -19,6 +19,8 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
+	ContributionService_SaveDividendDraft_FullMethodName             = "/contribution.v1.ContributionService/SaveDividendDraft"
+	ContributionService_GetDividendHistory_FullMethodName            = "/contribution.v1.ContributionService/GetDividendHistory"
 	ContributionService_GetDividendRegister_FullMethodName           = "/contribution.v1.ContributionService/GetDividendRegister"
 	ContributionService_ApproveDividends_FullMethodName              = "/contribution.v1.ContributionService/ApproveDividends"
 	ContributionService_RecordDividendChoice_FullMethodName          = "/contribution.v1.ContributionService/RecordDividendChoice"
@@ -49,6 +51,8 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ContributionServiceClient interface {
+	SaveDividendDraft(ctx context.Context, in *SaveDividendDraftRequest, opts ...grpc.CallOption) (*SaveDividendDraftResponse, error)
+	GetDividendHistory(ctx context.Context, in *GetDividendHistoryRequest, opts ...grpc.CallOption) (*GetDividendHistoryResponse, error)
 	GetDividendRegister(ctx context.Context, in *GetDividendRegisterRequest, opts ...grpc.CallOption) (*GetDividendRegisterResponse, error)
 	ApproveDividends(ctx context.Context, in *ApproveDividendsRequest, opts ...grpc.CallOption) (*ApproveDividendsResponse, error)
 	RecordDividendChoice(ctx context.Context, in *RecordDividendChoiceRequest, opts ...grpc.CallOption) (*RecordDividendChoiceResponse, error)
@@ -81,6 +85,26 @@ type contributionServiceClient struct {
 
 func NewContributionServiceClient(cc grpc.ClientConnInterface) ContributionServiceClient {
 	return &contributionServiceClient{cc}
+}
+
+func (c *contributionServiceClient) SaveDividendDraft(ctx context.Context, in *SaveDividendDraftRequest, opts ...grpc.CallOption) (*SaveDividendDraftResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SaveDividendDraftResponse)
+	err := c.cc.Invoke(ctx, ContributionService_SaveDividendDraft_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *contributionServiceClient) GetDividendHistory(ctx context.Context, in *GetDividendHistoryRequest, opts ...grpc.CallOption) (*GetDividendHistoryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetDividendHistoryResponse)
+	err := c.cc.Invoke(ctx, ContributionService_GetDividendHistory_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *contributionServiceClient) GetDividendRegister(ctx context.Context, in *GetDividendRegisterRequest, opts ...grpc.CallOption) (*GetDividendRegisterResponse, error) {
@@ -327,6 +351,8 @@ func (c *contributionServiceClient) VerifyCashDeposit(ctx context.Context, in *V
 // All implementations must embed UnimplementedContributionServiceServer
 // for forward compatibility.
 type ContributionServiceServer interface {
+	SaveDividendDraft(context.Context, *SaveDividendDraftRequest) (*SaveDividendDraftResponse, error)
+	GetDividendHistory(context.Context, *GetDividendHistoryRequest) (*GetDividendHistoryResponse, error)
 	GetDividendRegister(context.Context, *GetDividendRegisterRequest) (*GetDividendRegisterResponse, error)
 	ApproveDividends(context.Context, *ApproveDividendsRequest) (*ApproveDividendsResponse, error)
 	RecordDividendChoice(context.Context, *RecordDividendChoiceRequest) (*RecordDividendChoiceResponse, error)
@@ -361,6 +387,12 @@ type ContributionServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedContributionServiceServer struct{}
 
+func (UnimplementedContributionServiceServer) SaveDividendDraft(context.Context, *SaveDividendDraftRequest) (*SaveDividendDraftResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SaveDividendDraft not implemented")
+}
+func (UnimplementedContributionServiceServer) GetDividendHistory(context.Context, *GetDividendHistoryRequest) (*GetDividendHistoryResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetDividendHistory not implemented")
+}
 func (UnimplementedContributionServiceServer) GetDividendRegister(context.Context, *GetDividendRegisterRequest) (*GetDividendRegisterResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetDividendRegister not implemented")
 }
@@ -452,6 +484,42 @@ func RegisterContributionServiceServer(s grpc.ServiceRegistrar, srv Contribution
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&ContributionService_ServiceDesc, srv)
+}
+
+func _ContributionService_SaveDividendDraft_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SaveDividendDraftRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ContributionServiceServer).SaveDividendDraft(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ContributionService_SaveDividendDraft_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ContributionServiceServer).SaveDividendDraft(ctx, req.(*SaveDividendDraftRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ContributionService_GetDividendHistory_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetDividendHistoryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ContributionServiceServer).GetDividendHistory(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ContributionService_GetDividendHistory_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ContributionServiceServer).GetDividendHistory(ctx, req.(*GetDividendHistoryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _ContributionService_GetDividendRegister_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -893,6 +961,14 @@ var ContributionService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "contribution.v1.ContributionService",
 	HandlerType: (*ContributionServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "SaveDividendDraft",
+			Handler:    _ContributionService_SaveDividendDraft_Handler,
+		},
+		{
+			MethodName: "GetDividendHistory",
+			Handler:    _ContributionService_GetDividendHistory_Handler,
+		},
 		{
 			MethodName: "GetDividendRegister",
 			Handler:    _ContributionService_GetDividendRegister_Handler,

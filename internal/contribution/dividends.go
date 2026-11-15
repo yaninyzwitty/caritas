@@ -25,6 +25,37 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
+func dividendInputs(year int32, declared, rateText string) (time.Time, pgtype.Numeric, error) {
+	var rate pgtype.Numeric
+	if year < 2000 || year > 9998 {
+		return time.Time{}, rate, status.Error(codes.InvalidArgument, "financial_year must be between 2000 and 9998")
+	}
+	date, err := time.Parse("2006-01-02", declared)
+	today := time.Now().In(time.FixedZone("Africa/Nairobi", 3*60*60)).Format("2006-01-02")
+	if err != nil || date.Format("2006-01-02") != declared || declared > today || int(year) >= date.Year() {
+		return time.Time{}, rate, status.Error(codes.InvalidArgument, "declaration_date must follow the financial year and be no later than today in Nairobi")
+	}
+	if !regexp.MustCompile(`^\d{1,3}(\.\d{1,4})?$`).MatchString(rateText) {
+		return time.Time{}, rate, status.Error(codes.InvalidArgument, "rate must be a positive percentage with at most four decimal places")
+	}
+	value, valid := new(big.Rat).SetString(rateText)
+	if !valid || value.Sign() <= 0 || value.Cmp(big.NewRat(100, 1)) > 0 {
+		return time.Time{}, rate, status.Error(codes.InvalidArgument, "rate must be greater than zero and at most 100")
+	}
+	if err := rate.Scan(value.FloatString(4)); err != nil {
+		return time.Time{}, rate, err
+	}
+	return date, rate, nil
+}
+
+func dividendError(ctx context.Context, err error) error {
+	if status.Code(err) != codes.Unknown {
+		return err
+	}
+	slog.ErrorContext(ctx, "dividend operation failed", "error", err)
+	return status.Error(codes.Internal, "unable to complete dividend operation")
+}
+
 // GetDividendRegister keeps financial inputs on the authenticated backend; removing
 // this boundary would let the browser calculate eligibility from incomplete records.
 func (h *Handlers) GetDividendRegister(ctx context.Context, req *contributionv1.GetDividendRegisterRequest) (*contributionv1.GetDividendRegisterResponse, error) {
@@ -33,6 +64,85 @@ func (h *Handlers) GetDividendRegister(ctx context.Context, req *contributionv1.
 		return nil, err
 	}
 	return &contributionv1.GetDividendRegisterResponse{Report: report}, nil
+}
+
+func (h *Handlers) SaveDividendDraft(ctx context.Context, req *contributionv1.SaveDividendDraftRequest) (*contributionv1.SaveDividendDraftResponse, error) {
+	actor, ok := auth.PrincipalFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "authenticated staff is required")
+	}
+	_, canManage := auth.CashPermissions(actor.Role)
+	if !canManage {
+		return nil, status.Error(codes.PermissionDenied, "only an admin or manager can edit dividend drafts")
+	}
+	reason := strings.TrimSpace(req.GetReason())
+	if reason == "" || len(reason) > 1000 {
+		return nil, status.Error(codes.InvalidArgument, "reason is required (at most 1000 characters)")
+	}
+	date, rate, err := dividendInputs(req.GetFinancialYear(), req.GetDeclarationDate(), req.GetRate())
+	if err != nil {
+		return nil, err
+	}
+	err = h.service.store.ExecReceiptTx(ctx, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock($1::integer, $2::integer)`, int32(actor.BranchID), req.GetFinancialYear()); err != nil {
+			return err
+		}
+		var exists bool
+		if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM dividend_declarations WHERE branch_id=$1 AND financial_year=$2)`, actor.BranchID, req.GetFinancialYear()).Scan(&exists); err != nil {
+			return err
+		}
+		if exists {
+			return status.Error(codes.FailedPrecondition, "approved declaration is immutable; use an adjustment or reversal for corrections")
+		}
+		var beforeRate *string
+		var beforeDate *time.Time
+		err := tx.QueryRow(ctx, `SELECT rate::text, declaration_date FROM dividend_drafts WHERE branch_id=$1 AND financial_year=$2 FOR UPDATE`, actor.BranchID, req.GetFinancialYear()).Scan(&beforeRate, &beforeDate)
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			return err
+		}
+		if _, err := tx.Exec(ctx, `INSERT INTO dividend_drafts(branch_id, financial_year, declaration_date, rate, updated_by) VALUES($1,$2,$3,$4,$5)
+			ON CONFLICT (branch_id, financial_year) DO UPDATE SET declaration_date=EXCLUDED.declaration_date, rate=EXCLUDED.rate, updated_by=EXCLUDED.updated_by, updated_at=NOW()`, actor.BranchID, req.GetFinancialYear(), date, rate, actor.ID); err != nil {
+			return err
+		}
+		_, err = tx.Exec(ctx, `INSERT INTO dividend_draft_history(branch_id, financial_year, actor_id, reason, before_rate, before_declaration_date, after_rate, after_declaration_date)
+			VALUES($1,$2,$3,$4,$5,$6,$7,$8)`, actor.BranchID, req.GetFinancialYear(), actor.ID, reason, beforeRate, beforeDate, rate, date)
+		return err
+	})
+	if err != nil {
+		return nil, dividendError(ctx, err)
+	}
+	report, err := h.dividendRegister(ctx, &contributionv1.GetDividendRegisterRequest{FinancialYear: req.GetFinancialYear()}, "", "")
+	if err != nil {
+		return nil, err
+	}
+	return &contributionv1.SaveDividendDraftResponse{Report: report}, nil
+}
+
+func (h *Handlers) GetDividendHistory(ctx context.Context, req *contributionv1.GetDividendHistoryRequest) (*contributionv1.GetDividendHistoryResponse, error) {
+	actor, ok := auth.PrincipalFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "authenticated staff is required")
+	}
+	if req.GetFinancialYear() < 2000 || req.GetFinancialYear() > 9998 {
+		return nil, status.Error(codes.InvalidArgument, "financial_year must be between 2000 and 9998")
+	}
+	var raw []byte
+	err := h.service.store.ExecReceiptTx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT jsonb_build_object('financialYear',$2::integer,'entries',COALESCE(jsonb_agg(jsonb_build_object(
+			'id',h.id,'actorId',h.actor_id,'actor',s.full_name,'timestamp',h.changed_at,'reason',h.reason,
+			'before',CASE WHEN h.before_rate IS NULL THEN NULL ELSE jsonb_build_object('rate',h.before_rate::text,'declarationDate',h.before_declaration_date) END,
+			'after',jsonb_build_object('rate',h.after_rate::text,'declarationDate',h.after_declaration_date)
+			) ORDER BY h.changed_at DESC,h.id DESC) FILTER (WHERE h.id IS NOT NULL),'[]'::jsonb))
+			FROM dividend_draft_history h LEFT JOIN staff_users s ON s.id=h.actor_id WHERE h.branch_id=$1 AND h.financial_year=$2`, actor.BranchID, req.GetFinancialYear()).Scan(&raw)
+	})
+	if err != nil {
+		return nil, dividendError(ctx, err)
+	}
+	history := &structpb.Struct{}
+	if err := protojson.Unmarshal(raw, history); err != nil {
+		return nil, status.Error(codes.Internal, "unable to encode dividend history")
+	}
+	return &contributionv1.GetDividendHistoryResponse{History: history}, nil
 }
 
 // ApproveDividends binds approval to reviewed inputs; without this endpoint a
@@ -66,6 +176,11 @@ func (h *Handlers) dividendRegister(ctx context.Context, req *contributionv1.Get
 	}
 	var raw []byte
 	err := h.service.store.ExecReceiptTx(ctx, func(tx pgx.Tx) error {
+		if previewHash != "" {
+			if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock($1::integer, $2::integer)`, int32(actor.BranchID), req.GetFinancialYear()); err != nil {
+				return err
+			}
+		}
 		q := ceepdb.New(tx)
 		lookup := ceepdb.GetDividendRegisterParams{BranchID: actor.BranchID, FinancialYear: req.GetFinancialYear()}
 		var err error
@@ -87,29 +202,31 @@ func (h *Handlers) dividendRegister(ctx context.Context, req *contributionv1.Get
 		if !errors.Is(err, pgx.ErrNoRows) {
 			return err
 		}
+		var savedDate time.Time
+		var savedRate string
+		draftErr := tx.QueryRow(ctx, `SELECT declaration_date, rate::text FROM dividend_drafts WHERE branch_id=$1 AND financial_year=$2`, actor.BranchID, req.GetFinancialYear()).Scan(&savedDate, &savedRate)
+		if draftErr != nil && !errors.Is(draftErr, pgx.ErrNoRows) {
+			return draftErr
+		}
+		if draftErr == nil {
+			if previewHash != "" && (req.GetDeclarationDate() != savedDate.Format("2006-01-02") || req.GetRate() != savedRate) {
+				return status.Error(codes.FailedPrecondition, "approval inputs differ from saved draft; reload the preview")
+			}
+			req = &contributionv1.GetDividendRegisterRequest{FinancialYear: req.GetFinancialYear(), DeclarationDate: savedDate.Format("2006-01-02"), Rate: savedRate}
+		}
 		nairobi := time.FixedZone("Africa/Nairobi", 3*60*60)
 		today := time.Now().In(nairobi).Format("2006-01-02")
 		declared := req.GetDeclarationDate()
 		if declared == "" {
 			declared = today
 		}
-		date, err := time.Parse("2006-01-02", declared)
-		if err != nil || declared != today || int(req.GetFinancialYear()) >= date.Year() {
-			return status.Error(codes.InvalidArgument, "new declarations must use today's Nairobi date and an ended financial year")
-		}
+		_ = today
 		rateText := strings.TrimSpace(req.GetRate())
 		if rateText == "" {
 			rateText = "5"
 		}
-		if !regexp.MustCompile(`^\d{1,3}(\.\d{1,4})?$`).MatchString(rateText) {
-			return status.Error(codes.InvalidArgument, "rate must be a positive percentage with at most four decimal places")
-		}
-		rateValue, valid := new(big.Rat).SetString(rateText)
-		if !valid || rateValue.Sign() <= 0 || rateValue.Cmp(big.NewRat(100, 1)) > 0 {
-			return status.Error(codes.InvalidArgument, "rate must be greater than zero and at most 100")
-		}
-		var rate pgtype.Numeric
-		if err := rate.Scan(rateValue.FloatString(4)); err != nil {
+		date, rate, err := dividendInputs(req.GetFinancialYear(), declared, rateText)
+		if err != nil {
 			return err
 		}
 		raw, err = q.BuildDividendPreview(ctx, ceepdb.BuildDividendPreviewParams{

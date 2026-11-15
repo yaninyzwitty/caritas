@@ -39,6 +39,19 @@ func NewHandlers(store *Store, service *Service) *Handlers {
 	}
 }
 
+// requireLoanBranch checks ID-based loan operations; without it, a known loan ID could bypass branch-scoped listings.
+func (h *Handlers) requireLoanBranch(ctx context.Context, loanID pgtype.UUID) error {
+	actor, _ := auth.PrincipalFromContext(ctx)
+	loan, err := h.service.GetLoan(ctx, loanID)
+	if err != nil {
+		return mapServiceError(err)
+	}
+	if !auth.CanAccessBranch(actor, loan.BranchID) {
+		return status.Error(codes.NotFound, "loan not found")
+	}
+	return nil
+}
+
 const defaultBranchID = 1
 
 // mapServiceError keeps loan RPCs on stable gRPC codes while preserving service
@@ -106,7 +119,7 @@ func (h *Handlers) ApplyForLoan(ctx context.Context, req *loanv1.ApplyForLoanReq
 		return nil, status.Error(codes.InvalidArgument, "invalid member_id")
 	}
 
-	branchID := resolveBranchID(0)
+	branchID := int64(req.GetBranchId())
 
 	principalAmount, err := parseNumeric(req.GetPrincipal())
 	if err != nil {
@@ -116,6 +129,9 @@ func (h *Handlers) ApplyForLoan(ctx context.Context, req *loanv1.ApplyForLoanReq
 	actor, ok := auth.PrincipalFromContext(ctx)
 	if !ok {
 		return nil, status.Error(codes.Unauthenticated, "authenticated admin is required")
+	}
+	if !auth.CanAccessBranch(actor, branchID) {
+		return nil, status.Error(codes.PermissionDenied, "Your staff account cannot access this branch.")
 	}
 
 	guarantors := make([]ProposedGuarantor, 0, len(req.GetGuarantors()))
@@ -173,6 +189,9 @@ func (h *Handlers) ApproveLoan(ctx context.Context, req *loanv1.ApproveLoanReque
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "loan id is required")
 	}
+	if err := h.requireLoanBranch(ctx, loanID); err != nil {
+		return nil, err
+	}
 
 	actor, ok := auth.PrincipalFromContext(ctx)
 	if !ok {
@@ -206,6 +225,9 @@ func (h *Handlers) RejectLoan(ctx context.Context, req *loanv1.RejectLoanRequest
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "loan id is required")
 	}
+	if err := h.requireLoanBranch(ctx, loanID); err != nil {
+		return nil, err
+	}
 
 	actor, ok := auth.PrincipalFromContext(ctx)
 	if !ok {
@@ -236,6 +258,9 @@ func (h *Handlers) DisburseLoan(ctx context.Context, req *loanv1.DisburseLoanReq
 	loanID, err := stringToUUID(req.GetLoanId())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid loan_id")
+	}
+	if err := h.requireLoanBranch(ctx, loanID); err != nil {
+		return nil, err
 	}
 
 	actor, ok := auth.PrincipalFromContext(ctx)
@@ -295,6 +320,10 @@ func (h *Handlers) GetLoan(ctx context.Context, req *loanv1.GetLoanRequest) (*lo
 
 	if err != nil {
 		return nil, mapServiceError(err)
+	}
+	actor, _ := auth.PrincipalFromContext(ctx)
+	if !auth.CanAccessBranch(actor, loan.BranchID) {
+		return nil, status.Error(codes.NotFound, "loan not found")
 	}
 
 	security, err := h.store.GetLoanSecuritySummary(ctx, loan.ID)
@@ -358,6 +387,11 @@ func (h *Handlers) GetLoan(ctx context.Context, req *loanv1.GetLoanRequest) (*lo
 }
 
 func (h *Handlers) ListLoans(ctx context.Context, req *loanv1.ListLoansRequest) (*loanv1.ListLoansResponse, error) {
+	actor, _ := auth.PrincipalFromContext(ctx)
+	branchID := int64(defaultBranchID)
+	if actor.Role != "manager" && actor.Role != "system_admin" {
+		branchID = actor.BranchID
+	}
 	const (
 		defaultPageSize = 50
 		maxPageSize     = 1000
@@ -386,7 +420,7 @@ func (h *Handlers) ListLoans(ctx context.Context, req *loanv1.ListLoansRequest) 
 	}
 
 	loans, err := h.store.ListLoansByBranch(ctx, loansqlc.ListLoansByBranchParams{
-		BranchID: defaultBranchID,
+		BranchID: branchID,
 		MemberID: memberID,
 		Limit:    limit + 1,
 		Column2:  cursorTS,
@@ -394,7 +428,7 @@ func (h *Handlers) ListLoans(ctx context.Context, req *loanv1.ListLoansRequest) 
 	})
 
 	if err != nil {
-		slog.ErrorContext(ctx, "list loans failed", "branch_id", defaultBranchID, "error", err)
+		slog.ErrorContext(ctx, "list loans failed", "branch_id", branchID, "error", err)
 		return nil, mapServiceError(err)
 	}
 
@@ -464,6 +498,9 @@ func (h *Handlers) GetLoanStatus(ctx context.Context, req *loanv1.GetLoanStatusR
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid loan_id")
 	}
+	if err := h.requireLoanBranch(ctx, loanID); err != nil {
+		return nil, err
+	}
 
 	loanStatus, err := h.service.GetLoanStatus(ctx, loanID)
 	if err != nil {
@@ -492,6 +529,9 @@ func (h *Handlers) AddGuarantor(ctx context.Context, req *loanv1.AddGuarantorReq
 	loanID, err := stringToUUID(req.GetLoanId())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid loan_id")
+	}
+	if err := h.requireLoanBranch(ctx, loanID); err != nil {
+		return nil, err
 	}
 	guarantorID, err := stringToUUID(req.GetGuarantorId())
 	if err != nil {
@@ -532,6 +572,9 @@ func (h *Handlers) RemoveGuarantor(ctx context.Context, req *loanv1.RemoveGuaran
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid loan_id")
 	}
+	if err := h.requireLoanBranch(ctx, loanID); err != nil {
+		return nil, err
+	}
 
 	actor, ok := auth.PrincipalFromContext(ctx)
 	if !ok {
@@ -556,6 +599,9 @@ func (h *Handlers) ApproveGuarantor(ctx context.Context, req *loanv1.ApproveGuar
 	loanID, err := stringToUUID(req.GetLoanId())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid loan_id")
+	}
+	if err := h.requireLoanBranch(ctx, loanID); err != nil {
+		return nil, err
 	}
 	guarantorID, err := stringToUUID(req.GetGuarantorId())
 	if err != nil {
@@ -607,6 +653,9 @@ func (h *Handlers) ListGuarantors(ctx context.Context, req *loanv1.ListGuarantor
 	loanID, err := stringToUUID(req.GetLoanId())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid loan_id")
+	}
+	if err := h.requireLoanBranch(ctx, loanID); err != nil {
+		return nil, err
 	}
 
 	guarantors, err := h.service.ListGuarantors(ctx, loanID, cursor, limit+1)
@@ -667,6 +716,9 @@ func (h *Handlers) RecordRepayment(ctx context.Context, req *loanv1.RecordRepaym
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid loan_id")
 	}
+	if err := h.requireLoanBranch(ctx, loanID); err != nil {
+		return nil, err
+	}
 	amount, err := parseNumeric(req.GetAmount())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid amount")
@@ -697,6 +749,9 @@ func (h *Handlers) GetRepaymentSchedule(ctx context.Context, req *loanv1.GetRepa
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid loan_id")
 	}
+	if err := h.requireLoanBranch(ctx, loanID); err != nil {
+		return nil, err
+	}
 
 	schedules, err := h.service.ListRepaymentSchedules(ctx, loanID)
 	if err != nil {
@@ -723,6 +778,9 @@ func (h *Handlers) GetInstallmentDetails(ctx context.Context, req *loanv1.GetIns
 	loanID, err := stringToUUID(req.GetLoanId())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid loan_id")
+	}
+	if err := h.requireLoanBranch(ctx, loanID); err != nil {
+		return nil, err
 	}
 
 	schedules, err := h.service.ListRepaymentSchedules(ctx, loanID)
@@ -771,6 +829,9 @@ func (h *Handlers) GetPaymentHistory(ctx context.Context, req *loanv1.GetPayment
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid loan_id")
 	}
+	if err := h.requireLoanBranch(ctx, loanID); err != nil {
+		return nil, err
+	}
 
 	transactions, err := h.service.ListLoanTransactions(ctx, loanID, cursor, limit+1)
 	if err != nil {
@@ -810,7 +871,7 @@ func (h *Handlers) GetCreditBalance(ctx context.Context, req *loanv1.GetCreditBa
 		return nil, status.Error(codes.InvalidArgument, "invalid member_id")
 	}
 	branch, err := h.store.GetCreditMemberBranch(ctx, memberID)
-	if err != nil || branch != actor.BranchID {
+	if err != nil || !auth.CanAccessBranch(actor, branch) {
 		return nil, status.Error(codes.NotFound, "member not found")
 	}
 

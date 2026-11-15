@@ -60,6 +60,9 @@ func (h *Handlers) InitiateDarajaSTKContribution(ctx context.Context, req *contr
 	if branchID == 0 {
 		branchID = actor.BranchID
 	}
+	if !auth.CanAccessBranch(actor, branchID) {
+		return nil, status.Error(codes.PermissionDenied, "Your staff account cannot access this branch.")
+	}
 
 	actualPhoneNumber, err := normalizePhoneNumber(req.PhoneNumber)
 	if err != nil {
@@ -89,7 +92,11 @@ func (h *Handlers) OpenCashierSession(ctx context.Context, _ *contributionv1.Ope
 	if !ok {
 		return nil, status.Error(codes.Unauthenticated, "authenticated cashier is required")
 	}
+	started := time.Now()
 	session, err := h.service.OpenCashierSession(ctx, actor.BranchID, actor.ID)
+	if elapsed := time.Since(started); elapsed > 250*time.Millisecond || err != nil {
+		slog.InfoContext(ctx, "open cashier till", "duration", elapsed, "error", err)
+	}
 	if err != nil {
 		return nil, mapContributionError(err)
 	}

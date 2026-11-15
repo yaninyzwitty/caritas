@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"math/big"
 	"sort"
 	"strings"
@@ -16,10 +17,18 @@ import (
 	loansqlc "github.com/yaninyzwitty/caritas-backend/internal/loan/repository/sqlc"
 	"github.com/yaninyzwitty/caritas-backend/internal/member"
 	sharesqlc "github.com/yaninyzwitty/caritas-backend/internal/share/repository/sqlc"
+	"google.golang.org/grpc/metadata"
 )
 
 func (s *Service) OpenCashierSession(ctx context.Context, branchID int64, cashierID pgtype.UUID) (contributionsqlc.CashierSession, error) {
-	session, err := s.store.InsertCashierSession(ctx, contributionsqlc.InsertCashierSessionParams{
+	session, err := s.store.GetOpenCashierSession(ctx, cashierID)
+	if err == nil {
+		return session, nil
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return contributionsqlc.CashierSession{}, fmt.Errorf("get open cashier session: %w", err)
+	}
+	session, err = s.store.InsertCashierSession(ctx, contributionsqlc.InsertCashierSessionParams{
 		BranchID:  branchID,
 		CashierID: cashierID,
 	})
@@ -37,7 +46,9 @@ func (s *Service) OpenCashierSession(ctx context.Context, branchID int64, cashie
 }
 
 func (s *Service) CreateCashReceipt(ctx context.Context, params contributionsqlc.InsertContributionReceiptParams, allocations []AllocationInput) (CreatedReceipt, error) {
-	acceptCtx, cancel := context.WithTimeout(ctx, 8*time.Second)
+	started := time.Now()
+	stage := "acquire transaction"
+	acceptCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 	params.SourceChannel = contributionsqlc.ContributionSourceChannelCash
 	params.IdempotencyKey = text(strings.TrimSpace(params.IdempotencyKey.String))
@@ -48,6 +59,7 @@ func (s *Service) CreateCashReceipt(ctx context.Context, params contributionsqlc
 	err := s.store.ExecReceiptTx(acceptCtx, func(tx pgx.Tx) error {
 		ctx := acceptCtx
 		q := contributionsqlc.New(tx)
+		stage = "lock till and check retry"
 		session, err := q.LockCashierSession(ctx, params.CashierSessionID)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ErrCashierSessionNotFound
@@ -89,6 +101,7 @@ func (s *Service) CreateCashReceipt(ctx context.Context, params contributionsqlc
 		if err := member.RequireActiveMemberInTx(ctx, tx, params.MemberID, params.BranchID); err != nil {
 			return err
 		}
+		stage = "validate monthly fees"
 		fees, err := monthlyFees(ctx, q, params.MemberID, params.ContributionPeriod, pgtype.UUID{})
 		if err != nil {
 			return err
@@ -97,6 +110,7 @@ func (s *Service) CreateCashReceipt(ctx context.Context, params contributionsqlc
 		if err != nil {
 			return err
 		}
+		stage = "validate charge allocations"
 		if err := validateChargeAllocations(ctx, q, params.MemberID, params.BranchID, allocations, pgtype.UUID{}); err != nil {
 			return err
 		}
@@ -124,6 +138,7 @@ func (s *Service) CreateCashReceipt(ctx context.Context, params contributionsqlc
 				}
 			}
 		}
+		stage = "validate targets and save receipt"
 		params.AllocationPlan, err = buildAllocationPlan(allocations)
 		if err != nil {
 			return err
@@ -164,6 +179,13 @@ func (s *Service) CreateCashReceipt(ctx context.Context, params contributionsqlc
 
 	})
 	if err != nil {
+		requestID := ""
+		if md, ok := metadata.FromIncomingContext(ctx); ok {
+			if values := md.Get("x-request-id"); len(values) > 0 {
+				requestID = values[0]
+			}
+		}
+		slog.ErrorContext(ctx, "cash receipt acceptance failed", "request_id", requestID, "stage", stage, "duration", time.Since(started), "error", err)
 		return CreatedReceipt{}, err
 	}
 

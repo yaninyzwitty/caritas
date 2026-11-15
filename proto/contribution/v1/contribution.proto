@@ -8,6 +8,12 @@ import "google/protobuf/struct.proto";
 import "member/v1/member.proto";
 
 service ContributionService {
+  rpc SaveDividendDraft(SaveDividendDraftRequest) returns (SaveDividendDraftResponse) {
+    option (google.api.http) = {put: "/api/v1/contributions/dividends/draft" body: "*" response_body: "report"};
+  }
+  rpc GetDividendHistory(GetDividendHistoryRequest) returns (GetDividendHistoryResponse) {
+    option (google.api.http) = {get: "/api/v1/contributions/dividends/history" response_body: "history"};
+  }
   rpc GetDividendRegister(GetDividendRegisterRequest) returns (GetDividendRegisterResponse) {
     option (google.api.http) = {get: "/api/v1/contributions/dividends" response_body: "report"};
   }
@@ -495,6 +501,16 @@ message GetDividendRegisterRequest {
   string declaration_date = 2;
   string rate = 3;
 }
+
+message SaveDividendDraftRequest {
+  int32 financial_year = 1;
+  string declaration_date = 2;
+  string rate = 3;
+  string reason = 4;
+}
+message SaveDividendDraftResponse { google.protobuf.Struct report = 1; }
+message GetDividendHistoryRequest { int32 financial_year = 1; }
+message GetDividendHistoryResponse { google.protobuf.Struct history = 1; }
 
 // Approval binds the reviewed preview to the resolution; without the hash changed sources could be approved.
 message ApproveDividendsRequest {
