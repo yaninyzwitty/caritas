@@ -363,17 +363,14 @@ func (h *Handlers) WithdrawShares(ctx context.Context, req *sharev1.WithdrawShar
 	}, nil
 }
 
-// GetShareBalance handles balance reads. The account is verified first so a
-// missing account is not misreported as a zero balance; without this check the
-// loan domain could treat a non-existent account as zero collateral.
+// GetShareBalance handles balance reads. The account is verified under the
+// balance transaction lock so missing or inaccessible accounts are not reported as zero.
 func (h *Handlers) GetShareBalance(ctx context.Context, req *sharev1.GetShareBalanceRequest) (*sharev1.GetShareBalanceResponse, error) {
 	accountID, err := stringToUUID(req.GetAccountId())
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid account_id: %v", err)
 	}
-	if err := h.requireAccountBranch(ctx, accountID); err != nil {
-		return nil, err
-	}
+	actor, _ := auth.PrincipalFromContext(ctx)
 	result := &sharev1.GetShareBalanceResponse{}
 	err = h.store.ExecTx(ctx, func(q sharesqlc.Querier) error {
 		account, err := q.LockAndReadAccount(ctx, accountID)
@@ -382,6 +379,9 @@ func (h *Handlers) GetShareBalance(ctx context.Context, req *sharev1.GetShareBal
 		}
 		if err != nil {
 			return err
+		}
+		if !auth.CanAccessBranch(actor, account.BranchID) {
+			return ErrAccountNotFound
 		}
 		balance := new(big.Int)
 		latest, err := q.GetLatestBalance(ctx, accountID)
