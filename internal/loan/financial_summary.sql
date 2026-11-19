@@ -1,6 +1,6 @@
 -- name: GetLoanFinancialSummary :one
 -- One statement keeps balances and status on the same database snapshot.
-WITH repayments AS (
+WITH RECURSIVE repayments AS (
     SELECT COALESCE(SUM(amount), 0)::numeric AS received,
         COALESCE(SUM(COALESCE((allocation_breakdown->>'principal')::numeric,
             amount - COALESCE((allocation_breakdown->>'credit')::numeric, 0))), 0)::numeric AS principal_paid,
@@ -11,26 +11,27 @@ WITH repayments AS (
 ), assessed AS (
     SELECT COALESCE(SUM(amount), 0)::numeric AS interest, MAX(period)::date AS latest
     FROM loan_monthly_interest WHERE loan_id = $1
+), projected(period, total) AS (
+    SELECT (COALESCE(a.latest + INTERVAL '1 month', date_trunc('month', NOW() AT TIME ZONE 'Africa/Nairobi')) - INTERVAL '1 month')::date,
+        0::numeric
+    FROM assessed a
+    UNION ALL
+    SELECT (p.period + INTERVAL '1 month')::date,
+        p.total + ROUND((GREATEST(l.principal - r.principal_paid, 0)
+            + GREATEST(a.interest - r.interest_paid + p.total, 0)) * l.interest_rate, 4)
+    FROM projected p CROSS JOIN loans l CROSS JOIN repayments r CROSS JOIN assessed a
+    WHERE l.id = $1 AND l.status IN ('active', 'disbursed', 'delinquent')
+      AND p.period < date_trunc('month', NOW() AT TIME ZONE 'Africa/Nairobi')::date
 ), balances AS (
     SELECT l.status, l.previous_status, l.updated_at, l.disbursed_at,
         GREATEST(l.principal - r.principal_paid, 0)::numeric AS principal_outstanding,
         GREATEST(a.interest - r.interest_paid, 0)::numeric AS assessed_interest_outstanding,
-        -- Preview the exact catch-up assessments repayment will post this month.
-        COALESCE((SELECT SUM(ROUND(GREATEST(l.principal - (
-            SELECT COALESCE(SUM(COALESCE((t.allocation_breakdown->>'principal')::numeric,
-                t.amount - COALESCE((t.allocation_breakdown->>'credit')::numeric, 0))), 0)
-            FROM loan_transactions t WHERE t.loan_id = l.id AND t.type = 'repayment'
-              AND COALESCE((t.allocation_breakdown->>'period')::date,
-                  date_trunc('month', t.created_at AT TIME ZONE 'Africa/Nairobi')::date) < months.period::date
-        ), 0) * l.interest_rate, 4))
-        FROM generate_series(
-            COALESCE(a.latest + INTERVAL '1 month', date_trunc('month', NOW() AT TIME ZONE 'Africa/Nairobi')),
-            date_trunc('month', NOW() AT TIME ZONE 'Africa/Nairobi'), INTERVAL '1 month'
-        ) AS months(period)
-        WHERE l.status IN ('active', 'disbursed', 'delinquent')), 0)::numeric AS unposted_interest,
+        (SELECT total FROM projected ORDER BY period DESC LIMIT 1)::numeric AS unposted_interest,
         GREATEST((SELECT COALESCE(SUM(amount), 0) FROM loan_transactions
             WHERE loan_id = l.id AND type = 'penalty') - r.penalty_paid, 0)::numeric AS penalty_outstanding,
-        ROUND(GREATEST(l.principal - r.principal_paid, 0) * l.interest_rate, 4)::numeric AS next_month_interest,
+        ROUND((GREATEST(l.principal - r.principal_paid, 0)
+            + GREATEST(a.interest - r.interest_paid + (SELECT total FROM projected ORDER BY period DESC LIMIT 1), 0))
+            * l.interest_rate, 4)::numeric AS next_month_interest,
         r.received, r.principal_paid, r.interest_paid, r.penalty_paid, r.overpayment
     FROM loans l CROSS JOIN repayments r CROSS JOIN assessed a
     WHERE l.id = $1 AND NOT l.is_deleted

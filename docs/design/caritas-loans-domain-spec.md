@@ -259,19 +259,23 @@ pagination: unpaid principal, unpaid assessed interest, catch-up interest payabl
 on a current-month repayment, unpaid penalties, total settlement and available
 loan-specific credit. Status and these balances use the same database snapshot.
 Next month's interest is a separately labelled estimate based on remaining
-principal, assuming no further principal payments. Posted repayments expose their
+principal plus unpaid assessed interest, assuming no further payments. Posted repayments expose their
 principal, interest, penalty and credit allocation. Unavailable figures must not
 be displayed as zero.
 
 Repayments may be accepted only for `Active`, `Disbursed` where repayment is allowed, or `Delinquent` loans. Repayments must be rejected for `Closed`, `WrittenOff`, `Restructuring` and terminal application states.
 
-Loan interest for monthly contribution reporting is:
+Loan interest for monthly contribution reporting compounds unpaid interest once per month:
 
 ```text
-interest_due = previous_loan_balance * 1%
+opening_balance = unpaid_principal + unpaid_interest_from_prior_months
+interest_due = opening_balance * monthly_interest_rate
 ```
 
-Interest is zero when the previous loan balance is zero. Interest must not accrue after the loan is fully repaid.
+Each monthly assessment is rounded to four decimal places and recorded once.
+Payments clear interest before principal, so paid interest does not compound.
+Existing assessments and repayment allocations are not recalculated. Interest is
+zero when the opening balance is zero and must not accrue after full repayment.
 
 Repayment allocation order:
 

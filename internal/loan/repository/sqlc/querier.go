@@ -12,7 +12,6 @@ import (
 
 type Querier interface {
 	AssessLoanInterest(ctx context.Context, arg AssessLoanInterestParams) error
-	AssessLoanInterestPeriods(ctx context.Context, arg AssessLoanInterestPeriodsParams) error
 	CompleteCreditOperation(ctx context.Context, arg CompleteCreditOperationParams) (CreditOperation, error)
 	CountApprovedGuarantors(ctx context.Context, loanID pgtype.UUID) (int64, error)
 	CreateCreditBalance(ctx context.Context, arg CreateCreditBalanceParams) (CreditBalance, error)
