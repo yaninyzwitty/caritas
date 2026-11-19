@@ -86,3 +86,41 @@ func TestMonthlyInterestRepayments(t *testing.T) {
 		t.Fatalf("backdate: %v", err)
 	}
 }
+
+func TestUnpaidInterestCompoundsNextMonth(t *testing.T) {
+	ctx := t.Context()
+	store, pool := repaymentStore(t, ctx)
+	service := NewService(store, nil)
+	loanID := createRepaymentLoan(t, ctx, pool, loansqlc.LoanStatusActive)
+	createSchedule(t, ctx, pool, loanID, 1, "100000")
+	if _, err := pool.Exec(ctx, "UPDATE loans SET interest_rate = 0.01 WHERE id = $1", loanID); err != nil {
+		t.Fatal(err)
+	}
+	now := time.Now().UTC()
+	first := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC).AddDate(0, -2, 0)
+	actor := testUUID("00000000-0000-0000-0000-000000000001")
+	if _, err := service.RecordRepaymentForPeriod(ctx, loanID, mustNumeric(t, "600"), "partial-interest", actor,
+		pgtype.Date{Time: first, Valid: true}); err != nil {
+		t.Fatal(err)
+	}
+	tx, err := service.RecordRepaymentForPeriod(ctx, loanID, mustNumeric(t, "1004"), "compounded-interest", actor,
+		pgtype.Date{Time: first.AddDate(0, 1, 0), Valid: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var allocation repaymentAllocation
+	if err := json.Unmarshal(tx.AllocationBreakdown, &allocation); err != nil {
+		t.Fatal(err)
+	}
+	if allocation.Interest != "1004" || allocation.Principal != "0" {
+		t.Fatalf("allocation = %+v", allocation)
+	}
+	var interest string
+	if err := pool.QueryRow(ctx, `SELECT amount::text FROM loan_monthly_interest
+        WHERE loan_id = $1 AND period = $2`, loanID, first.AddDate(0, 1, 0)).Scan(&interest); err != nil {
+		t.Fatal(err)
+	}
+	if interest != "1004.0000" {
+		t.Fatalf("second-month interest = %s", interest)
+	}
+}

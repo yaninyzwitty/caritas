@@ -14,16 +14,21 @@ import (
 const assessLoanInterest = `-- name: AssessLoanInterest :exec
 INSERT INTO loan_monthly_interest (loan_id, period, previous_balance, rate, amount)
 SELECT l.id, $1::date,
-       GREATEST(l.principal - paid.principal, 0), l.interest_rate,
-       ROUND(GREATEST(l.principal - paid.principal, 0) * l.interest_rate, 4)
+       GREATEST(l.principal - paid.principal, 0) + GREATEST(assessed.interest - paid.interest, 0), l.interest_rate,
+       ROUND((GREATEST(l.principal - paid.principal, 0) + GREATEST(assessed.interest - paid.interest, 0)) * l.interest_rate, 4)
 FROM loans l
 CROSS JOIN LATERAL (
     SELECT COALESCE(SUM(COALESCE((t.allocation_breakdown->>'principal')::numeric,
-        t.amount - COALESCE((t.allocation_breakdown->>'credit')::numeric, 0))), 0)::numeric AS principal
+        t.amount - COALESCE((t.allocation_breakdown->>'credit')::numeric, 0))), 0)::numeric AS principal,
+        COALESCE(SUM((t.allocation_breakdown->>'interest')::numeric), 0)::numeric AS interest
     FROM loan_transactions t WHERE t.loan_id = l.id AND t.type = 'repayment'
       AND COALESCE((t.allocation_breakdown->>'period')::date,
           date_trunc('month', t.created_at AT TIME ZONE 'Africa/Nairobi')::date) < $1::date
 ) paid
+CROSS JOIN LATERAL (
+    SELECT COALESCE(SUM(amount), 0)::numeric AS interest FROM loan_monthly_interest
+    WHERE loan_id = l.id AND period < $1::date
+) assessed
 WHERE l.id = $2
 ON CONFLICT DO NOTHING
 `
@@ -35,35 +40,6 @@ type AssessLoanInterestParams struct {
 
 func (q *Queries) AssessLoanInterest(ctx context.Context, arg AssessLoanInterestParams) error {
 	_, err := q.db.Exec(ctx, assessLoanInterest, arg.Period, arg.LoanID)
-	return err
-}
-
-const assessLoanInterestPeriods = `-- name: AssessLoanInterestPeriods :exec
-INSERT INTO loan_monthly_interest (loan_id, period, previous_balance, rate, amount)
-SELECT l.id, months.period::date,
-       GREATEST(l.principal - paid.principal, 0), l.interest_rate,
-       ROUND(GREATEST(l.principal - paid.principal, 0) * l.interest_rate, 4)
-FROM loans l
-CROSS JOIN generate_series($1::date, $2::date, INTERVAL '1 month') AS months(period)
-CROSS JOIN LATERAL (
-    SELECT COALESCE(SUM(COALESCE((t.allocation_breakdown->>'principal')::numeric,
-        t.amount - COALESCE((t.allocation_breakdown->>'credit')::numeric, 0))), 0)::numeric AS principal
-    FROM loan_transactions t WHERE t.loan_id = l.id AND t.type = 'repayment'
-      AND COALESCE((t.allocation_breakdown->>'period')::date,
-          date_trunc('month', t.created_at AT TIME ZONE 'Africa/Nairobi')::date) < months.period::date
-) paid
-WHERE l.id = $3
-ON CONFLICT DO NOTHING
-`
-
-type AssessLoanInterestPeriodsParams struct {
-	FirstPeriod pgtype.Date `json:"firstPeriod"`
-	LastPeriod  pgtype.Date `json:"lastPeriod"`
-	LoanID      pgtype.UUID `json:"loanId"`
-}
-
-func (q *Queries) AssessLoanInterestPeriods(ctx context.Context, arg AssessLoanInterestPeriodsParams) error {
-	_, err := q.db.Exec(ctx, assessLoanInterestPeriods, arg.FirstPeriod, arg.LastPeriod, arg.LoanID)
 	return err
 }
 

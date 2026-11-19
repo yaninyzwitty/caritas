@@ -12,30 +12,19 @@ import (
 )
 
 const listContributionLoanPositions = `-- name: ListContributionLoanPositions :many
-WITH positions AS (
+WITH RECURSIVE positions AS (
     SELECT l.id, l.principal, COALESCE(a.period_rate, l.interest_rate)::numeric AS interest_rate, l.disbursed_at,
         COALESCE(a.latest, ($1::date - INTERVAL '1 month')::date) AS latest_assessment,
         r.latest AS latest_payment,
         GREATEST(l.principal - r.principal_paid, 0)::numeric AS principal_due,
-        COALESCE(a.opening_balance, GREATEST(l.principal - r.prior_principal_paid, 0))::numeric AS opening_principal,
+        GREATEST(l.principal - r.prior_principal_paid, 0)::numeric AS opening_principal,
         r.interest_paid,
         GREATEST(p.amount - r.penalty_paid, 0)::numeric AS penalty_due,
         a.assessed, a.earlier_assessed,
-        COALESCE((SELECT amount FROM loan_monthly_interest WHERE loan_id = l.id AND period = $1::date),
-            ROUND(GREATEST(l.principal - r.prior_principal_paid, 0) * l.interest_rate, 4))::numeric AS period_interest,
-        COALESCE((SELECT SUM(ROUND(GREATEST(l.principal - (
-            SELECT COALESCE(SUM(COALESCE((t.allocation_breakdown->>'principal')::numeric,
-                t.amount - COALESCE((t.allocation_breakdown->>'credit')::numeric, 0))), 0)
-            FROM loan_transactions t WHERE t.loan_id = l.id AND t.type = 'repayment'
-              AND COALESCE((t.allocation_breakdown->>'period')::date,
-                  date_trunc('month', t.created_at AT TIME ZONE 'Africa/Nairobi')::date) < months.period::date
-        ), 0) * l.interest_rate, 4))
-        FROM generate_series(COALESCE(a.latest + INTERVAL '1 month', $1::date),
-            $1::date, INTERVAL '1 month') AS months(period)), 0)::numeric AS unposted
+        (SELECT amount FROM loan_monthly_interest WHERE loan_id = l.id AND period = $1::date)::numeric AS posted_period_interest
     FROM loans l
     CROSS JOIN LATERAL (
         SELECT COALESCE(SUM(amount), 0)::numeric AS assessed,
-            MAX(previous_balance) FILTER (WHERE period = $1::date)::numeric AS opening_balance,
             MAX(rate) FILTER (WHERE period = $1::date)::numeric AS period_rate,
             COALESCE(SUM(amount) FILTER (WHERE period < $1::date), 0)::numeric AS earlier_assessed,
             MAX(period) AS latest
@@ -59,6 +48,19 @@ WITH positions AS (
     ) p
     WHERE l.member_id = $2 AND l.branch_id = $3
       AND NOT l.is_deleted AND l.status IN ('active', 'disbursed', 'delinquent')
+), pending(id, period, amount, total) AS (
+    SELECT id, latest_assessment, 0::numeric, 0::numeric FROM positions
+    UNION ALL
+    SELECT p.id, (p.period + INTERVAL '1 month')::date,
+        ROUND((v.principal_due + GREATEST(v.assessed - v.interest_paid + p.total, 0)) * v.interest_rate, 4),
+        p.total + ROUND((v.principal_due + GREATEST(v.assessed - v.interest_paid + p.total, 0)) * v.interest_rate, 4)
+    FROM pending p JOIN positions v ON v.id = p.id
+    WHERE p.period < $1::date
+), quoted AS (
+    SELECT v.id, v.principal, v.interest_rate, v.disbursed_at, v.latest_assessment, v.latest_payment, v.principal_due, v.opening_principal, v.interest_paid, v.penalty_due, v.assessed, v.earlier_assessed, v.posted_period_interest, COALESCE(v.posted_period_interest,
+            (SELECT amount FROM pending p WHERE p.id = v.id AND p.period = $1::date), 0)::numeric AS period_interest,
+        (SELECT total FROM pending p WHERE p.id = v.id ORDER BY period DESC LIMIT 1)::numeric AS unposted
+    FROM positions v
 )
 SELECT id, interest_rate, opening_principal, principal_due, period_interest, penalty_due,
     (CEIL(COALESCE((SELECT SUM(GREATEST(s.amount_due - GREATEST(
@@ -79,7 +81,7 @@ SELECT id, interest_rate, opening_principal, principal_due, period_interest, pen
     (latest_assessment <= $1::date
         AND (latest_payment IS NULL OR latest_payment <= $1::date)
         AND (disbursed_at IS NULL OR date_trunc('month', disbursed_at AT TIME ZONE 'Africa/Nairobi')::date <= $1::date))::boolean AS payable
-FROM positions ORDER BY id
+FROM quoted AS positions ORDER BY id
 `
 
 type ListContributionLoanPositionsParams struct {

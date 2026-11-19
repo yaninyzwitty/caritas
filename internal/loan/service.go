@@ -737,14 +737,14 @@ func (s *Service) RecordRepaymentForPeriodInTx(
 		}
 	}
 	// Start assessment at the first collected period; do not retrospectively
-	// charge legacy loans. Thereafter catch up missed months without compounding.
+	// charge legacy loans. Assess in order so each month includes unpaid prior interest.
 	first := period.Time
 	if latest.Valid {
 		first = latest.Time.AddDate(0, 1, 0)
 	}
-	if !first.After(period.Time) {
-		if err := q.AssessLoanInterestPeriods(ctx, loansqlc.AssessLoanInterestPeriodsParams{
-			LoanID: loanID, FirstPeriod: pgtype.Date{Time: first, Valid: true}, LastPeriod: period,
+	for month := first; !month.After(period.Time); month = month.AddDate(0, 1, 0) {
+		if err := q.AssessLoanInterest(ctx, loansqlc.AssessLoanInterestParams{
+			LoanID: loanID, Period: pgtype.Date{Time: month, Valid: true},
 		}); err != nil {
 			return tx, fmt.Errorf("assess monthly interest: %w", err)
 		}

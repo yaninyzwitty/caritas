@@ -5,33 +5,21 @@ FROM loan_monthly_interest WHERE loan_id = $1;
 -- name: AssessLoanInterest :exec
 INSERT INTO loan_monthly_interest (loan_id, period, previous_balance, rate, amount)
 SELECT l.id, sqlc.arg(period)::date,
-       GREATEST(l.principal - paid.principal, 0), l.interest_rate,
-       ROUND(GREATEST(l.principal - paid.principal, 0) * l.interest_rate, 4)
+       GREATEST(l.principal - paid.principal, 0) + GREATEST(assessed.interest - paid.interest, 0), l.interest_rate,
+       ROUND((GREATEST(l.principal - paid.principal, 0) + GREATEST(assessed.interest - paid.interest, 0)) * l.interest_rate, 4)
 FROM loans l
 CROSS JOIN LATERAL (
     SELECT COALESCE(SUM(COALESCE((t.allocation_breakdown->>'principal')::numeric,
-        t.amount - COALESCE((t.allocation_breakdown->>'credit')::numeric, 0))), 0)::numeric AS principal
+        t.amount - COALESCE((t.allocation_breakdown->>'credit')::numeric, 0))), 0)::numeric AS principal,
+        COALESCE(SUM((t.allocation_breakdown->>'interest')::numeric), 0)::numeric AS interest
     FROM loan_transactions t WHERE t.loan_id = l.id AND t.type = 'repayment'
       AND COALESCE((t.allocation_breakdown->>'period')::date,
           date_trunc('month', t.created_at AT TIME ZONE 'Africa/Nairobi')::date) < sqlc.arg(period)::date
 ) paid
-WHERE l.id = sqlc.arg(loan_id)
-ON CONFLICT DO NOTHING;
-
--- name: AssessLoanInterestPeriods :exec
-INSERT INTO loan_monthly_interest (loan_id, period, previous_balance, rate, amount)
-SELECT l.id, months.period::date,
-       GREATEST(l.principal - paid.principal, 0), l.interest_rate,
-       ROUND(GREATEST(l.principal - paid.principal, 0) * l.interest_rate, 4)
-FROM loans l
-CROSS JOIN generate_series(sqlc.arg(first_period)::date, sqlc.arg(last_period)::date, INTERVAL '1 month') AS months(period)
 CROSS JOIN LATERAL (
-    SELECT COALESCE(SUM(COALESCE((t.allocation_breakdown->>'principal')::numeric,
-        t.amount - COALESCE((t.allocation_breakdown->>'credit')::numeric, 0))), 0)::numeric AS principal
-    FROM loan_transactions t WHERE t.loan_id = l.id AND t.type = 'repayment'
-      AND COALESCE((t.allocation_breakdown->>'period')::date,
-          date_trunc('month', t.created_at AT TIME ZONE 'Africa/Nairobi')::date) < months.period::date
-) paid
+    SELECT COALESCE(SUM(amount), 0)::numeric AS interest FROM loan_monthly_interest
+    WHERE loan_id = l.id AND period < sqlc.arg(period)::date
+) assessed
 WHERE l.id = sqlc.arg(loan_id)
 ON CONFLICT DO NOTHING;
 
